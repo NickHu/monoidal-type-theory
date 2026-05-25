@@ -1,0 +1,4 @@
+name: monoidal-type-theory
+include: .
+depend: 1lab
+flags:
