@@ -2,3 +2,11 @@ name: monoidal-type-theory
 include: .
 depend: 1lab
 flags:
+  --cubical
+  --no-load-primitives
+  --postfix-projections
+  --rewriting
+  --guardedness
+  --two-level
+  -W noUnsupportedIndexedMatch
+  --experimental-lazy-instances
