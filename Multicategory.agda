@@ -12,9 +12,8 @@ record Premulticategory (o h : Level) : Type (lsuc (o ⊔ h)) where
   no-eta-equality
   field
     Obₘ : Type o
-    Obₘ-is-set : is-set Obₘ
     Homₘ : {n : Nat} → Vec Obₘ n → Obₘ → Type h
-    Homₘ-is-set : {n : Nat} {Γ : Vec Obₘ n} {τ : Obₘ} → is-set (Homₘ Γ τ)
+    Homₘ-set : {n : Nat} {Γ : Vec Obₘ n} {τ : Obₘ} → is-set (Homₘ Γ τ)
 
     idₘ : ∀ {x} → Homₘ (x ∷ []) x
     _∘ₘ[_]_
