@@ -18,24 +18,27 @@
         "type": "github"
       }
     },
-    "nixpkgs": {
+    "onelab": {
+      "flake": false,
       "locked": {
-        "lastModified": 1779536132,
-        "narHash": "sha256-q+fF42iv/geEbHfgSzy3tS0FF/EyD6XTZ98E6yxiBO8=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "3d8f0f3f72a6cd4d93d0ad13203f2ea1cb7e1456",
+        "lastModified": 1779109635,
+        "narHash": "sha256-7ozptmtAQEwbZddEOXxTI5faJviuGS9Bns7/8Sqv17o=",
+        "owner": "the1lab",
+        "repo": "1lab",
+        "rev": "e5a99a399a3c58922adef713f38314805810937c",
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
+        "owner": "the1lab",
+        "repo": "1lab",
+        "rev": "e5a99a399a3c58922adef713f38314805810937c",
+        "type": "github"
       }
     },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "onelab": "onelab"
       }
     },
     "systems": {
