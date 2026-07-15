@@ -59,6 +59,7 @@ lookup-splice
   : ∀ {ℓ} {A : Type ℓ} {n m}
   → (xs : Vec A (suc n)) (i : Fin (suc n)) (ys : Vec A (suc m)) (j : Fin (suc m))
   → lookup (splice xs i ys) (j f+ i) ≡ lookup ys j
+lookup-splice {n = zero} {m = zero} (_ ∷ []) fzero (_ ∷ []) fzero = refl
 lookup-splice xs i ys j with fin-view i
 lookup-splice (x ∷ xs) i ys j | zero =
   lookup (ys ++ xs) (j f+ fzero)
@@ -101,6 +102,7 @@ splice-assoc
   → PathP (λ t → Vec A (+-associative p m n t))
       (splice (splice xs i ys) (j f+ i) zs)
       (splice xs i (splice ys j zs))
+splice-assoc (x ∷ []) fzero (y ∷ []) fzero (z ∷ []) = refl
 splice-assoc xs i ys j zs with fin-view i
 splice-assoc {A = A} {n} {m} {p} (x ∷ xs) fzero ys j zs | zero =
   beginᵥ[]

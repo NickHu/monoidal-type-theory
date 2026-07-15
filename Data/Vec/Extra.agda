@@ -108,10 +108,11 @@ subst-∷ {A = A} q x xs =
 
 ++-zeror : ∀ {ℓ} {A : Type ℓ} {n : Nat} {Γ : Vec A n} → PathP (λ i → Vec A (+-zeror n i)) (Γ ++ []) Γ
 ++-zeror {Γ = []} = refl
-++-zeror {A = A} {Γ = x ∷ Γ} =
+++-zeror {Γ = x ∷ []} = refl
+++-zeror {A = A} {Γ = x ∷ y ∷ Γ} =
   beginᵥ[]
-    x ∷ (Γ ++ []) ≡ᵥ[]⟨ Vec-pathp refl (++-zeror {Γ = Γ}) ⟩
-    x ∷ Γ ∎ᵥ
+    x ∷ ((y ∷ Γ) ++ []) ≡ᵥ[]⟨ Vec-pathp refl (++-zeror {Γ = y ∷ Γ}) ⟩
+    x ∷ (y ∷ Γ) ∎ᵥ
 
 ++-associative
   : ∀ {ℓ} {A : Type ℓ} {p m n}
