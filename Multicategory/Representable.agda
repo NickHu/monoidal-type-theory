@@ -1,6 +1,6 @@
 open import Multicategory
 
-open import 1Lab.Prelude hiding (id ; _∘_ ; _++_)
+open import 1Lab.Prelude hiding (id ; _∘_)
 open import Cat.Base
 import Cat.Reasoning as Cr
 open import Cat.Monoidal.Base
@@ -67,7 +67,55 @@ representable-multicategory C M = Mc where
   -- Each law reduces, via the reducing ⊗-context-++ isos, to the corresponding
   -- monoidal coherence: the triangle for the unit laws, the pentagon for
   -- associativity, bifunctoriality for interchange.
-  Mc .idₘl f        = {!!}
+
+  -- Left identity: plugging idₘ = ρ← into x's slot is the identity, since
+  -- [x] ++ Ξ = x ∷ Ξ definitionally and the unit that ⊗[x] = x ⊗ Unit
+  -- introduces is exactly what ρ← removes (the triangle).
+  Mc .idₘl {Θ = Θ} {Ξ = Ξ} {x = x} f =
+    ap (f ∘_) plug-ρ ∙ idr f
+    where
+      split : ⊗-context (Θ ++ x ∷ Ξ) ≅ (⊗-context Θ ⊗ ⊗-context (x ∷ Ξ))
+      split = ⊗-context-++ Θ (x ∷ Ξ)
+      φ : ⊗-context (x ∷ Ξ) ≅ (⊗-context (x ∷ []) ⊗ ⊗-context Ξ)
+      φ = ⊗-context-++ (x ∷ []) Ξ
+
+      -- φ .from = ρ← x ◀ ⊗-context Ξ  (φ.from reduces to the LHS of the
+      -- triangle identity triangle-α→).
+      φ-from : φ .from ≡ ρ← x ◀ ⊗-context Ξ
+      φ-from = triangle-α→
+
+      -- (apply ρ←) ∘ (insert unit) is the identity: ρ← undoes the unit.
+      mid≡id : (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (φ .to)) ≡ id
+      mid≡id =
+          (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (φ .to))
+        ≡⟨ sym (▶.F-∘ _ _) ⟩
+          ⊗-context Θ ▶ (((ρ← x) ◀ ⊗-context Ξ) ∘ φ .to)
+        ≡⟨ ap (⊗-context Θ ▶_) (ap (_∘ φ .to) (sym φ-from)) ⟩
+          ⊗-context Θ ▶ (φ .from ∘ φ .to)
+        ≡⟨ ap (⊗-context Θ ▶_) (φ .invr) ⟩
+          ⊗-context Θ ▶ id
+        ≡⟨ ▶.F-id ⟩
+          id
+        ∎
+
+      -- plug with g = ρ← is the identity: rebracket (split), apply the
+      -- ρ←/unit-cancellation (mid≡id), and rebracket back.
+      plug-ρ : plug Θ (x ∷ []) Ξ (ρ← x) ≡ id
+      plug-ρ =
+          plug Θ (x ∷ []) Ξ (ρ← x)
+        ≡⟨⟩
+          split .from ∘ (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ))
+            ∘ ((⊗-context Θ ▶ (φ .to)) ∘ split .to)
+        ≡⟨ ap (split .from ∘_) (assoc _ _ _) ⟩
+          split .from ∘ (((⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (φ .to))) ∘ split .to)
+        ≡⟨ ap (λ p → split .from ∘ (p ∘ split .to)) mid≡id ⟩
+          split .from ∘ (id ∘ split .to)
+        ≡⟨ ap (split .from ∘_) (idl _) ⟩
+          split .from ∘ split .to
+        ≡⟨ split .invr ⟩
+          id
+        ∎
+
   Mc .idₘr f        = {!!}
   Mc .assocₘ f g h    = {!!}
   Mc .interchangeₘ f g h = {!!}
