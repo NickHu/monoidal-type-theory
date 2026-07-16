@@ -18,25 +18,33 @@ private variable
 
 private
   -- List reassociations underlying the associativity and interchange laws.
-  -- All homogeneous ≡ (lists carry no length index), so an object-valued fold
-  -- over the context reduces through them definitionally.  These are private:
-  -- they appear in field types below, which cannot reference a record's own
-  -- where-clause, so localising them as module-private is the closest analogue.
+  -- These are defined by structural recursion (cons-by-cons), NOT by composing
+  -- _++_-assoc with _∙_, so that a fold over the context — homₘ in the
+  -- underlying instance, ⊗-context in the representable instance — reduces
+  -- through them definitionally.  (A _∙_-composed reassociation is an hcomp,
+  -- which a fold cannot pattern-match through; that is what blocked the laws.)
+  -- They are private because they appear in field types below, which cannot
+  -- reference a record's own where-clause.
 
   -- Expose a slot buried under an extra prefix:
   --   Θ ++ ((Φ ++ x ∷ Ψ) ++ Ξ)  ≡  (Θ ++ Φ) ++ x ∷ (Ψ ++ Ξ)
   slot-unbury : ∀ {A : Type o} (Θ Φ : List A) (x : A) (Ψ Ξ : List A)
     → Θ ++ ((Φ ++ x ∷ Ψ) ++ Ξ) ≡ (Θ ++ Φ) ++ x ∷ (Ψ ++ Ξ)
-  slot-unbury Θ Φ x Ψ Ξ =
-    ap (Θ ++_) (++-assoc Φ (x ∷ Ψ) Ξ) ∙ sym (++-assoc Θ Φ (x ∷ Ψ ++ Ξ))
+  slot-unbury []       Φ x Ψ Ξ = ++-assoc Φ (x ∷ Ψ) Ξ
+  slot-unbury (a ∷ Θ') Φ x Ψ Ξ = ap (a ∷_) (slot-unbury Θ' Φ x Ψ Ξ)
+
+  -- Φ ++ Ρ ++ (Ψ ++ Ξ) ≡ (Φ ++ Ρ ++ Ψ) ++ Ξ  (base case of assocₘ-boundary)
+  assocₘ-flatten : ∀ {A : Type o} (Φ Ρ Ψ Ξ : List A)
+    → Φ ++ Ρ ++ (Ψ ++ Ξ) ≡ (Φ ++ Ρ ++ Ψ) ++ Ξ
+  assocₘ-flatten []       Ρ Ψ Ξ = sym (++-assoc Ρ Ψ Ξ)
+  assocₘ-flatten (a ∷ Φ') Ρ Ψ Ξ = ap (a ∷_) (assocₘ-flatten Φ' Ρ Ψ Ξ)
 
   -- The associativity boundary:
   --   (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ)  ≡  Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
   assocₘ-boundary : ∀ {A : Type o} (Θ Φ Ρ Ψ Ξ : List A)
     → (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ) ≡ Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
-  assocₘ-boundary Θ Φ Ρ Ψ Ξ =
-      ++-assoc Θ Φ (Ρ ++ Ψ ++ Ξ)
-    ∙ sym (ap (Θ ++_) (++-assoc Φ (Ρ ++ Ψ) Ξ ∙ ap (Φ ++_) (++-assoc Ρ Ψ Ξ)))
+  assocₘ-boundary []       Φ Ρ Ψ Ξ = assocₘ-flatten Φ Ρ Ψ Ξ
+  assocₘ-boundary (a ∷ Θ') Φ Ρ Ψ Ξ = ap (a ∷_) (assocₘ-boundary Θ' Φ Ρ Ψ Ξ)
 
   -- Reassociations for interchange.  f has two slots: Θ ++ x ∷ Μ ++ y ∷ Κ.
 
@@ -44,28 +52,35 @@ private
   --   Θ ++ x ∷ Μ ++ y ∷ Κ  ≡  (Θ ++ x ∷ Μ) ++ y ∷ Κ
   interchange-slot₀ : ∀ {A : Type o} (Θ : List A) (x : A) (Μ : List A) (y : A) (Κ : List A)
     → Θ ++ x ∷ Μ ++ y ∷ Κ ≡ (Θ ++ x ∷ Μ) ++ y ∷ Κ
-  interchange-slot₀ Θ x Μ y Κ = sym (++-assoc Θ (x ∷ Μ) (y ∷ Κ))
+  interchange-slot₀ []       x Μ y Κ = refl
+  interchange-slot₀ (a ∷ Θ') x Μ y Κ = ap (a ∷_) (interchange-slot₀ Θ' x Μ y Κ)
 
   -- Expose y once x has been replaced by Γ:
   --   Θ ++ Γ ++ Μ ++ y ∷ Κ  ≡  (Θ ++ Γ ++ Μ) ++ y ∷ Κ
   interchange-slot₁ : ∀ {A : Type o} (Θ Γ Μ : List A) (y : A) (Κ : List A)
     → Θ ++ Γ ++ Μ ++ y ∷ Κ ≡ (Θ ++ Γ ++ Μ) ++ y ∷ Κ
-  interchange-slot₁ Θ Γ Μ y Κ =
-    sym (++-assoc Θ (Γ ++ Μ) (y ∷ Κ) ∙ ap (Θ ++_) (++-assoc Γ Μ (y ∷ Κ)))
+  interchange-slot₁ []       Γ Μ y Κ = sym (++-assoc Γ Μ (y ∷ Κ))
+  interchange-slot₁ (a ∷ Θ') Γ Μ y Κ = ap (a ∷_) (interchange-slot₁ Θ' Γ Μ y Κ)
 
   -- Expose x once y has been replaced by Δ:
   --   (Θ ++ x ∷ Μ) ++ Δ ++ Κ  ≡  Θ ++ x ∷ (Μ ++ Δ ++ Κ)
   interchange-slot₂ : ∀ {A : Type o} (Θ : List A) (x : A) (Μ Δ Κ : List A)
     → (Θ ++ x ∷ Μ) ++ Δ ++ Κ ≡ Θ ++ x ∷ (Μ ++ Δ ++ Κ)
-  interchange-slot₂ Θ x Μ Δ Κ = ++-assoc Θ (x ∷ Μ) (Δ ++ Κ)
+  interchange-slot₂ []       x Μ Δ Κ = refl
+  interchange-slot₂ (a ∷ Θ') x Μ Δ Κ = ap (a ∷_) (interchange-slot₂ Θ' x Μ Δ Κ)
+
+  -- (Γ ++ Μ) ++ Δ ++ Κ ≡ Γ ++ (Μ ++ Δ ++ Κ)  (base case of interchangeₘ-boundary)
+  interchange-flatten : ∀ {A : Type o} (Γ Μ Δ Κ : List A)
+    → (Γ ++ Μ) ++ Δ ++ Κ ≡ Γ ++ (Μ ++ Δ ++ Κ)
+  interchange-flatten []       Μ Δ Κ = refl
+  interchange-flatten (a ∷ Γ') Μ Δ Κ = ap (a ∷_) (interchange-flatten Γ' Μ Δ Κ)
 
   -- The interchange boundary:
   --   (Θ ++ Γ ++ Μ) ++ Δ ++ Κ  ≡  Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
   interchangeₘ-boundary : ∀ {A : Type o} (Θ Γ Μ Δ Κ : List A)
     → (Θ ++ Γ ++ Μ) ++ Δ ++ Κ ≡ Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
-  interchangeₘ-boundary Θ Γ Μ Δ Κ =
-      ++-assoc Θ (Γ ++ Μ) (Δ ++ Κ)
-    ∙ ap (Θ ++_) (++-assoc Γ Μ (Δ ++ Κ))
+  interchangeₘ-boundary []       Γ Μ Δ Κ = interchange-flatten Γ Μ Δ Κ
+  interchangeₘ-boundary (a ∷ Θ') Γ Μ Δ Κ = ap (a ∷_) (interchangeₘ-boundary Θ' Γ Μ Δ Κ)
 
 record Premulticategory (o h : Level) : Type (lsuc (o ⊔ h)) where
   no-eta-equality

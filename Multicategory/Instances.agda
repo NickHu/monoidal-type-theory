@@ -53,10 +53,12 @@ underlying-multicategory C = M where
   M .idₘr {Γ = x ∷ []}          f = idl f
   M .idₘr {Γ = x ∷ y ∷ Γ}       f = absurd (lower f)
 
-  -- Associativity is ordinary associativity when f, g, h are all unary.
-  -- (The boundary/subst are over empty lists, hence propositionally refl, but
-  -- not definitionally, so this needs transport-refl cancellations.)
-  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = z ∷ []}  f g h = {!!}
+  -- Associativity is ordinary associativity when f, g, h are all unary.  The
+  -- boundary and slot-unbury reassociations are over empty lists, so they are
+  -- definitionally constant (structural recursion); only the subst over the
+  -- refl-typed slot-unbury is a stuck transport, cancelled by transport-refl.
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = w ∷ []}  f g h =
+    ap (_∘ h) (transport-refl (f ∘ g)) ∙ sym (assoc f g h)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = []}      f g h = absurd (lower h)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = _ ∷ _ ∷ _} f g h = absurd (lower h)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = _ ∷ []}           f g h = absurd (lower g)
