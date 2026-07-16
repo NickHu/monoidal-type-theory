@@ -1,6 +1,6 @@
 open import Multicategory
 
-open import 1Lab.Prelude hiding (id ; _∘_ ; _++_)
+open import 1Lab.Prelude hiding (id ; _∘_)
 open import Cat.Base
 open import Data.List
 open import Data.List.Properties
@@ -38,14 +38,12 @@ underlying-multicategory C = M where
   M ._∘ₘ_ {Θ = []}     {Ξ = []}    {Γ = y ∷ []}     f g = f ∘ g
   M ._∘ₘ_ {Θ = []}     {Ξ = []}    {Γ = []}         f g = absurd (lower g)
   M ._∘ₘ_ {Θ = []}     {Ξ = []}    {Γ = _ ∷ _ ∷ _}  f g = absurd (lower g)
-  M ._∘ₘ_ {Θ = []}     {Ξ = _ ∷ []}                  f g = absurd (lower f)
-  M ._∘ₘ_ {Θ = []}     {Ξ = _ ∷ _ ∷ _}               f g = absurd (lower f)
+  M ._∘ₘ_ {Θ = []}     {Ξ = _ ∷ _}                   f g = absurd (lower f)
   M ._∘ₘ_ {Θ = _ ∷ []}                                f g = absurd (lower f)
   M ._∘ₘ_ {Θ = _ ∷ _ ∷ _}                             f g = absurd (lower f)
 
   M .idₘl {Θ = []}   {Ξ = []}        f = idr f
-  M .idₘl {Θ = []}   {Ξ = _ ∷ []}    f = absurd (lower f)
-  M .idₘl {Θ = []}   {Ξ = _ ∷ _ ∷ _} f = absurd (lower f)
+  M .idₘl {Θ = []}   {Ξ = _ ∷ _}     f = absurd (lower f)
   M .idₘl {Θ = _ ∷ []}               f = absurd (lower f)
   M .idₘl {Θ = _ ∷ _ ∷ _}            f = absurd (lower f)
 
@@ -61,19 +59,16 @@ underlying-multicategory C = M where
     ap (_∘ h) (transport-refl (f ∘ g)) ∙ sym (assoc f g h)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = []}      f g h = absurd (lower h)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = _ ∷ _ ∷ _} f g h = absurd (lower h)
-  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = _ ∷ []}           f g h = absurd (lower g)
-  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = _ ∷ _ ∷ _}        f g h = absurd (lower g)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = _ ∷ _}            f g h = absurd (lower g)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = _ ∷ []}                    f g h = absurd (lower g)
   M .assocₘ {Θ = []} {Ξ = []} {Φ = _ ∷ _ ∷ _}                 f g h = absurd (lower g)
-  M .assocₘ {Θ = []} {Ξ = _ ∷ []}                             f g h = absurd (lower f)
-  M .assocₘ {Θ = []} {Ξ = _ ∷ _ ∷ _}                          f g h = absurd (lower f)
+  M .assocₘ {Θ = []} {Ξ = _ ∷ _}                              f g h = absurd (lower f)
   M .assocₘ {Θ = _ ∷ []}                                      f g h = absurd (lower f)
   M .assocₘ {Θ = _ ∷ _ ∷ _}                                   f g h = absurd (lower f)
 
   -- f's domain Θ ++ x ∷ Μ ++ y ∷ Κ always has ≥ 2 elements, so it is never
   -- inhabited; interchange is vacuous.
   M .interchangeₘ {Θ = []}      {Μ = []}          f g h = absurd (lower f)
-  M .interchangeₘ {Θ = []}      {Μ = _ ∷ []}      f g h = absurd (lower f)
-  M .interchangeₘ {Θ = []}      {Μ = _ ∷ _ ∷ _}   f g h = absurd (lower f)
+  M .interchangeₘ {Θ = []}      {Μ = _ ∷ _}       f g h = absurd (lower f)
   M .interchangeₘ {Θ = _ ∷ []}                     f g h = absurd (lower f)
   M .interchangeₘ {Θ = _ ∷ _ ∷ _}                  f g h = absurd (lower f)
