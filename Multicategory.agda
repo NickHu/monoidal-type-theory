@@ -1,67 +1,111 @@
-open import 1Lab.Prelude hiding (map)
-open import Data.Nat
-open import Data.Fin.Base renaming (_<_ to _<ᶠ_)
-open import Data.Fin.Extra
-open import Data.Vec.Base hiding (_++_)
-open import Data.Vec.Extra
-open import Data.Vec.Splice
+open import 1Lab.Prelude hiding (id ; _∘_)
+open import Data.List
+open import Data.List.Properties
 
 module Multicategory where
+
+-- A (non-unital) multicategory: multimorphisms take a list of objects (the
+-- context) to a single object.  Contexts are lists, so the only operation on
+-- them is _++_; there are no length indices, no Fin, and no splice.  A slot is
+-- specified by a decomposition of the list: Θ ++ x ∷ Ξ marks x as the slot,
+-- with Θ before it and Ξ after.
+--
+-- Naming convention: x y z τ are objects (τ reserved for a codomain);
+-- Γ Δ Θ Ξ Φ Ψ Ρ Μ Κ are contexts (lists); f g h are multimorphisms.
+
+private variable
+  o h : Level
+
+-- List reassociations underlying the associativity and interchange laws.
+-- All homogeneous ≡ (lists carry no length index), so an object-valued fold
+-- over the context reduces through them definitionally.
+
+-- Expose a slot buried under an extra prefix:
+--   Θ ++ ((Φ ++ x ∷ Ψ) ++ Ξ)  ≡  (Θ ++ Φ) ++ x ∷ (Ψ ++ Ξ)
+slot-unbury : ∀ {A : Type o} (Θ Φ : List A) (x : A) (Ψ Ξ : List A)
+  → Θ ++ ((Φ ++ x ∷ Ψ) ++ Ξ) ≡ (Θ ++ Φ) ++ x ∷ (Ψ ++ Ξ)
+slot-unbury Θ Φ x Ψ Ξ =
+  ap (Θ ++_) (++-assoc Φ (x ∷ Ψ) Ξ) ∙ sym (++-assoc Θ Φ (x ∷ Ψ ++ Ξ))
+
+-- The associativity boundary:
+--   (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ)  ≡  Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
+assocₘ-boundary : ∀ {A : Type o} (Θ Φ Ρ Ψ Ξ : List A)
+  → (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ) ≡ Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
+assocₘ-boundary Θ Φ Ρ Ψ Ξ =
+    ++-assoc Θ Φ (Ρ ++ Ψ ++ Ξ)
+  ∙ sym (ap (Θ ++_) (++-assoc Φ (Ρ ++ Ψ) Ξ ∙ ap (Φ ++_) (++-assoc Ρ Ψ Ξ)))
+
+-- Reassociations for interchange.  f has two slots: Θ ++ x ∷ Μ ++ y ∷ Κ.
+
+-- Expose the second slot y of f's own domain:
+--   Θ ++ x ∷ Μ ++ y ∷ Κ  ≡  (Θ ++ x ∷ Μ) ++ y ∷ Κ
+interchange-slot₀ : ∀ {A : Type o} (Θ : List A) (x : A) (Μ : List A) (y : A) (Κ : List A)
+  → Θ ++ x ∷ Μ ++ y ∷ Κ ≡ (Θ ++ x ∷ Μ) ++ y ∷ Κ
+interchange-slot₀ Θ x Μ y Κ = sym (++-assoc Θ (x ∷ Μ) (y ∷ Κ))
+
+-- Expose y once x has been replaced by Γ:
+--   Θ ++ Γ ++ Μ ++ y ∷ Κ  ≡  (Θ ++ Γ ++ Μ) ++ y ∷ Κ
+interchange-slot₁ : ∀ {A : Type o} (Θ Γ Μ : List A) (y : A) (Κ : List A)
+  → Θ ++ Γ ++ Μ ++ y ∷ Κ ≡ (Θ ++ Γ ++ Μ) ++ y ∷ Κ
+interchange-slot₁ Θ Γ Μ y Κ =
+  sym (++-assoc Θ (Γ ++ Μ) (y ∷ Κ) ∙ ap (Θ ++_) (++-assoc Γ Μ (y ∷ Κ)))
+
+-- Expose x once y has been replaced by Δ:
+--   (Θ ++ x ∷ Μ) ++ Δ ++ Κ  ≡  Θ ++ x ∷ (Μ ++ Δ ++ Κ)
+interchange-slot₂ : ∀ {A : Type o} (Θ : List A) (x : A) (Μ Δ Κ : List A)
+  → (Θ ++ x ∷ Μ) ++ Δ ++ Κ ≡ Θ ++ x ∷ (Μ ++ Δ ++ Κ)
+interchange-slot₂ Θ x Μ Δ Κ = ++-assoc Θ (x ∷ Μ) (Δ ++ Κ)
+
+-- The interchange boundary:
+--   (Θ ++ Γ ++ Μ) ++ Δ ++ Κ  ≡  Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
+interchangeₘ-boundary : ∀ {A : Type o} (Θ Γ Μ Δ Κ : List A)
+  → (Θ ++ Γ ++ Μ) ++ Δ ++ Κ ≡ Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
+interchangeₘ-boundary Θ Γ Μ Δ Κ =
+    ++-assoc Θ (Γ ++ Μ) (Δ ++ Κ)
+  ∙ ap (Θ ++_) (++-assoc Γ Μ (Δ ++ Κ))
 
 record Premulticategory (o h : Level) : Type (lsuc (o ⊔ h)) where
   no-eta-equality
   field
     Obₘ : Type o
-    Homₘ : {n : Nat} → Vec Obₘ n → Obₘ → Type h
-    Homₘ-set : {n : Nat} {Γ : Vec Obₘ n} {τ : Obₘ} → is-set (Homₘ Γ τ)
+    Homₘ : List Obₘ → Obₘ → Type h
+    Homₘ-set : ∀ {Γ τ} → is-set (Homₘ Γ τ)
 
     idₘ : ∀ {x} → Homₘ (x ∷ []) x
-    _∘ₘ[_]_
-      : ∀ {m n} {Δ : Vec Obₘ n} {Γ : Vec Obₘ m} {τ}
-      → Homₘ Δ τ
-      → (i : Fin n)
-      → Homₘ Γ (lookup Δ i)
-      → Homₘ (splice Δ i Γ) τ
 
-    idₘl[_]_ : ∀ {n} {Γ : Vec Obₘ (suc n)} {τ} → (i : Fin (suc n)) → (f : Homₘ Γ τ) → PathP (λ j → Homₘ (splice-singleton-id {xs = Γ} {i = i} j) τ) (f ∘ₘ[ i ] idₘ) f
-    idₘr : ∀ {n} {Γ : Vec Obₘ n} {τ} → (f : Homₘ Γ τ) → PathP (λ i → Homₘ (++-zeror {Γ = Γ} i) τ) (idₘ ∘ₘ[ fzero ] f) f
+    -- Plug g into the marked slot of f.  f's domain is Θ ++ x ∷ Ξ; the slot x
+    -- is replaced by g's context Γ.
+    _∘ₘ_ : ∀ {Θ Ξ Γ} {x τ}
+        → Homₘ (Θ ++ x ∷ Ξ) τ → Homₘ Γ x → Homₘ (Θ ++ Γ ++ Ξ) τ
 
-    assocₘ
-      : ∀ {n m p} {Θ : Vec Obₘ (suc n)} {Δ : Vec Obₘ (suc m)} {Γ : Vec Obₘ p} {τ}
-      → (i : Fin (suc n)) → (j : Fin (suc m))
-      → (f : Homₘ Θ τ) → (g : Homₘ Δ (lookup Θ i)) → (h : Homₘ Γ (lookup Δ j))
-      → PathP (λ t → Homₘ (splice-assoc Θ i Δ j Γ t) τ)
-          ((f ∘ₘ[ i ] g) ∘ₘ[ j f+ i ]
-            (subst (λ σ → Homₘ Γ σ) (sym (lookup-splice Θ i Δ j)) h))
-          (f ∘ₘ[ i ] (g ∘ₘ[ j ] h))
+    -- Left identity is homogeneous: [x] ++ Ξ = x ∷ Ξ definitionally, so
+    -- plugging idₘ into x's slot leaves the context unchanged.
+    idₘl : ∀ {Θ Ξ} {x τ} (f : Homₘ (Θ ++ x ∷ Ξ) τ) → (f ∘ₘ idₘ) ≡ f
 
-    -- Interchange: plug into two distinct slots of f in either order.
-    -- Axiom for i <ᶠ k; the k <ᶠ i case is derived in Reasoning.
-    interchangeₘ
-      : ∀ {n m p} {Θ : Vec Obₘ (suc (suc n))} {Γ : Vec Obₘ m} {Δ : Vec Obₘ p} {τ}
-      → (i k : Fin (suc (suc n))) → (i<k : i <ᶠ k)
-      → (f : Homₘ Θ τ)
-      → (g : Homₘ Γ (lookup Θ i))
-      → (h : Homₘ Δ (lookup Θ k))
-      → PathP (λ t → Homₘ (splice-interchange Θ i k i<k Γ Δ t) τ)
-          ((f ∘ₘ[ i ] g) ∘ₘ[ shift-spliceʳ {n = suc n} {m} {i} {k} i<k ]
-            (subst (λ σ → Homₘ Δ σ) (sym (lookup-shiftʳ Θ i k i<k Γ)) h))
-          ((f ∘ₘ[ k ] h) ∘ₘ[ shift-spliceˡ {n = suc n} {p} {i} {k} i<k ]
-            (subst (λ σ → Homₘ Γ σ) (sym (lookup-shiftˡ Θ i k i<k Δ)) g))
+    -- Right identity ranges over ++-idr: [] ++ Γ ++ [] = Γ ++ [].  The empty
+    -- decomposition of idₘ's domain is given explicitly (Agda will not invert
+    -- _++_ on the concrete singleton x ∷ [] to recover Θ = []).
+    idₘr : ∀ {Γ τ} (f : Homₘ Γ τ)
+        → PathP (λ i → Homₘ (++-idr Γ i) τ) (_∘ₘ_ {Θ = []} {Ξ = []} idₘ f) f
 
-module Reasoning {o h} (M : Premulticategory o h) where
-  open Premulticategory M public
+    -- Associativity (the pentagon).  Plugging h into the slot inherited from g
+    -- requires exposing that slot via slot-unbury.
+    assocₘ : ∀ {Θ Ξ Φ Ψ Ρ} {x y τ}
+        → (f : Homₘ (Θ ++ x ∷ Ξ) τ)
+        → (g : Homₘ (Φ ++ y ∷ Ψ) x)
+        → (h : Homₘ Ρ y)
+        → PathP (λ i → Homₘ (assocₘ-boundary Θ Φ Ρ Ψ Ξ i) τ)
+            (subst (λ Ω → Homₘ Ω τ) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ₘ g) ∘ₘ h)
+            (f ∘ₘ (g ∘ₘ h))
 
-  -- Interchange with k <ᶠ i, by swapping the two slots in interchangeₘ.
-  interchangeₘ-<
-    : ∀ {n m p} {Θ : Vec Obₘ (suc (suc n))} {Γ : Vec Obₘ m} {Δ : Vec Obₘ p} {τ}
-    → (i k : Fin (suc (suc n))) → (k<i : k <ᶠ i)
-    → (f : Homₘ Θ τ)
-    → (g : Homₘ Γ (lookup Θ i))
-    → (h : Homₘ Δ (lookup Θ k))
-    → PathP (λ t → Homₘ (splice-interchange-< Θ i k k<i Γ Δ t) τ)
-        ((f ∘ₘ[ k ] h) ∘ₘ[ shift-spliceʳ {n = suc n} {p} {i = k} {k = i} k<i ]
-          (subst (λ σ → Homₘ Γ σ) (sym (lookup-shiftʳ Θ k i k<i Δ)) g))
-        ((f ∘ₘ[ i ] g) ∘ₘ[ shift-spliceˡ {n = suc n} {m} {i = k} {k = i} k<i ]
-          (subst (λ σ → Homₘ Δ σ) (sym (lookup-shiftˡ Θ k i k<i Γ)) h))
-  interchangeₘ-< i k k<i f g h = interchangeₘ k i k<i f h g
+    -- Interchange: plug g and h into the two slots of f, in either order.
+    interchangeₘ : ∀ {Θ Μ Κ Γ Δ} {x y τ}
+        → (f : Homₘ (Θ ++ x ∷ Μ ++ y ∷ Κ) τ)
+        → (g : Homₘ Γ x)
+        → (h : Homₘ Δ y)
+        → PathP (λ i → Homₘ (interchangeₘ-boundary Θ Γ Μ Δ Κ i) τ)
+            (subst (λ Ω → Homₘ Ω τ) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ₘ g) ∘ₘ h)
+            (subst (λ Ω → Homₘ Ω τ) (interchange-slot₂ Θ x Μ Δ Κ)
+              (subst (λ Ω → Homₘ Ω τ) (interchange-slot₀ Θ x Μ y Κ) f ∘ₘ h) ∘ₘ g)
+
+  infixr 9 _∘ₘ_

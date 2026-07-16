@@ -1,2 +1,4 @@
 .direnv/
 _build/
+.claude/
+1lab

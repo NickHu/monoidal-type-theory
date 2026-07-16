@@ -1,65 +1,77 @@
 open import Multicategory
 
-open import 1Lab.Prelude hiding (id ; _∘_)
+open import 1Lab.Prelude hiding (id ; _∘_ ; _++_)
 open import Cat.Base
-open import Data.Nat
-open import Data.Fin.Base
-open import Data.Fin.Extra
-open import Data.Vec.Base hiding (_++_)
-open import Data.Vec.Extra
-open import Data.Vec.Splice
+open import Data.List
+open import Data.List.Properties
 
 module Multicategory.Instances where
 
 -- Every category is (trivially) a multicategory: the only inhabited
 -- multihomsets are the unary ones, which agree with the original Homs.
+--
+-- Because contexts are lists (no length index), a multihomset Homₘ Γ τ is
+-- inhabited only when Γ is a singleton.  When a domain is written Θ ++ x ∷ Ξ
+-- with Θ a non-empty variable, the (++) is stuck, so to expose that the list is
+-- /not/ a singleton we split on the first two elements of each part.
 underlying-multicategory : ∀ {o h} → Precategory o h → Premulticategory o h
 underlying-multicategory C = M where
   open Precategory C
   open Premulticategory
 
+  homₘ : List Ob → Ob → Type _
+  homₘ []           τ = Lift _ ⊥
+  homₘ (x ∷ [])     τ = Hom x τ
+  homₘ (x ∷ y ∷ Γ)  τ = Lift _ ⊥
+
   M : Premulticategory _ _
   M .Obₘ = Ob
+  M .Homₘ = homₘ
 
-  M .Homₘ {zero} _ _ = Lift _ ⊥
-  M .Homₘ {suc zero} Γ y = Hom (head Γ) y
-  M .Homₘ {suc (suc _)} _ _ = Lift _ ⊥
-
-  M .Homₘ-set {zero} = hlevel 2
-  M .Homₘ-set {suc zero} = Hom-set _ _
-  M .Homₘ-set {suc (suc _)} = hlevel 2
+  M .Homₘ-set {Γ = []}           = hlevel 2
+  M .Homₘ-set {Γ = x ∷ []}       = Hom-set _ _
+  M .Homₘ-set {Γ = x ∷ y ∷ Γ}    = hlevel 2
 
   M .idₘ = id
 
-  M ._∘ₘ[_]_ {suc zero} {suc zero} {_ ∷ []} {_ ∷ []} f fzero g = f ∘ g
-  M ._∘ₘ[_]_ {suc zero} {suc zero} f (fin (suc _) ⦃ b ⦄) g =
-    absurd (¬suc≤0 (≤-peel b))
-  M ._∘ₘ[_]_ {zero} {suc zero} f i g = absurd (lower g)
-  M ._∘ₘ[_]_ {suc (suc _)} {suc zero} f i g = absurd (lower g)
-  M ._∘ₘ[_]_ {_} {zero} f i g = absurd (Fin-absurd i)
-  M ._∘ₘ[_]_ {_} {suc (suc _)} f i g = absurd (lower f)
+  -- Composition is ordinary composition when both sides are singletons.
+  M ._∘ₘ_ {Θ = []}     {Ξ = []}    {Γ = y ∷ []}     f g = f ∘ g
+  M ._∘ₘ_ {Θ = []}     {Ξ = []}    {Γ = []}         f g = absurd (lower g)
+  M ._∘ₘ_ {Θ = []}     {Ξ = []}    {Γ = _ ∷ _ ∷ _}  f g = absurd (lower g)
+  M ._∘ₘ_ {Θ = []}     {Ξ = _ ∷ []}                  f g = absurd (lower f)
+  M ._∘ₘ_ {Θ = []}     {Ξ = _ ∷ _ ∷ _}               f g = absurd (lower f)
+  M ._∘ₘ_ {Θ = _ ∷ []}                                f g = absurd (lower f)
+  M ._∘ₘ_ {Θ = _ ∷ _ ∷ _}                             f g = absurd (lower f)
 
-  M .idₘl[_]_ {zero} {_ ∷ []} fzero f = idr f
-  M .idₘl[_]_ {zero} (fin (suc _) ⦃ b ⦄) f = absurd (¬suc≤0 (≤-peel b))
-  M .idₘl[_]_ {suc _} i f = absurd (lower f)
+  M .idₘl {Θ = []}   {Ξ = []}        f = idr f
+  M .idₘl {Θ = []}   {Ξ = _ ∷ []}    f = absurd (lower f)
+  M .idₘl {Θ = []}   {Ξ = _ ∷ _ ∷ _} f = absurd (lower f)
+  M .idₘl {Θ = _ ∷ []}               f = absurd (lower f)
+  M .idₘl {Θ = _ ∷ _ ∷ _}            f = absurd (lower f)
 
-  M .idₘr {suc zero} {_ ∷ []} f = idl f
-  M .idₘr {zero} f = absurd (lower f)
-  M .idₘr {suc (suc _)} f = absurd (lower f)
+  M .idₘr {Γ = []}              f = absurd (lower f)
+  M .idₘr {Γ = x ∷ []}          f = idl f
+  M .idₘr {Γ = x ∷ y ∷ Γ}       f = absurd (lower f)
 
-  M .assocₘ {zero} {zero} {suc zero} {z ∷ []} {y ∷ []} {x ∷ []} fzero fzero f g h =
-    (f ∘ g) ∘ subst (Hom x) (sym (lookup-splice (z ∷ []) fzero (y ∷ []) fzero)) h
-      ≡⟨ ap ((f ∘ g) ∘_) (transport-refl h) ⟩
-    (f ∘ g) ∘ h
-      ≡˘⟨ assoc f g h ⟩
-    f ∘ (g ∘ h) ∎
-  M .assocₘ {zero} {zero} {suc zero} fzero (fin (suc _) ⦃ b ⦄) f g h =
-    absurd (¬suc≤0 (≤-peel b))
-  M .assocₘ {zero} {zero} {suc zero} (fin (suc _) ⦃ b ⦄) j f g h =
-    absurd (¬suc≤0 (≤-peel b))
-  M .assocₘ {zero} {zero} {zero} i j f g h = absurd (lower h)
-  M .assocₘ {zero} {zero} {suc (suc _)} i j f g h = absurd (lower h)
-  M .assocₘ {zero} {suc _} i j f g h = absurd (lower g)
-  M .assocₘ {suc _} i j f g h = absurd (lower f)
+  -- Associativity is ordinary associativity when f, g, h are all unary.
+  -- (The boundary/subst are over empty lists, hence propositionally refl, but
+  -- not definitionally, so this needs transport-refl cancellations.)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = z ∷ []}  f g h = {!!}
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = []}      f g h = absurd (lower h)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} {Ρ = _ ∷ _ ∷ _} f g h = absurd (lower h)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = _ ∷ []}           f g h = absurd (lower g)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = _ ∷ _ ∷ _}        f g h = absurd (lower g)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = _ ∷ []}                    f g h = absurd (lower g)
+  M .assocₘ {Θ = []} {Ξ = []} {Φ = _ ∷ _ ∷ _}                 f g h = absurd (lower g)
+  M .assocₘ {Θ = []} {Ξ = _ ∷ []}                             f g h = absurd (lower f)
+  M .assocₘ {Θ = []} {Ξ = _ ∷ _ ∷ _}                          f g h = absurd (lower f)
+  M .assocₘ {Θ = _ ∷ []}                                      f g h = absurd (lower f)
+  M .assocₘ {Θ = _ ∷ _ ∷ _}                                   f g h = absurd (lower f)
 
-  M .interchangeₘ _ _ _ f _ _ = absurd (lower f)
+  -- f's domain Θ ++ x ∷ Μ ++ y ∷ Κ always has ≥ 2 elements, so it is never
+  -- inhabited; interchange is vacuous.
+  M .interchangeₘ {Θ = []}      {Μ = []}          f g h = absurd (lower f)
+  M .interchangeₘ {Θ = []}      {Μ = _ ∷ []}      f g h = absurd (lower f)
+  M .interchangeₘ {Θ = []}      {Μ = _ ∷ _ ∷ _}   f g h = absurd (lower f)
+  M .interchangeₘ {Θ = _ ∷ []}                     f g h = absurd (lower f)
+  M .interchangeₘ {Θ = _ ∷ _ ∷ _}                  f g h = absurd (lower f)
