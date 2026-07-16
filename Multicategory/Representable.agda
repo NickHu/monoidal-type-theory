@@ -5,6 +5,7 @@ open import Cat.Base
 import Cat.Reasoning as Cr
 open import Cat.Monoidal.Base
 open import Cat.Univalent using (path→iso)
+import Cat.Functor.Base as FB
 open import Data.List
 open import Data.List.Properties
 
@@ -41,6 +42,31 @@ representable-multicategory C M = Mc where
     → ⊗-context (A ++ B ++ C) ≅ (⊗-context A ⊗ (⊗-context B ⊗ ⊗-context C))
   ⊗-context-++-++ A B C =
     ⊗-context-++ A (B ++ C) ∙Iso ▶.F-map-iso (⊗-context-++ B C)
+
+  -- path→iso of a refl path is id-iso.
+  path→iso-refl : ∀ {A : Ob} → path→iso (refl {x = A}) ≡ id-iso
+  path→iso-refl = transport-refl _
+
+  -- path→iso sees through tensoring-on-the-left (Cat.Functor.Base.F-iso).
+  path→iso-ap-⊗ : ∀ x {A B : Ob} (p : A ≡ B)
+    → path→iso (ap (λ Y → x ⊗ Y) p) ≡ ▶.F-map-iso (path→iso p)
+  path→iso-ap-⊗ x p = ap-F₀-to-iso p
+    where open FB.F-iso (-⊗-.Right x)
+
+  -- ⊗(Γ ++ []) ≅ ⊗Γ, mirroring ++-idr's recursion (id at [], ▶ at cons).
+  -- Stated this way so path→iso of the ++-idr boundary equals it by a clean
+  -- induction (no ρ/α coherence chase) — see ⊗-context-++-idr-path.
+  ⊗-context-++-idr : (Γ : List Ob) → ⊗-context (Γ ++ []) ≅ ⊗-context Γ
+  ⊗-context-++-idr []      = id-iso
+  ⊗-context-++-idr (x ∷ Γ) = ▶.F-map-iso (⊗-context-++-idr Γ)
+
+  -- The ++-idr boundary induces exactly ⊗-context-++-idr.
+  ⊗-context-++-idr-path : (Γ : List Ob)
+    → path→iso (ap ⊗-context (++-idr Γ)) ≡ ⊗-context-++-idr Γ
+  ⊗-context-++-idr-path []      = path→iso-refl
+  ⊗-context-++-idr-path (x ∷ Γ) =
+      path→iso-ap-⊗ x (ap ⊗-context (++-idr Γ))
+    ∙ ap ▶.F-map-iso (⊗-context-++-idr-path Γ)
 
   -- Plug g into the slot x of f's domain: rebracket ⊗(Θ ++ Γ ++ Ξ) so that ⊗Γ
   -- sits where x was, apply g there (whiskered with identities), and rebracket
