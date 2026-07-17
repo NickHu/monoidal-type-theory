@@ -4,7 +4,7 @@ open import 1Lab.Prelude hiding (id ; _∘_)
 open import Cat.Base
 import Cat.Reasoning as Cr
 open import Cat.Monoidal.Base
-open import Cat.Univalent using (path→iso)
+open import Cat.Univalent using (path→iso; Hom-transport)
 import Cat.Functor.Base as FB
 open import Data.List
 open import Data.List.Properties
@@ -142,6 +142,29 @@ representable-multicategory C M = Mc where
           id
         ∎
 
-  Mc .idₘr f        = {!!}
+  Mc .idₘr {Γ = Γ} {z = z} f = to-pathp eq
+    where
+      -- Transport the domain from ⊗(Γ++[]) to ⊗Γ via the ++-idr boundary.
+      eq : transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f) ≡ f
+      eq =
+          transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f)
+        ≡⟨ Hom-transport C (ap ⊗-context (++-idr Γ)) refl _ ⟩
+          path→iso refl .to ∘ (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from
+        ≡⟨ ap (λ k → k ∘ (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from)
+               (ap (λ φ → φ .to) path→iso-refl) ⟩
+          id ∘ (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from
+        ≡⟨ idl _ ⟩
+          (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from
+        ≡⟨ ap ((ρ← z ∘ plug [] Γ [] f) ∘_)
+               (ap (λ φ → φ .from) (⊗-context-++-idr-path Γ)) ⟩
+          (ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from
+        ≡⟨ core-eq ⟩
+          f
+        ∎
+
+      -- The core equation: after the transport, the composite equals f.
+      -- Chain: λ-naturality, ρ-naturality, ▶.F-∘, and the iso laws.
+      core-eq : (ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from ≡ f
+      core-eq = {!!}
   Mc .assocₘ f g h    = {!!}
   Mc .interchangeₘ f g h = {!!}
