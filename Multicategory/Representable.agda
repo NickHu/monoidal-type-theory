@@ -2,9 +2,11 @@ open import Multicategory
 
 open import 1Lab.Prelude hiding (id ; _∘_)
 open import Cat.Base
+open Cat.Base._=>_ public using (is-natural)
 import Cat.Reasoning as Cr
 open import Cat.Monoidal.Base
 open import Cat.Univalent using (path→iso; Hom-transport)
+open import Cat.Functor.Naturality
 import Cat.Functor.Base as FB
 open import Data.List
 open import Data.List.Properties
@@ -144,7 +146,12 @@ representable-multicategory C M = Mc where
 
   Mc .idₘr {Γ = Γ} {z = z} f = to-pathp eq
     where
-      -- Transport the domain from ⊗(Γ++[]) to ⊗Γ via the ++-idr boundary.
+      -- λ-naturality: ρ←z ∘ λ←(at z⊗Unit) = λ←(at z) ∘ (Unit▶ρ←z).
+      λ-nat-rho = unitor-l .Isoⁿ.from .is-natural (z ⊗ Unit) z (ρ← z)
+
+      -- ρ-naturality: ρ←z ∘ (f◀Unit) = f ∘ ρ←(⊗Γ).
+      ρ-nat-f = sym (unitor-r .Isoⁿ.from .is-natural (⊗-context Γ) z f)
+
       eq : transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f) ≡ f
       eq =
           transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f)
