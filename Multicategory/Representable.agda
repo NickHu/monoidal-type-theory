@@ -158,13 +158,8 @@ representable-multicategory C M = Mc where
         ≡⟨ ap ((ρ← z ∘ plug [] Γ [] f) ∘_)
                (ap (λ φ → φ .from) (⊗-context-++-idr-path Γ)) ⟩
           (ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from
-        ≡⟨ core-eq ⟩
+        ≡⟨ {!!} ⟩
           f
         ∎
-
-      -- The core equation: after the transport, the composite equals f.
-      -- Chain: λ-naturality, ρ-naturality, ▶.F-∘, and the iso laws.
-      core-eq : (ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from ≡ f
-      core-eq = {!!}
   Mc .assocₘ f g h    = {!!}
   Mc .interchangeₘ f g h = {!!}
