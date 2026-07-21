@@ -341,13 +341,8 @@ representable-multicategory C M = Mc where
   φ : (Γ Δ : List Ob) → Hom (⊗-context Γ ⊗ ⊗-context Δ) (⊗-context (Γ ++ Δ))
   φ Γ Δ = (⊗-context-++ Γ Δ) .from
 
-  -- Cons-reductions of the structure maps (definitional, hence refl):
-  --   ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to  =  a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to
-  --   φ (a ∷ Γ) Δ                      =  (a ▶ φ Γ Δ) ∘ α→ (a , ⊗Γ , ⊗Δ)
-  char-to-cons : (a : Ob) (Γ Δ Ξ : List Ob)
-    → ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to ≡ a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to
-  char-to-cons a Γ Δ Ξ = refl
-
+  -- Cons-reduction of φ (definitional, hence refl):
+  --   φ (a ∷ Γ) Δ  =  (a ▶ φ Γ Δ) ∘ α→ (a , ⊗Γ , ⊗Δ)
   φ-cons : (a : Ob) (Γ Δ : List Ob)
     → φ (a ∷ Γ) Δ ≡ (a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , ⊗-context Δ)
   φ-cons a Γ Δ = refl
@@ -456,19 +451,11 @@ representable-multicategory C M = Mc where
       ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to
   F-α→-to Γ Δ Ξ = sym helper
     where
-      qq : (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to) ∘ (⊗-context Γ ▶ φ Δ Ξ) ≡ id
-      qq = ▶.annihilate ((⊗-context-++ Δ Ξ) .invl)
-      pp : (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ φ Γ (Δ ++ Ξ) ≡ id
-      pp = (⊗-context-++ Γ (Δ ++ Ξ)) .invl
-      dd : (φ Γ Δ ◀ ⊗-context Ξ) ∘ ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ) ≡ id
-      dd = ◀.annihilate ((⊗-context-++ Γ Δ) .invr)
-      bb : φ (Γ ++ Δ) Ξ ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to ≡ id
-      bb = (⊗-context-++ (Γ ++ Δ) Ξ) .invr
-
       QS : (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
          ≡ (⊗-context-++ Γ (Δ ++ Ξ)) .to
              ∘ ( ++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)) )
-      QS = sym (cancell pp) ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (F-α→ Γ Δ Ξ))
+      QS = sym (cancell ((⊗-context-++ Γ (Δ ++ Ξ)) .invl))
+         ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (F-α→ Γ Δ Ξ))
 
       MID : (⊗-context Γ ▶ φ Δ Ξ)
               ∘ ( α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
@@ -480,8 +467,10 @@ representable-multicategory C M = Mc where
         ∙ sym (assoc _ _ _)
         ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (assoc _ _ _))
         ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w)) (sym (assoc _ _ _))
-        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ w))) (cancell dd)
-        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w)) bb
+        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ w)))
+             (cancell (◀.annihilate ((⊗-context-++ Γ Δ) .invr)))
+        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w))
+             ((⊗-context-++ (Γ ++ Δ) Ξ) .invr)
         ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (idr _)
 
       helper : α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
@@ -490,7 +479,8 @@ representable-multicategory C M = Mc where
              ≡ (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to)
                  ∘ (⊗-context-++ Γ (Δ ++ Ξ)) .to
                  ∘ (++-assoc-⊗-iso Γ Δ Ξ) .to
-      helper = sym (cancell qq) ∙ ap ((⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to) ∘_) MID
+      helper = sym (cancell (▶.annihilate ((⊗-context-++ Δ Ξ) .invl)))
+             ∙ ap ((⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to) ∘_) MID
 
   Mc : Premulticategory _ _
   Mc .Obₘ = Ob
@@ -557,12 +547,6 @@ representable-multicategory C M = Mc where
 
   Mc .idₘr {Γ = Γ} {z = z} f = to-pathp eq
     where
-      -- λ-naturality: ρ←z ∘ λ←(at z⊗Unit) = λ←(at z) ∘ (Unit▶ρ←z).
-      λ-nat-rho = λ←nat (ρ← z)
-
-      -- ρ-naturality: ρ←z ∘ (f◀Unit) = f ∘ ρ←(⊗Γ).
-      ρ-nat-f = sym (ρ←nat f)
-
       -- The three-way split ⊗(Γ++[]) ≅ Unit ⊗ (⊗Γ ⊗ Unit) and the ++-idr iso.
       split : ⊗-context (Γ ++ []) ≅ (Unit ⊗ (⊗-context Γ ⊗ Unit))
       split = ⊗-context-++-++ [] Γ []
@@ -575,12 +559,6 @@ representable-multicategory C M = Mc where
       intro : Hom (⊗-context Γ) (Unit ⊗ (⊗-context Γ ⊗ Unit))
       intro = split .to ∘ ρ-idr .from
 
-      -- λ→-naturality moves ρ-idr.from past the leading-unit λ→.
-      λ→-nat
-        : λ→ _ ∘ ρ-idr .from ≡ (Unit ▶ ρ-idr .from) ∘ λ→ (⊗-context Γ)
-      λ→-nat =
-        λ→nat (ρ-idr .from)
-
       -- intro = (Unit ▶ ρ→(⊗Γ)) ∘ λ→(⊗Γ): the leading [] contributes λ→ and the
       -- trailing [] contributes ρ→ (via ⊗-context-++-[]-ρ).
       intro-eq : intro ≡ (Unit ▶ ρ→ (⊗-context Γ)) ∘ λ→ (⊗-context Γ)
@@ -590,7 +568,7 @@ representable-multicategory C M = Mc where
           ((Unit ▶ (⊗-context-++ Γ []) .to) ∘ λ→ _) ∘ ρ-idr .from
         ≡⟨ sym (assoc _ _ _) ⟩
           (Unit ▶ (⊗-context-++ Γ []) .to) ∘ (λ→ _ ∘ ρ-idr .from)
-        ≡⟨ ap ((Unit ▶ (⊗-context-++ Γ []) .to) ∘_) λ→-nat ⟩
+        ≡⟨ ap ((Unit ▶ (⊗-context-++ Γ []) .to) ∘_) (λ→nat (ρ-idr .from)) ⟩
           (Unit ▶ (⊗-context-++ Γ []) .to) ∘ ((Unit ▶ ρ-idr .from) ∘ λ→ (⊗-context Γ))
         ≡⟨ assoc _ _ _ ⟩
           ((Unit ▶ (⊗-context-++ Γ []) .to) ∘ (Unit ▶ ρ-idr .from)) ∘ λ→ (⊗-context Γ)
@@ -618,16 +596,12 @@ representable-multicategory C M = Mc where
           λ→ (⊗-context Γ)
         ∎
 
-      -- λ-naturality: λ←_z ∘ (Unit ▶ f) = f ∘ λ←(⊗Γ).
-      λ-nat-f : λ← z ∘ (Unit ▶ f) ≡ f ∘ λ← (⊗-context Γ)
-      λ-nat-f = λ←nat f
-
       -- The core equation.  plug [] Γ [] f unfolds to
       --   λ←(z⊗Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ split.to
       -- and split.to ∘ ρ-idr.from = intro, so after regrouping we reduce
       --   ρ←z ∘ λ←(z⊗Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ intro
-      -- by a chain of naturality squares (λ-nat-rho, ρ-nat-f, λ-nat-f) and the
-      -- unit coherences (▶.F-∘, sub, λ≅.invr) to f.
+      -- by the unitor naturality squares (λ←nat, ρ←nat) and the unit
+      -- coherences (▶.F-∘, sub, λ≅.invr) to f.
       core : (ρ← z ∘ plug [] Γ [] f) ∘ ρ-idr .from ≡ f
       core =
           (ρ← z ∘ plug [] Γ [] f) ∘ ρ-idr .from
@@ -641,13 +615,13 @@ representable-multicategory C M = Mc where
           ρ← z ∘ (λ← (z ⊗ Unit) ∘ ((Unit ▶ (f ◀ Unit)) ∘ (split .to ∘ ρ-idr .from)))
         ≡⟨⟩
           ρ← z ∘ (λ← (z ⊗ Unit) ∘ ((Unit ▶ (f ◀ Unit)) ∘ intro))
-        ≡⟨ pulll (sym λ-nat-rho) ⟩
+        ≡⟨ pulll (sym (λ←nat (ρ← z))) ⟩
           (λ← z ∘ (Unit ▶ ρ← z)) ∘ ((Unit ▶ (f ◀ Unit)) ∘ intro)
         ≡⟨ sym (assoc _ _ _) ⟩
           λ← z ∘ ((Unit ▶ ρ← z) ∘ ((Unit ▶ (f ◀ Unit)) ∘ intro))
         ≡⟨ ap (λ← z ∘_) (pulll (sym (▶.F-∘ _ _))) ⟩
           λ← z ∘ ((Unit ▶ (ρ← z ∘ (f ◀ Unit))) ∘ intro)
-        ≡⟨ ap (λ← z ∘_) (ap (_∘ intro) (ap (Unit ▶_) (sym ρ-nat-f))) ⟩
+        ≡⟨ ap (λ← z ∘_) (ap (_∘ intro) (ap (Unit ▶_) (ρ←nat f))) ⟩
           λ← z ∘ ((Unit ▶ (f ∘ ρ← (⊗-context Γ))) ∘ intro)
         ≡⟨ ap (λ← z ∘_) (ap (_∘ intro) (▶.F-∘ _ _)) ⟩
           λ← z ∘ (((Unit ▶ f) ∘ (Unit ▶ ρ← (⊗-context Γ))) ∘ intro)
@@ -655,7 +629,7 @@ representable-multicategory C M = Mc where
           λ← z ∘ ((Unit ▶ f) ∘ ((Unit ▶ ρ← (⊗-context Γ)) ∘ intro))
         ≡⟨ ap (λ← z ∘_) (ap ((Unit ▶ f) ∘_) sub) ⟩
           λ← z ∘ ((Unit ▶ f) ∘ λ→ (⊗-context Γ))
-        ≡⟨ pulll λ-nat-f ⟩
+        ≡⟨ pulll (λ←nat f) ⟩
           (f ∘ λ← (⊗-context Γ)) ∘ λ→ (⊗-context Γ)
         ≡⟨ sym (assoc _ _ _) ⟩
           f ∘ (λ← (⊗-context Γ) ∘ λ→ (⊗-context Γ))
@@ -920,13 +894,6 @@ representable-multicategory C M = Mc where
                ≡ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ)) ∘ decR .to
       g-free = plug-assoc Θ
 
-      -- (⊗Θ ▶ a) ∘ (⊗Θ ▶ b) = ⊗Θ ▶ (a ∘ b)  (▶.F-∘), then ◀.F-∘ inside.
-      merge-▶ : (⊗-context Θ ▶ (g ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ))
-                ≡ ⊗-context Θ ▶ ((g ∘ plugGH) ◀ ⊗-context Ξ)
-      merge-▶ =
-          sym (▶.F-∘ (g ◀ ⊗-context Ξ) (plugGH ◀ ⊗-context Ξ))
-        ∙ ap (⊗-context Θ ▶_) (sym (◀.F-∘ g plugGH))
-
       plug-coherence : plugL ∘ slot-iso .from ∘ plugH ∘ bdry-iso .from ≡ plugR
       plug-coherence =
           plugL ∘ slot-iso .from ∘ plugH ∘ bdry-iso .from
@@ -945,7 +912,7 @@ representable-multicategory C M = Mc where
           splitL .from
             ∘ ((⊗-context Θ ▶ (g ◀ ⊗-context Ξ))
                ∘ ((⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ)) ∘ decR .to))
-        ≡⟨ ap (splitL .from ∘_) (assoc _ _ _ ∙ ap (_∘ decR .to) merge-▶) ⟩
+        ≡⟨ ap (splitL .from ∘_) (assoc _ _ _ ∙ ap (_∘ decR .to) (▶.collapse (sym (◀.F-∘ g plugGH)))) ⟩
           splitL .from ∘ ((⊗-context Θ ▶ ((g ∘ plugGH) ◀ ⊗-context Ξ)) ∘ decR .to)
         ≡⟨⟩
           plugR
