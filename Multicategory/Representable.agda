@@ -286,6 +286,12 @@ representable-multicategory C M = Mc where
       a ▶ plug Ω Γ Ξ' g
     ∎
 
+  -- With no prefix the 3-way split is the 2-way split up to the left unitor.
+  dec-nil : (B Ξ' : List Ob)
+    → (⊗-context-++-++ [] B Ξ') .to
+      ≡ λ→ (⊗-context B ⊗ ⊗-context Ξ') ∘ (⊗-context-++ B Ξ') .to
+  dec-nil B Ξ' = sym (unitor-l .Isoⁿ.to .is-natural _ _ ((⊗-context-++ B Ξ') .to))
+
   Mc : Premulticategory _ _
   Mc .Obₘ = Ob
 
@@ -511,6 +517,61 @@ representable-multicategory C M = Mc where
       decL   = ⊗-context-++-++ Θ (Φ ++ y ∷ Ψ) Ξ
       decR   = ⊗-context-++-++ Θ (Φ ++ Ρ ++ Ψ) Ξ
 
+      -- The Θ=[] core, generalised over Φ so it can recurse: the 2-way-split
+      -- version of gfi (⊗-context-++/++-assoc-⊗/assocₘ-flatten in place of the
+      -- -++-++/slot-unbury/assocₘ-boundary isos).  Cons on Φ mirrors gfi's cons
+      -- (pp-cons is refl, so the ⊗-context-++ split unfolds definitionally);
+      -- the RHS plug also carries a prefix, pushed out with ◀-▶-comm.
+      gfi0 : (Φ' : List Ob)
+        → (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
+            ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
+            ∘ plug Φ' Ρ (Ψ ++ Ξ) h
+            ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from
+          ≡ (plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to
+      gfi0 []        = {!!}
+      gfi0 (b ∷ Φ') =
+          (⊗-context-++ ((b ∷ Φ') ++ y ∷ Ψ) Ξ) .to
+            ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
+            ∘ plug (b ∷ Φ') Ρ (Ψ ++ Ξ) h
+            ∘ (b ▶ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from)
+        ≡⟨ ap (λ z → (⊗-context-++ ((b ∷ Φ') ++ y ∷ Ψ) Ξ) .to
+                   ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
+                   ∘ z
+                   ∘ (b ▶ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from))
+              (plug-cons b Φ' Ρ (Ψ ++ Ξ) h) ⟩
+          (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
+            ∘ (b ▶ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to))
+            ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
+            ∘ (b ▶ plug Φ' Ρ (Ψ ++ Ξ) h)
+            ∘ (b ▶ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from)
+        ≡⟨ sym (assoc _ _ _)
+         ∙ ap (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘_)
+              (sym ( ▶.F-∘ _ _
+                   ∙ ap ((b ▶ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to) ∘_)
+                        (▶.F-∘ _ _ ∙ ap ((b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
+          α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
+            ∘ (b ▶ ( (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
+                   ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
+                   ∘ plug Φ' Ρ (Ψ ++ Ξ) h
+                   ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from ))
+        ≡⟨ ap (λ z → α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘ (b ▶ z)) (gfi0 Φ') ⟩
+          α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
+            ∘ (b ▶ ((plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to))
+        ≡⟨ ap (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘_) (▶.F-∘ _ _) ⟩
+          α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
+            ∘ ( (b ▶ (plug Φ' Ρ Ψ h ◀ ⊗-context Ξ))
+              ∘ (b ▶ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to) )
+        ≡⟨ extendl ((◀-▶-comm {f = ⊗-context Ξ} {g = b}) .Isoⁿ.from .is-natural _ _ (plug Φ' Ρ Ψ h)) ⟩
+          ((b ▶ plug Φ' Ρ Ψ h) ◀ ⊗-context Ξ)
+            ∘ ( α← (b , ⊗-context (Φ' ++ Ρ ++ Ψ) , ⊗-context Ξ)
+              ∘ (b ▶ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to) )
+        ≡⟨ ap (λ z → (z ◀ ⊗-context Ξ)
+                   ∘ ( α← (b , ⊗-context (Φ' ++ Ρ ++ Ψ) , ⊗-context Ξ)
+                     ∘ (b ▶ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to) ))
+              (sym (plug-cons b Φ' Ρ Ψ h)) ⟩
+          (plug (b ∷ Φ') Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ ((b ∷ Φ') ++ Ρ ++ Ψ) Ξ) .to
+        ∎
+
       -- g cancelled: decL.to ∘ slot-iso.from ∘ plugH ∘ bdry-iso.from
       --              = (⊗Θ ▶ (plugGH ◀ ⊗Ξ)) ∘ decR.to   (only h remains).
       -- Proved by induction on the prefix Θ: the slot/boundary isos are clean
@@ -522,7 +583,48 @@ representable-multicategory C M = Mc where
             ∘ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from
           ≡ (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ))
             ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to
-      gfi []        = {!!}
+      -- Base: no outer prefix.  Reduces (via λ→ naturality on the ⊗-context-++-++ []
+      -- = λ→ ∘ ⊗-context-++ unfolding, see dec-nil) to the Φ-indexed coherence
+      -- gfi0 (same statement with ⊗-context-++ / ++-assoc-⊗ / assocₘ-flatten in
+      -- place of the -++-++ / slot-unbury / assocₘ-boundary isos), provable by a
+      -- further induction on Φ (cons: pp-cons refl + plug-cons + ▶-assoc, exactly
+      -- like the Θ-cons above; base Φ=[] bottoms out in a Ρ-induction from
+      -- assocₘ-flatten with a unit/triangle core).
+      gfi [] =
+          (⊗-context-++-++ [] (Φ ++ y ∷ Ψ) Ξ) .to
+            ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
+            ∘ plug Φ Ρ (Ψ ++ Ξ) h
+            ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from
+        ≡⟨ ap (λ z → z ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
+                   ∘ plug Φ Ρ (Ψ ++ Ξ) h
+                   ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from)
+              (dec-nil (Φ ++ y ∷ Ψ) Ξ) ⟩
+          (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ y ∷ Ψ) Ξ) .to)
+            ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
+            ∘ plug Φ Ρ (Ψ ++ Ξ) h
+            ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from
+        ≡⟨ sym (assoc _ _ _) ⟩
+          λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
+            ∘ ( (⊗-context-++ (Φ ++ y ∷ Ψ) Ξ) .to
+              ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
+              ∘ plug Φ Ρ (Ψ ++ Ξ) h
+              ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from )
+        ≡⟨ ap (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘_) (gfi0 Φ) ⟩
+          λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
+            ∘ ((plug Φ Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to)
+        ≡⟨ assoc _ _ _ ⟩
+          (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘ (plug Φ Ρ Ψ h ◀ ⊗-context Ξ))
+            ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to
+        ≡⟨ ap (_∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to)
+              (unitor-l .Isoⁿ.to .is-natural _ _ (plugGH ◀ ⊗-context Ξ)) ⟩
+          ((Unit ▶ (plugGH ◀ ⊗-context Ξ)) ∘ λ→ (⊗-context (Φ ++ Ρ ++ Ψ) ⊗ ⊗-context Ξ))
+            ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to
+        ≡⟨ sym (assoc _ _ _) ⟩
+          (Unit ▶ (plugGH ◀ ⊗-context Ξ))
+            ∘ (λ→ (⊗-context (Φ ++ Ρ ++ Ψ) ⊗ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to)
+        ≡⟨ ap ((Unit ▶ (plugGH ◀ ⊗-context Ξ)) ∘_) (sym (dec-nil (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
+          (⊗-context [] ▶ (plugGH ◀ ⊗-context Ξ)) ∘ (⊗-context-++-++ [] (Φ ++ Ρ ++ Ψ) Ξ) .to
+        ∎
       gfi (a ∷ Θ') =
           (⊗-context-++-++ (a ∷ Θ') (Φ ++ y ∷ Ψ) Ξ) .to
             ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
