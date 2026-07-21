@@ -472,9 +472,21 @@ representable-multicategory C M = Mc where
 
       -- g cancelled: decL.to ∘ slot-iso.from ∘ plugH ∘ bdry-iso.from
       --              = (⊗Θ ▶ (plugGH ◀ ⊗Ξ)) ∘ decR.to   (only h remains).
+      -- Proved by induction on the prefix Θ: the slot/boundary isos are clean
+      -- ▶-recursions, and dec/plug carry α→ corrections (as in F-α→'s cons).
+      gfi : (Θ' : List Ob)
+        → (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to
+            ∘ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from
+            ∘ plug (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h
+            ∘ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from
+          ≡ (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ))
+            ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to
+      gfi []        = {!!}
+      gfi (a ∷ Θ') = {!!}
+
       g-free : decL .to ∘ slot-iso .from ∘ plugH ∘ bdry-iso .from
                ≡ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ)) ∘ decR .to
-      g-free = {!!}
+      g-free = gfi Θ
 
       -- (⊗Θ ▶ a) ∘ (⊗Θ ▶ b) = ⊗Θ ▶ (a ∘ b)  (▶.F-∘), then ◀.F-∘ inside.
       merge-▶ : (⊗-context Θ ▶ (g ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ))
