@@ -56,10 +56,12 @@ Functor reasoning: `▶.F-∘ : ▶.F₁ (f ∘ g) ≡ ▶.F₁ f ∘ ▶.F₁ g
 |------|--------|----------|
 | `idₘl` | ✅ proven | `plug Θ [x] Ξ (ρ← x) ≡ id` via `triangle-α→` |
 | `idₘr` | ✅ proven | Hom-transport over `++-idr` + the `core` chain (naturality squares + unit coherences) |
-| `assocₘ` | 🔧 reduced to `g-free` (verified) | transport+f-cancellation+g-cancellation done; `g-free` (h-only pentagon) hole remains |
+| `assocₘ` | 🔧 reduced to `gfi0 []` (1 hole) | `g-free = gfi Θ`; `gfi` cons + base + `gfi0` cons all PROVEN; only the deep core `gfi0 []` remains |
 | `interchangeₘ` | 🔧 reduced to `ic-plug-coherence` (verified) | all 4 subst/transport reductions done; `ic-plug-coherence` (bifunctoriality) hole remains |
 
-**Strong-monoidal-functor foundation `F-α→` — ✅ PROVEN (2026-07-21).** `φ Γ Δ = (⊗-context-++ Γ Δ).from`; `F-α→ : ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ++Δ) Ξ ∘ (φ Γ Δ ◀ ⊗Ξ) ≡ φ Γ (Δ++Ξ) ∘ (⊗Γ ▶ φ Δ Ξ) ∘ α→(⊗Γ,⊗Δ,⊗Ξ)` (the monoidal-functor associativity hexagon). Base `[]` via `triangle-λ←` + unitor naturality. Cons `(a∷Γ)` via **coh1** (`◀.F-∘` + `◀-▶-comm` middle-slot naturality + `▶.F-∘` merge) → `ap (a▶_) IH` → **coh2** (`▶.F-∘` + `pentagon-α→` + `▶-assoc` third-slot naturality). Both coh1/coh2 are explicit chains — `bicat!` CANNOT do them (see caveat above). Next: use `F-α→` (and to-be-proven `F-λ←`,`F-ρ←`) to discharge `g-free` and `ic-plug-coherence`.
+**`F-α→` (strong-monoidal-functor hexagon) — ✅ PROVEN (2026-07-21).** `φ Γ Δ = (⊗-context-++ Γ Δ).from`; `F-α→ : ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ++Δ) Ξ ∘ (φ Γ Δ ◀ ⊗Ξ) ≡ φ Γ (Δ++Ξ) ∘ (⊗Γ ▶ φ Δ Ξ) ∘ α→(⊗Γ,⊗Δ,⊗Ξ)`. Base `[]` via `triangle-λ←` + unitor nat. Cons via **coh1** (`◀.F-∘` + `◀-▶-comm` + `▶.F-∘`) → `ap (a▶_) IH` → **coh2** (`▶.F-∘` + `pentagon-α→` + `▶-assoc`).
+
+**`g-free` reduced to `gfi0 []` — ✅ mostly PROVEN (2026-07-21).** `g-free = gfi Θ` inducts on the prefix. Proven: reusable lemmas `dec-cons`, `plug-cons` (plug is prefix-linear: `plug (a∷Ω) = a ▶ plug Ω`), `dec-nil`, `plug-nil`, `flat-from`; `gfi` cons (dec-cons + plug-cons + `▶-assoc.from` push-out); `gfi []` (`dec-nil` + λ→-nat + `gfi0 Φ`); `gfi0` cons (pp-cons refl + plug-cons + `◀-▶-comm.from`). **Remaining: `gfi0 []`** — fully worked out on paper (closes): `plug-nil`/`flat-from`/pp-cons simplify, then `-⊗-.rlmap` (bifunctor interchange for h) + `F-α→-to` (the `.to`/ψ-mirror of the hexagon — prove by its own Ρ-induction or invert `F-α→`) + α→ first-slot nat + `α≅.invr` cancel + `◀.F-∘`. See memory `representable-law-proofs`.
 
 ### Key infrastructure added (all proven, type-check)
 
