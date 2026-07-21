@@ -384,14 +384,11 @@ representable-multicategory C M = Mc where
        ∙ ap (_∘ ( α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
                 ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) ))
             (sym (▶.F-∘ _ _ ∙ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_) (▶.F-∘ _ _))) ⟩
-        (a ▶ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)))
+        (a ▶ ⌜ ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ) ⌝)
       ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
       ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
       -- apply the induction hypothesis inside the ▶.
-      ≡⟨ ap (λ m → (a ▶ m)
-                 ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-                 ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
-            (F-α→ Γ Δ Ξ) ⟩
+      ≡⟨ ap! (F-α→ Γ Δ Ξ) ⟩
         (a ▶ (φ Γ (Δ ++ Ξ) ∘ (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)))
       ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
       ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
@@ -717,18 +714,14 @@ representable-multicategory C M = Mc where
       gfi0 [] =
           (⊗-context-++ (y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
-            ∘ plug [] Ρ (Ψ ++ Ξ) h
+            ∘ ⌜ plug [] Ρ (Ψ ++ Ξ) h ⌝
             ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from
-        ≡⟨ ap (λ w → (⊗-context-++ (y ∷ Ψ) Ξ) .to ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
-                   ∘ w ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from)
-              (plug-nil Ρ (Ψ ++ Ξ) h) ⟩
+        ≡⟨ ap! (plug-nil Ρ (Ψ ++ Ξ) h) ⟩
           (⊗-context-++ (y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
             ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
-            ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from
-        ≡⟨ ap (λ w → (⊗-context-++ (y ∷ Ψ) Ξ) .to ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
-                   ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to) ∘ w)
-              (flat-from Ρ Ψ Ξ) ⟩
+            ∘ ⌜ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from ⌝
+        ≡⟨ ap! (flat-from Ρ Ψ Ξ) ⟩
           (⊗-context-++ (y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
             ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
@@ -796,11 +789,11 @@ representable-multicategory C M = Mc where
                    ∙ ap ((b ▶ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to) ∘_)
                         (▶.F-∘ _ _ ∙ ap ((b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
           α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
-            ∘ (b ▶ ( (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
+            ∘ (b ▶ ⌜ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
                    ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
                    ∘ plug Φ' Ρ (Ψ ++ Ξ) h
-                   ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from ))
-        ≡⟨ ap (λ z → α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘ (b ▶ z)) (gfi0 Φ') ⟩
+                   ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from ⌝)
+        ≡⟨ ap! (gfi0 Φ') ⟩
           α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
             ∘ (b ▶ ((plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to))
         ≡⟨ ap (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘_) (▶.F-∘ _ _) ⟩
@@ -902,12 +895,11 @@ representable-multicategory C M = Mc where
                    ∙ ap ((a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to) ∘_)
                         (▶.F-∘ _ _ ∙ ap ((a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
           α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-            ∘ (a ▶ ( (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to
+            ∘ (a ▶ ⌜ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to
                    ∘ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from
                    ∘ plug (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h
-                   ∘ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from ))
-        ≡⟨ ap (λ z → α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘ (a ▶ z))
-              (gfi Θ') ⟩
+                   ∘ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from ⌝)
+        ≡⟨ ap! (gfi Θ') ⟩
           α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
             ∘ (a ▶ ( (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ))
                    ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to ))
@@ -1055,11 +1047,11 @@ representable-multicategory C M = Mc where
                    ∙ ap ((b ▶ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to) ∘_)
                         (▶.F-∘ _ _ ∙ ap ((b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
           α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
-            ∘ (b ▶ ( (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
+            ∘ (b ▶ ⌜ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
                    ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
                    ∘ plug (Γ' ++ Μ) Δ Κ h
-                   ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from ))
-        ≡⟨ ap (λ w → α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘ (b ▶ w)) (ic-core Γ') ⟩
+                   ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from ⌝)
+        ≡⟨ ap! (ic-core Γ') ⟩
           α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
             ∘ (b ▶ ((⊗-context Γ' ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to))
         ≡⟨ ap (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘_) (▶.F-∘ _ _) ⟩
