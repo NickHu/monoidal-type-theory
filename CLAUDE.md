@@ -16,7 +16,7 @@ Agda 2.9.0 with the `--cubical` flag (set in `monoidal-type-theory.agda-lib`). T
   ```
   _∘ₘ_ : Homₘ (Θ ++ x ∷ Ξ) z → Homₘ Γ x → Homₘ (Θ ++ Γ ++ Ξ) z
   ```
-  Laws range over homogeneous `≡`s (`++-idr`, `++-assoc`) where possible; `idₘl` is definitional. The reassociation helpers (`slot-unbury`, `assocₘ-boundary`, etc.) are **private** and defined by **structural recursion** (cons-by-cons), NOT by composing `++-assoc` with `∙` — this is critical so that `homₘ`/`⊗-context` reduce through them definitionally.
+  Laws range over homogeneous `≡`s (`++-idr`, `++-assoc`) where possible; `idₘl` is definitional. The reassociation helpers (`slot-unbury`, `assocₘ-boundary`, `assocₘ-flatten`, `interchange-slot₀/₁/₂`, `interchange-flatten`, `interchangeₘ-boundary`) are **public** (exported) and defined by **structural recursion** (cons-by-cons), NOT by composing `++-assoc` with `∙` — this is critical so that `homₘ`/`⊗-context` reduce through them definitionally, and public so instances can characterise `path→iso (ap ⊗-context/homₘ <path>)` for the law transports.
 
 - **`Multicategory/Instances.agda`** — Every category is trivially a multicategory (only singleton contexts inhabited). All 4 laws proven. Case splits expose the first two elements of each list part (to make `homₘ` reduce); unused cases are auto-discharged by Agda's coverage checker (arguments whose type reduces to `⊥`).
 
@@ -48,33 +48,54 @@ Iso composition: `∙Iso` is **left-to-right** (`a ∙Iso b` = a first, then b).
 
 Functor reasoning: `▶.F-∘ : ▶.F₁ (f ∘ g) ≡ ▶.F₁ f ∘ ▶.F₁ g`, `▶.F-id : ▶.F₁ id ≡ id`, `▶.F-map-iso : iso → iso`.
 
+**bicat! caveat (learned the hard way):** `Cat.Bi.Solver.bicat! (Deloop M)` closes PURE associator/unitor coherences (pentagon, triangle) but **cannot** move a 2-cell whose domain/codomain are *stuck* `⊗-context …` terms (e.g. `φ Γ Δ = (⊗-context-++ Γ Δ).from : ⊗Γ⊗⊗Δ → ⊗(Γ++Δ)`) past an associator — its NbE leaves those objects unreconciled and `refl` on `nf₂` fails. For those naturality moves use the explicit 1lab lemmas: middle-slot `α→` naturality = `◀-▶-comm .Isoⁿ.to .is-natural` (functor `x ↦ (g▶x)◀f`, eta `α→(g,x,f)`); third-slot = `▶-assoc .Isoⁿ.to .is-natural` (functor `x ↦ (f⊗g)▶x` ≅ `f▶(g▶x)`, eta `α→(f,g,x)`). Both give clean `▶`/`◀` whiskering with no `id⊗id` noise. Pentagon: `pentagon-α→` (from `open Monoidal-category M`).
+
 ## Current state of Representable.agda
 
 | Law | Status | Approach |
 |------|--------|----------|
 | `idₘl` | ✅ proven | `plug Θ [x] Ξ (ρ← x) ≡ id` via `triangle-α→` |
-| `idₘr` | 🔧 transport + naturality done; core equation is a hole | See below |
-| `assocₘ` | ⬜ hole | Pentagon |
-| `interchangeₘ` | ⬜ hole | Bifunctoriality |
+| `idₘr` | ✅ proven | Hom-transport over `++-idr` + the `core` chain (naturality squares + unit coherences) |
+| `assocₘ` | 🔧 reduced to `g-free` (verified) | transport+f-cancellation+g-cancellation done; `g-free` (h-only pentagon) hole remains |
+| `interchangeₘ` | 🔧 reduced to `ic-plug-coherence` (verified) | all 4 subst/transport reductions done; `ic-plug-coherence` (bifunctoriality) hole remains |
 
-### idₘr core equation
+**Strong-monoidal-functor foundation `F-α→` — ✅ PROVEN (2026-07-21).** `φ Γ Δ = (⊗-context-++ Γ Δ).from`; `F-α→ : ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ++Δ) Ξ ∘ (φ Γ Δ ◀ ⊗Ξ) ≡ φ Γ (Δ++Ξ) ∘ (⊗Γ ▶ φ Δ Ξ) ∘ α→(⊗Γ,⊗Δ,⊗Ξ)` (the monoidal-functor associativity hexagon). Base `[]` via `triangle-λ←` + unitor naturality. Cons `(a∷Γ)` via **coh1** (`◀.F-∘` + `◀-▶-comm` middle-slot naturality + `▶.F-∘` merge) → `ap (a▶_) IH` → **coh2** (`▶.F-∘` + `pentagon-α→` + `▶-assoc` third-slot naturality). Both coh1/coh2 are explicit chains — `bicat!` CANNOT do them (see caveat above). Next: use `F-α→` (and to-be-proven `F-λ←`,`F-ρ←`) to discharge `g-free` and `ic-plug-coherence`.
 
-The transport handling (Hom-transport + path→iso-refl + ⊗-context-++-idr-path) and naturality lemmas (`λ-nat-rho`, `ρ-nat-f`) are proven. The remaining hole is:
+### Key infrastructure added (all proven, type-check)
 
+- `⊗-context-++-[]-ρ : (⊗-context-++ Γ []).to ∘ (⊗-context-++-idr Γ).from ≡ ρ→ (⊗-context Γ)` — cons-by-cons; base `idr _ ∙ λ→≡ρ→`, step `sym triangle-ρ→`.
+- Monoidal coherence lemmas (`triangle-ρ←/→`, `triangle-λ←/→`, `λ←≡ρ←`, `λ→≡ρ→`) via `open Cat.Bi.Reasoning (Deloop M) using (...)` — import with `import Cat.Bi.Reasoning` (NOT `open import`; the parameterised module's `λ≅`/`ρ≅` clash with `Monoidal-category`'s).
+- `path→iso` characterisations for the assocₘ transports (all cons-by-cons inductions via `path→iso-ap-⊗`, paralleling `⊗-context-++-idr-path`): `++-assoc-⊗-iso`/`-path`, `slot-unbury-iso`/`-⊗`, `assocₘ-flatten-iso`/`-⊗`, `assocₘ-boundary-iso`/`-⊗`. Each says `path→iso (ap ⊗-context <list-reassoc-path>)` is a `▶`-chain of `id-iso` (⊗-context is invariant under list reassociation).
+- The list-reassoc helpers (`slot-unbury`, `assocₘ-boundary`, `assocₘ-flatten`, …) are now **public** in `Multicategory.agda` (were `private`) so these characterisations can name them.
+
+### assocₘ assembly (the remaining piece)
+
+`assocₘ f g h = to-pathp eq`. Via `Hom-transport`, the two transports become iso precomposition:
+- `subst (λ Ω → Homₘ Ω z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ₘ g) = (f ∘ₘ g) ∘ slot-unbury-iso .from`
+- `transport (λ i → Hom (⊗(assocₘ-boundary … i)) z) LHS = LHS ∘ assocₘ-boundary-iso .from`
+
+So `eq` reduces to:
 ```
-(ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from ≡ f
+((f ∘ plug Θ (Φ++y∷Ψ) Ξ g) ∘ slot-unbury-iso .from) ∘ plug (Θ++Φ) Ρ (Ψ++Ξ) h ∘ assocₘ-boundary-iso .from
+  ≡ f ∘ plug Θ (Φ++Ρ++Ψ) Ξ (g ∘ plug Φ Ρ Ψ h)
 ```
+Unfold plugs (`splitL.from ∘ (⊗Θ ▶ (g ◊ ⊗Ξ)) ∘ splitR.to`) + the characterised isos (▶-chains + `⊗-context-++`), push f/g/h leftward with the naturality squares (`unitor-l/r .Isoⁿ.from .is-natural`), and the residual is the monoidal pentagon. `Cat.Bi.Solver.bicat! (Deloop M)` discharges pure associator/unitor coherences at the object level (confirmed: solves the pentagon); **caveat**: `import Cat.Bi.Solver` turns the `Mc .field = …` record implementations into `[MissingTypeSignature.Function]` errors — work around by giving those fields explicit `:` type signatures.
 
-Proof chain (7 steps):
-1. **λ-naturality**: `ρ←z ∘ λ←(z⊗Unit) = λ←z ∘ (Unit▶ρ←z)` — have `λ-nat-rho`
-2. **▶.F-∘**: merge `(Unit▶ρ←z) ∘ (Unit▶(f◀Unit))` into `Unit▶(ρ←z ∘ (f◀Unit))`
-3. **ρ-naturality**: `ρ←z ∘ (f◀Unit) = f ∘ ρ←(⊗Γ)` — have `ρ-nat-f`
-4. **▶.F-∘**: merge `Unit▶(f ∘ ρ←⊗Γ)` into `(Unit▶f) ∘ (Unit▶ρ←⊗Γ)`
-5. **Sub-lemma**: `(Unit▶ρ←⊗Γ) ∘ intro = λ→` where `intro = (⊗-context-++-++ [] Γ []).to ∘ (⊗-context-++-idr Γ).from`
-6. **λ-naturality**: `λ←z ∘ (Unit▶f) = f ∘ λ←⊗Γ`
-7. **λ←∘λ→ = id**: `λ≅ .invl`
+**Progress / findings on the assembly (2026-07):**
+- `bicat! (Deloop M)` **does handle naturality** (morphism leaves interacting with associators/unitators) — confirmed: `bicat-nat : λ← b ∘ (Unit ▶ f) ≡ f ∘ λ← a` is `bicat! (Deloop M)`. BUT it works on term *syntax*, so it cannot see through `⊗-context-++ Θ Δ` / `plug` when Θ,Δ are **variables** (they are stuck). It only closes the coherence once lists are concrete.
+- The assocₘ proof has been reduced (all VERIFIED, compiles) by successive cancellation:
+  1. transport reduction (`transport-⊗-red`, `subst-red`) + `ap (f ∘_)` → **plug-coherence** `plugL ∘ slot-iso.from ∘ plugH ∘ bdry-iso.from ≡ plugR`;
+  2. unfold plugs (`splitL.from ∘ (⊗Θ ▶ (g ◊ ⊗Ξ)) ∘ dec.to`) + `▶.F-∘`/`◀.F-∘` merge + `ap` → **g-free** `decL.to ∘ slot-iso.from ∘ plugH ∘ bdry-iso.from ≡ (⊗Θ ▶ (plugGH ◊ ⊗Ξ)) ∘ decR.to` (h only).
+  This is the current hole (`g-free`). `plugL/plugH/plugR/plugGH`, `splitL/decL/decR`, `slot-iso/bdry-iso`, `merge-▶`, `transport-⊗-red`, `subst-red`, `eq` are all defined and checked.
+- Remaining: `g-free` cancels `h` (plugH vs plugGH apply h at different groupings → an associator coherence), reaching a pure-iso coherence provable by list-induction; OR prove `g-free` directly by induction on Θ (h, plugGH are Θ-independent; base Θ=[] needs Φ-induction). This is the last hard piece of assocₘ.
+- Induction on Θ is type-correct for the *f-free* coherence (g,h's types don't depend on Θ) but the Θ=[] base still has Φ,Ρ,Ψ variable and `⊗-context-++` stuck, so it needs further cancellation/induction.
 
-Step 5 needs a coherence `ρ←(A⊗B) ∘ α←(A,B,Unit) = A ▶ ρ←B`, derivable from the triangle identity. This is the main remaining sub-goal.
+### Gotchas (cost real time)
+
+- 1lab `is-natural x y f : η y ∘ F.₁ f ≡ G.₁ f ∘ η x` (Cat.Base). The inline comments on `λ-nat-rho`/`ρ-nat-f` describe the REVERSE direction — verify against the convention and add `sym` as needed (idₘr's `core` uses `sym λ-nat-rho`, `sym ρ-nat-f`).
+- `where` blocks here do NOT resolve forward references: a helper used in a clause must be TEXTUALLY BEFORE the clause.
+- lmap whiskering is `_◀_` (U+25C0 BLACK LEFT-POINTING TRIANGLE), not `◊` (U+25CA). `_▶_` is rmap.
+- `assoc f g h : f ∘ (g ∘ h) ≡ (f ∘ g) ∘ h` (right→left regrouping); `sym assoc` for the reverse. `≅ .invr : from ∘ to ≡ id` (the `f ∘ id`-shaped one); `.invl : to ∘ from ≡ id`.
 
 ### Naming conventions
 
