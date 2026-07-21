@@ -56,8 +56,8 @@ Functor reasoning: `▶.F-∘ : ▶.F₁ (f ∘ g) ≡ ▶.F₁ f ∘ ▶.F₁ g
 |------|--------|----------|
 | `idₘl` | ✅ proven | `plug Θ [x] Ξ (ρ← x) ≡ id` via `triangle-α→` |
 | `idₘr` | ✅ proven | Hom-transport over `++-idr` + the `core` chain (naturality squares + unit coherences) |
-| `assocₘ` | 🔧 reduced to `gfi0 []` (1 hole) | `g-free = gfi Θ`; `gfi` cons + base + `gfi0` cons all PROVEN; only the deep core `gfi0 []` remains |
-| `interchangeₘ` | 🔧 reduced to `ic-plug-coherence` (verified) | all 4 subst/transport reductions done; `ic-plug-coherence` (bifunctoriality) hole remains |
+| `assocₘ` | ✅ proven | `g-free = gfi Θ` (prefix induction); base via `dec-nil`+`gfi0 Φ`; `gfi0 []` via `plug-nil`/`flat-from`/`-⊗-.rlmap`/`F-α→-to`/`◀-assoc`; all machinery in `dec-cons`/`plug-cons`/`plug-nil`/`F-α→-to` |
+| `interchangeₘ` | 🔧 reduced to `ici []` (1 hole — the ONLY hole left) | `ic-plug-coherence = ici Θ`; `ici` cons PROVEN (clean, all `a▶…` — no α corrections); only the base `ici []` remains (needs `-⊗-.rlmap` interchange + reassoc coherence, cf. `gfi0 []`) |
 
 **`F-α→` (strong-monoidal-functor hexagon) — ✅ PROVEN (2026-07-21).** `φ Γ Δ = (⊗-context-++ Γ Δ).from`; `F-α→ : ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ++Δ) Ξ ∘ (φ Γ Δ ◀ ⊗Ξ) ≡ φ Γ (Δ++Ξ) ∘ (⊗Γ ▶ φ Δ Ξ) ∘ α→(⊗Γ,⊗Δ,⊗Ξ)`. Base `[]` via `triangle-λ←` + unitor nat. Cons via **coh1** (`◀.F-∘` + `◀-▶-comm` + `▶.F-∘`) → `ap (a▶_) IH` → **coh2** (`▶.F-∘` + `pentagon-α→` + `▶-assoc`).
 
