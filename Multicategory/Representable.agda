@@ -1021,11 +1021,77 @@ representable-multicategory C M = Mc where
           transport-⊗-red (ap ⊗-context (interchange-slot₂ Θ x Μ Δ Κ)) M
         ∙ ap (M ∘_) (ap (λ φ → φ .from) (ic-slot₂-⊗ Θ x Μ Δ Κ))
 
-      -- the f-free bifunctoriality coherence (the hard piece).
+      -- the f-free bifunctoriality coherence (the hard piece), by induction on
+      -- the prefix Θ.  Cons is clean: every factor is a ▶ (plug is prefix-linear
+      -- via plug-cons; the ic-slot isos are ▶.F-map-iso), so no α corrections.
+      ici : (Θ' : List Ob)
+        →   plug Θ' Γ (Μ ++ y ∷ Κ) g
+              ∘ (ic-slot₁-iso Θ' Γ Μ y Κ) .from
+              ∘ plug (Θ' ++ Γ ++ Μ) Δ Κ h
+              ∘ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from
+          ≡   (ic-slot₀-iso Θ' x Μ y Κ) .from
+              ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
+              ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
+              ∘ plug Θ' Γ (Μ ++ Δ ++ Κ) g
+      ici []        = {!!}
+      ici (a ∷ Θ') =
+          plug (a ∷ Θ') Γ (Μ ++ y ∷ Κ) g
+            ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
+            ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h
+            ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
+        ≡⟨ ap (λ w → w ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
+                   ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from))
+              (plug-cons a Θ' Γ (Μ ++ y ∷ Κ) g) ⟩
+          (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g)
+            ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
+            ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h
+            ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
+        ≡⟨ ap (λ w → (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g) ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
+                   ∘ w ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from))
+              (plug-cons a (Θ' ++ Γ ++ Μ) Δ Κ h) ⟩
+          (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g)
+            ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
+            ∘ (a ▶ plug (Θ' ++ Γ ++ Μ) Δ Κ h)
+            ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
+        ≡⟨ sym ( ▶.F-∘ _ _
+               ∙ ap ((a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g) ∘_)
+                    (▶.F-∘ _ _ ∙ ap ((a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from) ∘_) (▶.F-∘ _ _)) ) ⟩
+          a ▶ ( plug Θ' Γ (Μ ++ y ∷ Κ) g
+              ∘ (ic-slot₁-iso Θ' Γ Μ y Κ) .from
+              ∘ plug (Θ' ++ Γ ++ Μ) Δ Κ h
+              ∘ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from )
+        ≡⟨ ap (a ▶_) (ici Θ') ⟩
+          a ▶ ( (ic-slot₀-iso Θ' x Μ y Κ) .from
+              ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
+              ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
+              ∘ plug Θ' Γ (Μ ++ Δ ++ Κ) g )
+        ≡⟨ ▶.F-∘ _ _
+         ∙ ap ((a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘_)
+              (▶.F-∘ _ _ ∙ ap ((a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h) ∘_) (▶.F-∘ _ _)) ⟩
+          (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
+            ∘ (a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h)
+            ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
+            ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g)
+        ≡⟨ ap (λ w → (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘ w
+                   ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from) ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g))
+              (sym (plug-cons a (Θ' ++ x ∷ Μ) Δ Κ h)) ⟩
+          (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
+            ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
+            ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
+            ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g)
+        ≡⟨ ap (λ w → (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
+                   ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from) ∘ w)
+              (sym (plug-cons a Θ' Γ (Μ ++ Δ ++ Κ) g)) ⟩
+          (ic-slot₀-iso (a ∷ Θ') x Μ y Κ) .from
+            ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
+            ∘ (ic-slot₂-iso (a ∷ Θ') x Μ Δ Κ) .from
+            ∘ plug (a ∷ Θ') Γ (Μ ++ Δ ++ Κ) g
+        ∎
+
       ic-plug-coherence
         :   plugg ∘ slot₁-iso .from ∘ plugh₁ ∘ bdry-iso .from
         ≡ slot₀-iso .from ∘ plugh₂ ∘ slot₂-iso .from ∘ plugg₂
-      ic-plug-coherence = {!!}
+      ic-plug-coherence = ici Θ
 
       rest₂ = slot₀-iso .from ∘ (plugh₂ ∘ (slot₂-iso .from ∘ plugg₂))
 
