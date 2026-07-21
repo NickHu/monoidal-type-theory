@@ -314,6 +314,122 @@ representable-multicategory C M = Mc where
   flat-from []      Ψ Ξ' = refl
   flat-from (b ∷ Ρ) Ψ Ξ' = ap (b ▶_) (flat-from Ρ Ψ Ξ')
 
+  ----------------------------------------------------------------------
+  -- The monoidal-functor associativity hexagon for ⊗-context, stated
+  -- standalone (the substance of "⊗-context is a strong monoidal functor").
+  --   φ_{Γ,Δ} = (⊗-context-++ Γ Δ).from : ⊗Γ ⊗ ⊗Δ → ⊗(Γ++Δ)
+  --   F-α→ : the associativity coherence (pure iso, no f/g/h).
+  ----------------------------------------------------------------------
+  φ : (Γ Δ : List Ob) → Hom (⊗-context Γ ⊗ ⊗-context Δ) (⊗-context (Γ ++ Δ))
+  φ Γ Δ = (⊗-context-++ Γ Δ) .from
+
+  -- Cons-reductions of the structure maps (definitional, hence refl):
+  --   ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to  =  a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to
+  --   φ (a ∷ Γ) Δ                      =  (a ▶ φ Γ Δ) ∘ α→ (a , ⊗Γ , ⊗Δ)
+  char-to-cons : (a : Ob) (Γ Δ Ξ : List Ob)
+    → ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to ≡ a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to
+  char-to-cons a Γ Δ Ξ = refl
+
+  φ-cons : (a : Ob) (Γ Δ : List Ob)
+    → φ (a ∷ Γ) Δ ≡ (a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , ⊗-context Δ)
+  φ-cons a Γ Δ = refl
+
+  F-α→ : (Γ Δ Ξ : List Ob)
+    →   ++-assoc-⊗-iso Γ Δ Ξ .to  ∘ φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)
+    ≡ φ Γ (Δ ++ Ξ) ∘ (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+  F-α→ [] Δ Ξ =
+      idl _
+    ∙ ap (φ Δ Ξ ∘_) (sym triangle-λ←)
+    ∙ assoc _ _ _
+    ∙ ap (λ x → x ∘ α→ (Unit , ⊗-context Δ , ⊗-context Ξ))
+          (sym (unitor-l .Isoⁿ.from .is-natural (⊗-context Δ ⊗ ⊗-context Ξ) (⊗-context (Δ ++ Ξ)) (φ Δ Ξ)))
+    ∙ sym (assoc _ _ _)
+  F-α→ (a ∷ Γ) Δ Ξ =
+        ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to ∘ φ ((a ∷ Γ) ++ Δ) Ξ ∘ (φ (a ∷ Γ) Δ ◀ ⊗-context Ξ)
+      ≡⟨⟩
+        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
+      ∘ ((a ▶ φ (Γ ++ Δ) Ξ) ∘ α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ))
+      ∘ (((a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , ⊗-context Δ)) ◀ ⊗-context Ξ)
+      -- coh1: distribute ◀ over the whiskered α2, use ◀-▶-comm (middle-slot α→
+      -- naturality) to push φ Γ Δ past the outer α→, then merge the ▶-layer.
+      -- No IH — pure structure.
+      ≡⟨ ap (λ z → (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
+                 ∘ ((a ▶ φ (Γ ++ Δ) Ξ) ∘ α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ)) ∘ z)
+            (◀.F-∘ _ _) ⟩
+        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
+      ∘ ((a ▶ φ (Γ ++ Δ) Ξ) ∘ α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ))
+      ∘ (((a ▶ φ Γ Δ) ◀ ⊗-context Ξ) ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
+      ≡⟨ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_)
+            (sym (assoc _ _ _) ∙ ap ((a ▶ φ (Γ ++ Δ) Ξ) ∘_) (assoc _ _ _)) ⟩
+        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
+      ∘ (a ▶ φ (Γ ++ Δ) Ξ)
+      ∘ ( (α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ) ∘ ((a ▶ φ Γ Δ) ◀ ⊗-context Ξ))
+        ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) )
+      ≡⟨ ap (λ z → (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘ (a ▶ φ (Γ ++ Δ) Ξ)
+                 ∘ (z ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)))
+            ((◀-▶-comm {f = ⊗-context Ξ} {g = a}) .Isoⁿ.to .is-natural _ _ (φ Γ Δ)) ⟩
+        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
+      ∘ (a ▶ φ (Γ ++ Δ) Ξ)
+      ∘ ( ((a ▶ (φ Γ Δ ◀ ⊗-context Ξ)) ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ))
+        ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) )
+      ≡⟨ ap (λ z → (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘ (a ▶ φ (Γ ++ Δ) Ξ) ∘ z) (sym (assoc _ _ _)) ⟩
+        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
+      ∘ (a ▶ φ (Γ ++ Δ) Ξ)
+      ∘ ( (a ▶ (φ Γ Δ ◀ ⊗-context Ξ))
+        ∘ ( α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+          ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) ) )
+      ≡⟨ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_) (assoc _ _ _)
+       ∙ assoc _ _ _
+       ∙ ap (_∘ ( α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+                ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) ))
+            (sym (▶.F-∘ _ _ ∙ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_) (▶.F-∘ _ _))) ⟩
+        (a ▶ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)))
+      ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+      ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
+      -- apply the induction hypothesis inside the ▶.
+      ≡⟨ ap (λ m → (a ▶ m)
+                 ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+                 ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
+            (F-α→ Γ Δ Ξ) ⟩
+        (a ▶ (φ Γ (Δ ++ Ξ) ∘ (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)))
+      ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+      ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
+      -- coh2a: distribute the outer ▶, then pentagon-α→ reassembles the three
+      -- associators (φ Γ (Δ++Ξ) and φ Δ Ξ are inert 2-cells; no IH).
+      ≡⟨ ap (_∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+                  ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
+            ( ▶.F-∘ _ _ ∙ ap ((a ▶ φ Γ (Δ ++ Ξ)) ∘_) (▶.F-∘ _ _) ) ⟩
+        ((a ▶ φ Γ (Δ ++ Ξ)) ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ)) ∘ (a ▶ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)))
+      ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+      ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
+      ≡⟨ sym (assoc _ _ _) ∙ ap ((a ▶ φ Γ (Δ ++ Ξ)) ∘_) (sym (assoc _ _ _)) ⟩
+        (a ▶ φ Γ (Δ ++ Ξ))
+      ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ))
+      ∘ ( (a ▶ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
+        ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
+        ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) )
+      ≡⟨ ap (λ z → (a ▶ φ Γ (Δ ++ Ξ)) ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ)) ∘ z) pentagon-α→ ⟩
+        (a ▶ φ Γ (Δ ++ Ξ))
+      ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ))
+      ∘ α→ (a , ⊗-context Γ , ⊗-context Δ ⊗ ⊗-context Ξ)
+      ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+      -- coh2b: α→ naturality in the third slot pushes φ Δ Ξ outward.
+      ≡⟨ ap ((a ▶ φ Γ (Δ ++ Ξ)) ∘_)
+            ( assoc _ _ _
+            ∙ ap (_∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
+                 (sym ((▶-assoc {f = a} {g = ⊗-context Γ}) .Isoⁿ.to .is-natural _ _ (φ Δ Ξ)))
+            ∙ sym (assoc _ _ _) ) ⟩
+        (a ▶ φ Γ (Δ ++ Ξ))
+      ∘ α→ (a , ⊗-context Γ , ⊗-context (Δ ++ Ξ))
+      ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ)
+      ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+      -- fold φ (a ∷ Γ) (Δ ++ Ξ) back (definitional, φ-cons) after reassoc.
+      ≡⟨ assoc _ _ _
+       ∙ ap (_∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
+            (sym (φ-cons a Γ (Δ ++ Ξ))) ⟩
+        φ (a ∷ Γ) (Δ ++ Ξ) ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+      ∎
+
   Mc : Premulticategory _ _
   Mc .Obₘ = Ob
 
@@ -337,23 +453,23 @@ representable-multicategory C M = Mc where
     where
       split : ⊗-context (Θ ++ x ∷ Ξ) ≅ (⊗-context Θ ⊗ ⊗-context (x ∷ Ξ))
       split = ⊗-context-++ Θ (x ∷ Ξ)
-      φ : ⊗-context (x ∷ Ξ) ≅ (⊗-context (x ∷ []) ⊗ ⊗-context Ξ)
-      φ = ⊗-context-++ (x ∷ []) Ξ
+      ψ : ⊗-context (x ∷ Ξ) ≅ (⊗-context (x ∷ []) ⊗ ⊗-context Ξ)
+      ψ = ⊗-context-++ (x ∷ []) Ξ
 
-      -- φ .from = ρ← x ◀ ⊗-context Ξ  (φ.from reduces to the LHS of the
+      -- ψ .from = ρ← x ◀ ⊗-context Ξ  (φ.from reduces to the LHS of the
       -- triangle identity triangle-α→).
-      φ-from : φ .from ≡ ρ← x ◀ ⊗-context Ξ
+      φ-from : ψ .from ≡ ρ← x ◀ ⊗-context Ξ
       φ-from = triangle-α→
 
       -- (apply ρ←) ∘ (insert unit) is the identity: ρ← undoes the unit.
-      mid≡id : (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (φ .to)) ≡ id
+      mid≡id : (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (ψ .to)) ≡ id
       mid≡id =
-          (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (φ .to))
+          (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (ψ .to))
         ≡⟨ sym (▶.F-∘ _ _) ⟩
-          ⊗-context Θ ▶ (((ρ← x) ◀ ⊗-context Ξ) ∘ φ .to)
-        ≡⟨ ap (⊗-context Θ ▶_) (ap (_∘ φ .to) (sym φ-from)) ⟩
-          ⊗-context Θ ▶ (φ .from ∘ φ .to)
-        ≡⟨ ap (⊗-context Θ ▶_) (φ .invr) ⟩
+          ⊗-context Θ ▶ (((ρ← x) ◀ ⊗-context Ξ) ∘ ψ .to)
+        ≡⟨ ap (⊗-context Θ ▶_) (ap (_∘ ψ .to) (sym φ-from)) ⟩
+          ⊗-context Θ ▶ (ψ .from ∘ ψ .to)
+        ≡⟨ ap (⊗-context Θ ▶_) (ψ .invr) ⟩
           ⊗-context Θ ▶ id
         ≡⟨ ▶.F-id ⟩
           id
@@ -366,9 +482,9 @@ representable-multicategory C M = Mc where
           plug Θ (x ∷ []) Ξ (ρ← x)
         ≡⟨⟩
           split .from ∘ (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ))
-            ∘ ((⊗-context Θ ▶ (φ .to)) ∘ split .to)
+            ∘ ((⊗-context Θ ▶ (ψ .to)) ∘ split .to)
         ≡⟨ ap (split .from ∘_) (assoc _ _ _) ⟩
-          split .from ∘ (((⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (φ .to))) ∘ split .to)
+          split .from ∘ (((⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (ψ .to))) ∘ split .to)
         ≡⟨ ap (λ p → split .from ∘ (p ∘ split .to)) mid≡id ⟩
           split .from ∘ (id ∘ split .to)
         ≡⟨ ap (split .from ∘_) (idl _) ⟩
@@ -846,119 +962,4 @@ representable-multicategory C M = Mc where
         ∎
 
 
-  ----------------------------------------------------------------------
-  -- The monoidal-functor associativity hexagon for ⊗-context, stated
-  -- standalone (the substance of "⊗-context is a strong monoidal functor").
-  --   φ_{Γ,Δ} = (⊗-context-++ Γ Δ).from : ⊗Γ ⊗ ⊗Δ → ⊗(Γ++Δ)
-  --   F-α→ : the associativity coherence (pure iso, no f/g/h).
-  ----------------------------------------------------------------------
-  φ : (Γ Δ : List Ob) → Hom (⊗-context Γ ⊗ ⊗-context Δ) (⊗-context (Γ ++ Δ))
-  φ Γ Δ = (⊗-context-++ Γ Δ) .from
-
-  -- Cons-reductions of the structure maps (definitional, hence refl):
-  --   ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to  =  a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to
-  --   φ (a ∷ Γ) Δ                      =  (a ▶ φ Γ Δ) ∘ α→ (a , ⊗Γ , ⊗Δ)
-  char-to-cons : (a : Ob) (Γ Δ Ξ : List Ob)
-    → ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to ≡ a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to
-  char-to-cons a Γ Δ Ξ = refl
-
-  φ-cons : (a : Ob) (Γ Δ : List Ob)
-    → φ (a ∷ Γ) Δ ≡ (a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , ⊗-context Δ)
-  φ-cons a Γ Δ = refl
-
-  F-α→ : (Γ Δ Ξ : List Ob)
-    →   ++-assoc-⊗-iso Γ Δ Ξ .to  ∘ φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)
-    ≡ φ Γ (Δ ++ Ξ) ∘ (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-  F-α→ [] Δ Ξ =
-      idl _
-    ∙ ap (φ Δ Ξ ∘_) (sym triangle-λ←)
-    ∙ assoc _ _ _
-    ∙ ap (λ x → x ∘ α→ (Unit , ⊗-context Δ , ⊗-context Ξ))
-          (sym (unitor-l .Isoⁿ.from .is-natural (⊗-context Δ ⊗ ⊗-context Ξ) (⊗-context (Δ ++ Ξ)) (φ Δ Ξ)))
-    ∙ sym (assoc _ _ _)
-  F-α→ (a ∷ Γ) Δ Ξ =
-        ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to ∘ φ ((a ∷ Γ) ++ Δ) Ξ ∘ (φ (a ∷ Γ) Δ ◀ ⊗-context Ξ)
-      ≡⟨⟩
-        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
-      ∘ ((a ▶ φ (Γ ++ Δ) Ξ) ∘ α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ))
-      ∘ (((a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , ⊗-context Δ)) ◀ ⊗-context Ξ)
-      -- coh1: distribute ◀ over the whiskered α2, use ◀-▶-comm (middle-slot α→
-      -- naturality) to push φ Γ Δ past the outer α→, then merge the ▶-layer.
-      -- No IH — pure structure.
-      ≡⟨ ap (λ z → (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
-                 ∘ ((a ▶ φ (Γ ++ Δ) Ξ) ∘ α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ)) ∘ z)
-            (◀.F-∘ _ _) ⟩
-        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
-      ∘ ((a ▶ φ (Γ ++ Δ) Ξ) ∘ α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ))
-      ∘ (((a ▶ φ Γ Δ) ◀ ⊗-context Ξ) ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
-      ≡⟨ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_)
-            (sym (assoc _ _ _) ∙ ap ((a ▶ φ (Γ ++ Δ) Ξ) ∘_) (assoc _ _ _)) ⟩
-        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
-      ∘ (a ▶ φ (Γ ++ Δ) Ξ)
-      ∘ ( (α→ (a , ⊗-context (Γ ++ Δ) , ⊗-context Ξ) ∘ ((a ▶ φ Γ Δ) ◀ ⊗-context Ξ))
-        ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) )
-      ≡⟨ ap (λ z → (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘ (a ▶ φ (Γ ++ Δ) Ξ)
-                 ∘ (z ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)))
-            ((◀-▶-comm {f = ⊗-context Ξ} {g = a}) .Isoⁿ.to .is-natural _ _ (φ Γ Δ)) ⟩
-        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
-      ∘ (a ▶ φ (Γ ++ Δ) Ξ)
-      ∘ ( ((a ▶ (φ Γ Δ ◀ ⊗-context Ξ)) ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ))
-        ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) )
-      ≡⟨ ap (λ z → (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘ (a ▶ φ (Γ ++ Δ) Ξ) ∘ z) (sym (assoc _ _ _)) ⟩
-        (a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to)
-      ∘ (a ▶ φ (Γ ++ Δ) Ξ)
-      ∘ ( (a ▶ (φ Γ Δ ◀ ⊗-context Ξ))
-        ∘ ( α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-          ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) ) )
-      ≡⟨ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_) (assoc _ _ _)
-       ∙ assoc _ _ _
-       ∙ ap (_∘ ( α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-                ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) ))
-            (sym (▶.F-∘ _ _ ∙ ap ((a ▶ ++-assoc-⊗-iso Γ Δ Ξ .to) ∘_) (▶.F-∘ _ _))) ⟩
-        (a ▶ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)))
-      ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-      ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
-      -- apply the induction hypothesis inside the ▶.
-      ≡⟨ ap (λ m → (a ▶ m)
-                 ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-                 ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
-            (F-α→ Γ Δ Ξ) ⟩
-        (a ▶ (φ Γ (Δ ++ Ξ) ∘ (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)))
-      ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-      ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
-      -- coh2a: distribute the outer ▶, then pentagon-α→ reassembles the three
-      -- associators (φ Γ (Δ++Ξ) and φ Δ Ξ are inert 2-cells; no IH).
-      ≡⟨ ap (_∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-                  ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ))
-            ( ▶.F-∘ _ _ ∙ ap ((a ▶ φ Γ (Δ ++ Ξ)) ∘_) (▶.F-∘ _ _) ) ⟩
-        ((a ▶ φ Γ (Δ ++ Ξ)) ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ)) ∘ (a ▶ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)))
-      ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-      ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ)
-      ≡⟨ sym (assoc _ _ _) ∙ ap ((a ▶ φ Γ (Δ ++ Ξ)) ∘_) (sym (assoc _ _ _)) ⟩
-        (a ▶ φ Γ (Δ ++ Ξ))
-      ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ))
-      ∘ ( (a ▶ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
-        ∘ α→ (a , ⊗-context Γ ⊗ ⊗-context Δ , ⊗-context Ξ)
-        ∘ (α→ (a , ⊗-context Γ , ⊗-context Δ) ◀ ⊗-context Ξ) )
-      ≡⟨ ap (λ z → (a ▶ φ Γ (Δ ++ Ξ)) ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ)) ∘ z) pentagon-α→ ⟩
-        (a ▶ φ Γ (Δ ++ Ξ))
-      ∘ (a ▶ (⊗-context Γ ▶ φ Δ Ξ))
-      ∘ α→ (a , ⊗-context Γ , ⊗-context Δ ⊗ ⊗-context Ξ)
-      ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-      -- coh2b: α→ naturality in the third slot pushes φ Δ Ξ outward.
-      ≡⟨ ap ((a ▶ φ Γ (Δ ++ Ξ)) ∘_)
-            ( assoc _ _ _
-            ∙ ap (_∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
-                 (sym ((▶-assoc {f = a} {g = ⊗-context Γ}) .Isoⁿ.to .is-natural _ _ (φ Δ Ξ)))
-            ∙ sym (assoc _ _ _) ) ⟩
-        (a ▶ φ Γ (Δ ++ Ξ))
-      ∘ α→ (a , ⊗-context Γ , ⊗-context (Δ ++ Ξ))
-      ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ)
-      ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-      -- fold φ (a ∷ Γ) (Δ ++ Ξ) back (definitional, φ-cons) after reassoc.
-      ≡⟨ assoc _ _ _
-       ∙ ap (_∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
-            (sym (φ-cons a Γ (Δ ++ Ξ))) ⟩
-        φ (a ∷ Γ) (Δ ++ Ξ) ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-      ∎
 
