@@ -265,12 +265,12 @@ representable-multicategory C M = Mc where
 
   -- Prepending an object a to the prefix tensors the 3-way split on the left,
   -- up to the associator (α← moves the new a⊗ past the split).  Used to run the
-  -- assocₘ h-coherence (g-free/gfi) by induction on the prefix.
-  dec-cons : (a : Ob) (Ω B Ξ' : List Ob)
+  -- assocₘ h-coherence (g-free/plug-assoc) by induction on the prefix.
+  split3-cons : (a : Ob) (Ω B Ξ' : List Ob)
     → (⊗-context-++-++ (a ∷ Ω) B Ξ') .to
       ≡ α← (a , ⊗-context Ω , ⊗-context B ⊗ ⊗-context Ξ')
         ∘ (a ▶ (⊗-context-++-++ Ω B Ξ') .to)
-  dec-cons a Ω B Ξ' =
+  split3-cons a Ω B Ξ' =
       assoc _ _ _
     ∙ ap (_∘ (a ▶ (⊗-context-++ Ω (B ++ Ξ')) .to))
          (sym ((▶-assoc {f = a} {g = ⊗-context Ω}) .Isoⁿ.from .is-natural _ _ ((⊗-context-++ B Ξ') .to)))
@@ -287,7 +287,7 @@ representable-multicategory C M = Mc where
       plug (a ∷ Ω) Γ Ξ' g
     ≡⟨ ap (λ z → ((a ▶ (⊗-context-++ Ω (x ∷ Ξ')) .from) ∘ α→ (a , ⊗-context Ω , x ⊗ ⊗-context Ξ'))
                ∘ ((a ⊗ ⊗-context Ω) ▶ (g ◀ ⊗-context Ξ')) ∘ z)
-          (dec-cons a Ω Γ Ξ') ⟩
+          (split3-cons a Ω Γ Ξ') ⟩
       ((a ▶ (⊗-context-++ Ω (x ∷ Ξ')) .from) ∘ α→ (a , ⊗-context Ω , x ⊗ ⊗-context Ξ'))
         ∘ ((a ⊗ ⊗-context Ω) ▶ (g ◀ ⊗-context Ξ'))
         ∘ (α← (a , ⊗-context Ω , ⊗-context Γ ⊗ ⊗-context Ξ') ∘ (a ▶ (⊗-context-++-++ Ω Γ Ξ') .to))
@@ -305,17 +305,17 @@ representable-multicategory C M = Mc where
     ∎
 
   -- With no prefix the 3-way split is the 2-way split up to the left unitor.
-  dec-nil : (B Ξ' : List Ob)
+  split3-nil : (B Ξ' : List Ob)
     → (⊗-context-++-++ [] B Ξ') .to
       ≡ λ→ (⊗-context B ⊗ ⊗-context Ξ') ∘ (⊗-context-++ B Ξ') .to
-  dec-nil B Ξ' = sym (λ→nat ((⊗-context-++ B Ξ') .to))
+  split3-nil B Ξ' = sym (λ→nat ((⊗-context-++ B Ξ') .to))
 
   -- With no prefix, plug is just the whiskered morphism after the 2-way split.
   plug-nil : ∀ {x} (Γ Ξ' : List Ob) (g : Hom (⊗-context Γ) x)
     → plug [] Γ Ξ' g ≡ (g ◀ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to
   plug-nil {x} Γ Ξ' g =
       plug [] Γ Ξ' g
-    ≡⟨ ap (λ z → λ← (x ⊗ ⊗-context Ξ') ∘ (Unit ▶ (g ◀ ⊗-context Ξ')) ∘ z) (dec-nil Γ Ξ') ⟩
+    ≡⟨ ap (λ z → λ← (x ⊗ ⊗-context Ξ') ∘ (Unit ▶ (g ◀ ⊗-context Ξ')) ∘ z) (split3-nil Γ Ξ') ⟩
       λ← (x ⊗ ⊗-context Ξ')
         ∘ ((Unit ▶ (g ◀ ⊗-context Ξ')) ∘ (λ→ (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to))
     ≡⟨ extendl (λ←nat (g ◀ ⊗-context Ξ')) ⟩
@@ -446,7 +446,7 @@ representable-multicategory C M = Mc where
       ∎
 
   -- The .to-direction of the hexagon (ψ = .to everywhere; obtained from F-α→
-  -- by inverting every factor).  Used for the assocₘ base gfi0 [].
+  -- by inverting every factor).  Used for the assocₘ base plug-assoc-nil [].
   F-α→-to : (Γ Δ Ξ : List Ob)
     →   (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to)
       ∘ (⊗-context-++ Γ (Δ ++ Ξ)) .to
@@ -700,17 +700,17 @@ representable-multicategory C M = Mc where
       decR   = ⊗-context-++-++ Θ (Φ ++ Ρ ++ Ψ) Ξ
 
       -- The Θ=[] core, generalised over Φ so it can recurse: the 2-way-split
-      -- version of gfi (⊗-context-++/++-assoc-⊗/assocₘ-flatten in place of the
-      -- -++-++/slot-unbury/assocₘ-boundary isos).  Cons on Φ mirrors gfi's cons
+      -- version of plug-assoc (⊗-context-++/++-assoc-⊗/assocₘ-flatten in place of the
+      -- -++-++/slot-unbury/assocₘ-boundary isos).  Cons on Φ mirrors plug-assoc's cons
       -- (pp-cons is refl, so the ⊗-context-++ split unfolds definitionally);
       -- the RHS plug also carries a prefix, pushed out with ◀-▶-comm.
-      gfi0 : (Φ' : List Ob)
+      plug-assoc-nil : (Φ' : List Ob)
         → (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
             ∘ plug Φ' Ρ (Ψ ++ Ξ) h
             ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from
           ≡ (plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to
-      gfi0 [] =
+      plug-assoc-nil [] =
           (⊗-context-++ (y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
             ∘ ⌜ plug [] Ρ (Ψ ++ Ξ) h ⌝
@@ -767,7 +767,7 @@ representable-multicategory C M = Mc where
          ∙ ap (λ w → (w ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to) (sym (plug-nil Ρ Ψ h)) ⟩
           (plug [] Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to
         ∎
-      gfi0 (b ∷ Φ') =
+      plug-assoc-nil (b ∷ Φ') =
           (⊗-context-++ ((b ∷ Φ') ++ y ∷ Ψ) Ξ) .to
             ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
             ∘ plug (b ∷ Φ') Ρ (Ψ ++ Ξ) h
@@ -792,7 +792,7 @@ representable-multicategory C M = Mc where
                    ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
                    ∘ plug Φ' Ρ (Ψ ++ Ξ) h
                    ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from ⌝)
-        ≡⟨ ap! (gfi0 Φ') ⟩
+        ≡⟨ ap! (plug-assoc-nil Φ') ⟩
           α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
             ∘ (b ▶ ((plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to))
         ≡⟨ ap (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘_) (▶.F-∘ _ _) ⟩
@@ -814,7 +814,7 @@ representable-multicategory C M = Mc where
       --              = (⊗Θ ▶ (plugGH ◀ ⊗Ξ)) ∘ decR.to   (only h remains).
       -- Proved by induction on the prefix Θ: the slot/boundary isos are clean
       -- ▶-recursions, and dec/plug carry α→ corrections (as in F-α→'s cons).
-      gfi : (Θ' : List Ob)
+      plug-assoc : (Θ' : List Ob)
         → (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to
             ∘ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from
             ∘ plug (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h
@@ -822,13 +822,13 @@ representable-multicategory C M = Mc where
           ≡ (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ))
             ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to
       -- Base: no outer prefix.  Reduces (via λ→ naturality on the ⊗-context-++-++ []
-      -- = λ→ ∘ ⊗-context-++ unfolding, see dec-nil) to the Φ-indexed coherence
-      -- gfi0 (same statement with ⊗-context-++ / ++-assoc-⊗ / assocₘ-flatten in
+      -- = λ→ ∘ ⊗-context-++ unfolding, see split3-nil) to the Φ-indexed coherence
+      -- plug-assoc-nil (same statement with ⊗-context-++ / ++-assoc-⊗ / assocₘ-flatten in
       -- place of the -++-++ / slot-unbury / assocₘ-boundary isos), provable by a
       -- further induction on Φ (cons: pp-cons refl + plug-cons + ▶-assoc, exactly
       -- like the Θ-cons above; base Φ=[] bottoms out in a Ρ-induction from
       -- assocₘ-flatten with a unit/triangle core).
-      gfi [] =
+      plug-assoc [] =
           (⊗-context-++-++ [] (Φ ++ y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
             ∘ plug Φ Ρ (Ψ ++ Ξ) h
@@ -836,7 +836,7 @@ representable-multicategory C M = Mc where
         ≡⟨ ap (λ z → z ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
                    ∘ plug Φ Ρ (Ψ ++ Ξ) h
                    ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from)
-              (dec-nil (Φ ++ y ∷ Ψ) Ξ) ⟩
+              (split3-nil (Φ ++ y ∷ Ψ) Ξ) ⟩
           (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ y ∷ Ψ) Ξ) .to)
             ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
             ∘ plug Φ Ρ (Ψ ++ Ξ) h
@@ -847,7 +847,7 @@ representable-multicategory C M = Mc where
               ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
               ∘ plug Φ Ρ (Ψ ++ Ξ) h
               ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from )
-        ≡⟨ ap (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘_) (gfi0 Φ) ⟩
+        ≡⟨ ap (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘_) (plug-assoc-nil Φ) ⟩
           λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
             ∘ ((plug Φ Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to)
         ≡⟨ assoc _ _ _ ⟩
@@ -860,10 +860,10 @@ representable-multicategory C M = Mc where
         ≡⟨ sym (assoc _ _ _) ⟩
           (Unit ▶ (plugGH ◀ ⊗-context Ξ))
             ∘ (λ→ (⊗-context (Φ ++ Ρ ++ Ψ) ⊗ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to)
-        ≡⟨ ap ((Unit ▶ (plugGH ◀ ⊗-context Ξ)) ∘_) (sym (dec-nil (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
+        ≡⟨ ap ((Unit ▶ (plugGH ◀ ⊗-context Ξ)) ∘_) (sym (split3-nil (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
           (⊗-context [] ▶ (plugGH ◀ ⊗-context Ξ)) ∘ (⊗-context-++-++ [] (Φ ++ Ρ ++ Ψ) Ξ) .to
         ∎
-      gfi (a ∷ Θ') =
+      plug-assoc (a ∷ Θ') =
           (⊗-context-++-++ (a ∷ Θ') (Φ ++ y ∷ Ψ) Ξ) .to
             ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
             ∘ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h
@@ -871,7 +871,7 @@ representable-multicategory C M = Mc where
         ≡⟨ ap (λ z → z ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
                    ∘ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h
                    ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from))
-              (dec-cons a Θ' (Φ ++ y ∷ Ψ) Ξ) ⟩
+              (split3-cons a Θ' (Φ ++ y ∷ Ψ) Ξ) ⟩
           (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
             ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to))
             ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
@@ -898,7 +898,7 @@ representable-multicategory C M = Mc where
                    ∘ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from
                    ∘ plug (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h
                    ∘ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from ⌝)
-        ≡⟨ ap! (gfi Θ') ⟩
+        ≡⟨ ap! (plug-assoc Θ') ⟩
           α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
             ∘ (a ▶ ( (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ))
                    ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to ))
@@ -911,14 +911,14 @@ representable-multicategory C M = Mc where
             ∘ ( α← (a , ⊗-context Θ' , ⊗-context (Φ ++ Ρ ++ Ψ) ⊗ ⊗-context Ξ)
               ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to) )
         ≡⟨ ap (((a ⊗ ⊗-context Θ') ▶ (plugGH ◀ ⊗-context Ξ)) ∘_)
-              (sym (dec-cons a Θ' (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
+              (sym (split3-cons a Θ' (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
           (⊗-context (a ∷ Θ') ▶ (plugGH ◀ ⊗-context Ξ))
             ∘ (⊗-context-++-++ (a ∷ Θ') (Φ ++ Ρ ++ Ψ) Ξ) .to
         ∎
 
       g-free : decL .to ∘ slot-iso .from ∘ plugH ∘ bdry-iso .from
                ≡ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ)) ∘ decR .to
-      g-free = gfi Θ
+      g-free = plug-assoc Θ
 
       -- (⊗Θ ▶ a) ∘ (⊗Θ ▶ b) = ⊗Θ ▶ (a ∘ b)  (▶.F-∘), then ◀.F-∘ inside.
       merge-▶ : (⊗-context Θ ▶ (g ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ))
@@ -1001,19 +1001,19 @@ representable-multicategory C M = Mc where
       -- The g-free remainder of the interchange base (Θ=[]), generalised over Γ
       -- so it can recurse: relates plug (Γ++Μ) h to (⊗Γ ▶ plug Μ h).  Since g has
       -- been factored out, Γ-induction is legitimate (h, plug Μ h are Γ-fixed).
-      -- Cons mirrors gfi's cons (pp-cons refl + plug-cons + ▶-assoc push-out);
+      -- Cons mirrors plug-assoc's cons (pp-cons refl + plug-cons + ▶-assoc push-out);
       -- base Γ=[] is left-unitor naturality.
-      ic-core : (Γ' : List Ob)
+      plug-shift : (Γ' : List Ob)
         →   (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
               ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
               ∘ plug (Γ' ++ Μ) Δ Κ h
               ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from
           ≡   (⊗-context Γ' ▶ plug Μ Δ Κ h)
               ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to
-      ic-core [] =
+      plug-shift [] =
           ap (λ→ (⊗-context (Μ ++ y ∷ Κ)) ∘_) (idl _ ∙ idr _)
         ∙ λ→nat (plug Μ Δ Κ h)
-      ic-core (b ∷ Γ') =
+      plug-shift (b ∷ Γ') =
           (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to
             ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
             ∘ plug ((b ∷ Γ') ++ Μ) Δ Κ h
@@ -1035,7 +1035,7 @@ representable-multicategory C M = Mc where
                    ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
                    ∘ plug (Γ' ++ Μ) Δ Κ h
                    ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from ⌝)
-        ≡⟨ ap! (ic-core Γ') ⟩
+        ≡⟨ ap! (plug-shift Γ') ⟩
           α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
             ∘ (b ▶ ((⊗-context Γ' ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to))
         ≡⟨ ap (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘_) (▶.F-∘ _ _) ⟩
@@ -1048,7 +1048,7 @@ representable-multicategory C M = Mc where
       -- the f-free bifunctoriality coherence (the hard piece), by induction on
       -- the prefix Θ.  Cons is clean: every factor is a ▶ (plug is prefix-linear
       -- via plug-cons; the ic-slot isos are ▶.F-map-iso), so no α corrections.
-      ici : (Θ' : List Ob)
+      plug-interchange : (Θ' : List Ob)
         →   plug Θ' Γ (Μ ++ y ∷ Κ) g
               ∘ (ic-slot₁-iso Θ' Γ Μ y Κ) .from
               ∘ plug (Θ' ++ Γ ++ Μ) Δ Κ h
@@ -1057,7 +1057,7 @@ representable-multicategory C M = Mc where
               ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
               ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
               ∘ plug Θ' Γ (Μ ++ Δ ++ Κ) g
-      ici [] =
+      plug-interchange [] =
           plug [] Γ (Μ ++ y ∷ Κ) g
             ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
             ∘ plug ([] ++ Γ ++ Μ) Δ Κ h
@@ -1075,7 +1075,7 @@ representable-multicategory C M = Mc where
               ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
               ∘ plug (Γ ++ Μ) Δ Κ h
               ∘ (ic-flatten-iso Γ Μ Δ Κ) .from )
-        ≡⟨ ap ((g ◀ ⊗-context (Μ ++ y ∷ Κ)) ∘_) (ic-core Γ) ⟩
+        ≡⟨ ap ((g ◀ ⊗-context (Μ ++ y ∷ Κ)) ∘_) (plug-shift Γ) ⟩
           (g ◀ ⊗-context (Μ ++ y ∷ Κ))
             ∘ ((⊗-context Γ ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ Γ (Μ ++ Δ ++ Κ)) .to)
         ≡⟨ assoc _ _ _ ⟩
@@ -1098,7 +1098,7 @@ representable-multicategory C M = Mc where
             ∘ (ic-slot₂-iso [] x Μ Δ Κ) .from
             ∘ plug [] Γ (Μ ++ Δ ++ Κ) g
         ∎
-      ici (a ∷ Θ') =
+      plug-interchange (a ∷ Θ') =
           plug (a ∷ Θ') Γ (Μ ++ y ∷ Κ) g
             ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
             ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h
@@ -1124,7 +1124,7 @@ representable-multicategory C M = Mc where
               ∘ (ic-slot₁-iso Θ' Γ Μ y Κ) .from
               ∘ plug (Θ' ++ Γ ++ Μ) Δ Κ h
               ∘ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from )
-        ≡⟨ ap (a ▶_) (ici Θ') ⟩
+        ≡⟨ ap (a ▶_) (plug-interchange Θ') ⟩
           a ▶ ( (ic-slot₀-iso Θ' x Μ y Κ) .from
               ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
               ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
@@ -1155,7 +1155,7 @@ representable-multicategory C M = Mc where
       ic-plug-coherence
         :   plugg ∘ slot₁-iso .from ∘ plugh₁ ∘ bdry-iso .from
         ≡ slot₀-iso .from ∘ plugh₂ ∘ slot₂-iso .from ∘ plugg₂
-      ic-plug-coherence = ici Θ
+      ic-plug-coherence = plug-interchange Θ
 
       rest₂ = slot₀-iso .from ∘ (plugh₂ ∘ (slot₂-iso .from ∘ plugg₂))
 
