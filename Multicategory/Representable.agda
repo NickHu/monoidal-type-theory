@@ -65,6 +65,23 @@ representable-multicategory C M = Mc where
   path→iso-ap-⊗ x p = ap-F₀-to-iso p
     where open FB.F-iso (-⊗-.Right x)
 
+  -- Transporting a morphism along an object path (fixed codomain) is
+  -- precomposition with the induced iso.  Every law uses this to discharge the
+  -- to-pathp obligation; the `subst`-over-⊗-context form composes it with a
+  -- path→iso characterisation.
+  transport-⊗-red : ∀ {z} {A B : Ob} (q : A ≡ B) (m : Hom A z)
+    → transport (λ i → Hom (q i) z) m ≡ m ∘ path→iso q .from
+  transport-⊗-red q m =
+      Hom-transport C q refl m
+    ∙ ap (λ k → k ∘ m ∘ path→iso q .from) (ap (λ i → i .to) path→iso-refl)
+    ∙ idl _
+
+  subst-⊗-red : ∀ {z} {A B : List Ob} (p : A ≡ B) {i : _ ≅ _}
+    → path→iso (ap ⊗-context p) ≡ i → (m : Hom (⊗-context A) z)
+    → subst (λ Ω → Hom (⊗-context Ω) z) p m ≡ m ∘ i .from
+  subst-⊗-red p char m =
+    transport-⊗-red (ap ⊗-context p) m ∙ ap (m ∘_) (ap (λ i → i .from) char)
+
   -- ⊗(Γ ++ []) ≅ ⊗Γ, mirroring ++-idr's recursion (id at [], ▶ at cons).
   -- Stated this way so path→iso of the ++-idr boundary equals it by a clean
   -- induction (no ρ/α coherence chase) — see ⊗-context-++-idr-path.
@@ -651,15 +668,7 @@ representable-multicategory C M = Mc where
       eq : transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f) ≡ f
       eq =
           transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f)
-        ≡⟨ Hom-transport C (ap ⊗-context (++-idr Γ)) refl _ ⟩
-          path→iso refl .to ∘ (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from
-        ≡⟨ ap (λ k → k ∘ (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from)
-               (ap (λ φ → φ .to) path→iso-refl) ⟩
-          id ∘ (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from
-        ≡⟨ idl _ ⟩
-          (ρ← z ∘ plug [] Γ [] f) ∘ path→iso (ap ⊗-context (++-idr Γ)) .from
-        ≡⟨ ap ((ρ← z ∘ plug [] Γ [] f) ∘_)
-               (ap (λ φ → φ .from) (⊗-context-++-idr-path Γ)) ⟩
+        ≡⟨ subst-⊗-red (++-idr Γ) (⊗-context-++-idr-path Γ) (ρ← z ∘ plug [] Γ [] f) ⟩
           (ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from
         ≡⟨ core ⟩
           f
@@ -677,19 +686,9 @@ representable-multicategory C M = Mc where
       plugGH = plug Φ Ρ Ψ h
       plugR = plug Θ (Φ ++ Ρ ++ Ψ) Ξ (g ∘ plugGH)
 
-      -- transport over Hom(⊗-)-by-domain reduces to precomposition with .from.
-      transport-⊗-red : ∀ {A B : Ob} (q : A ≡ B) (M : Hom A z)
-        → transport (λ i → Hom (q i) z) M ≡ M ∘ path→iso q .from
-      transport-⊗-red q M =
-          Hom-transport C q refl M
-        ∙ ap (λ k → k ∘ M ∘ path→iso q .from) (ap (λ φ → φ .to) path→iso-refl)
-        ∙ idl _
-
       subst-red : subst (λ Ω → Hom (⊗-context Ω) z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ plugL)
                   ≡ (f ∘ plugL) ∘ slot-iso .from
-      subst-red =
-          transport-⊗-red (ap ⊗-context (slot-unbury Θ Φ y Ψ Ξ)) (f ∘ plugL)
-        ∙ ap ((f ∘ plugL) ∘_) (ap (λ φ → φ .from) (slot-unbury-⊗ Θ Φ y Ψ Ξ))
+      subst-red = subst-⊗-red (slot-unbury Θ Φ y Ψ Ξ) (slot-unbury-⊗ Θ Φ y Ψ Ξ) (f ∘ plugL)
 
       -- The f-free plug coherence (the pentagon): plugging h into the relocated
       -- slot of (f∘ₘg) equals plugging (g∘ₘh) into f's slot.  f is cancelled by
@@ -962,10 +961,8 @@ representable-multicategory C M = Mc where
               subst-red ⟩
           transport (λ i → Hom (⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ i)) z)
             (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH)
-        ≡⟨ (transport-⊗-red (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ))
-                (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH)
-            ∙ ap (λ φ → (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH) ∘ φ)
-                (ap (λ ψ → ψ .from) (assocₘ-boundary-⊗ Θ Φ Ρ Ψ Ξ))) ⟩
+        ≡⟨ subst-⊗-red (assocₘ-boundary Θ Φ Ρ Ψ Ξ) (assocₘ-boundary-⊗ Θ Φ Ρ Ψ Ξ)
+              (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH) ⟩
           (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH) ∘ bdry-iso .from
         ≡⟨ sym (assoc _ _ _) ⟩
           ((f ∘ plugL) ∘ slot-iso .from) ∘ (plugH ∘ bdry-iso .from)
@@ -989,30 +986,17 @@ representable-multicategory C M = Mc where
       slot₂-iso = ic-slot₂-iso Θ x Μ Δ Κ
       bdry-iso  = ic-boundary-iso Θ Γ Μ Δ Κ
 
-      transport-⊗-red : ∀ {A B : Ob} (q : A ≡ B) (M : Hom A z)
-        → transport (λ i → Hom (q i) z) M ≡ M ∘ path→iso q .from
-      transport-⊗-red q M =
-          Hom-transport C q refl M
-        ∙ ap (λ k → k ∘ M ∘ path→iso q .from) (ap (λ φ → φ .to) path→iso-refl)
-        ∙ idl _
-
       subst₀ : subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₀ Θ x Μ y Κ) f
                ≡ f ∘ slot₀-iso .from
-      subst₀ =
-          transport-⊗-red (ap ⊗-context (interchange-slot₀ Θ x Μ y Κ)) f
-        ∙ ap (f ∘_) (ap (λ φ → φ .from) (ic-slot₀-⊗ Θ x Μ y Κ))
+      subst₀ = subst-⊗-red (interchange-slot₀ Θ x Μ y Κ) (ic-slot₀-⊗ Θ x Μ y Κ) f
 
       subst₁ : subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ plugg)
                ≡ (f ∘ plugg) ∘ slot₁-iso .from
-      subst₁ =
-          transport-⊗-red (ap ⊗-context (interchange-slot₁ Θ Γ Μ y Κ)) (f ∘ plugg)
-        ∙ ap ((f ∘ plugg) ∘_) (ap (λ φ → φ .from) (ic-slot₁-⊗ Θ Γ Μ y Κ))
+      subst₁ = subst-⊗-red (interchange-slot₁ Θ Γ Μ y Κ) (ic-slot₁-⊗ Θ Γ Μ y Κ) (f ∘ plugg)
 
       subst₂-red : (M : Hom (⊗-context ((Θ ++ x ∷ Μ) ++ Δ ++ Κ)) z)
         → subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₂ Θ x Μ Δ Κ) M ≡ M ∘ slot₂-iso .from
-      subst₂-red M =
-          transport-⊗-red (ap ⊗-context (interchange-slot₂ Θ x Μ Δ Κ)) M
-        ∙ ap (M ∘_) (ap (λ φ → φ .from) (ic-slot₂-⊗ Θ x Μ Δ Κ))
+      subst₂-red = subst-⊗-red (interchange-slot₂ Θ x Μ Δ Κ) (ic-slot₂-⊗ Θ x Μ Δ Κ)
 
       -- The g-free remainder of the interchange base (Θ=[]), generalised over Γ
       -- so it can recurse: relates plug (Γ++Μ) h to (⊗Γ ▶ plug Μ h).  Since g has
@@ -1196,10 +1180,8 @@ representable-multicategory C M = Mc where
               subst₁ ⟩
           transport (λ i → Hom (⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ i)) z)
             (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁)
-        ≡⟨ (transport-⊗-red (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ))
-                (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁)
-            ∙ ap (λ φ → (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁) ∘ φ)
-                (ap (λ ψ → ψ .from) (ic-boundary-⊗ Θ Γ Μ Δ Κ))) ⟩
+        ≡⟨ subst-⊗-red (interchangeₘ-boundary Θ Γ Μ Δ Κ) (ic-boundary-⊗ Θ Γ Μ Δ Κ)
+              (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁) ⟩
           (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁) ∘ bdry-iso .from
         ≡⟨ sym (assoc _ _ _) ⟩
           ((f ∘ plugg) ∘ slot₁-iso .from) ∘ (plugh₁ ∘ bdry-iso .from)
