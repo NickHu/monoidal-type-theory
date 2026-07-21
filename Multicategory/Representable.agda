@@ -36,7 +36,7 @@ representable-multicategory C M = Mc where
   -- 1-cells are objects of C and the 1-cell tensor is the monoidal ⊗, so the
   -- bicategory's ρ←/λ←/α← (and ▶/◀/⊗) are definitionally the monoidal ones.
   open Cat.Bi.Reasoning (Deloop M) using
-    (triangle-ρ← ; triangle-ρ→ ; triangle-λ← ; triangle-λ→ ; λ←≡ρ← ; λ→≡ρ→ ; ▶-assoc ; ◀-▶-comm)
+    (triangle-ρ← ; triangle-ρ→ ; triangle-λ← ; triangle-λ→ ; λ←≡ρ← ; λ→≡ρ→ ; ▶-assoc ; ◀-▶-comm ; ◀-assoc)
 
   ⊗-context : List Ob → Ob
   ⊗-context []       = Unit
@@ -430,6 +430,53 @@ representable-multicategory C M = Mc where
         φ (a ∷ Γ) (Δ ++ Ξ) ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
       ∎
 
+  -- The .to-direction of the hexagon (ψ = .to everywhere; obtained from F-α→
+  -- by inverting every factor).  Used for the assocₘ base gfi0 [].
+  F-α→-to : (Γ Δ Ξ : List Ob)
+    →   (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to)
+      ∘ (⊗-context-++ Γ (Δ ++ Ξ)) .to
+      ∘ (++-assoc-⊗-iso Γ Δ Ξ) .to
+    ≡   α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+      ∘ ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ)
+      ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to
+  F-α→-to Γ Δ Ξ = sym helper
+    where
+      qq : (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to) ∘ (⊗-context Γ ▶ φ Δ Ξ) ≡ id
+      qq = ▶.annihilate ((⊗-context-++ Δ Ξ) .invl)
+      pp : (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ φ Γ (Δ ++ Ξ) ≡ id
+      pp = (⊗-context-++ Γ (Δ ++ Ξ)) .invl
+      dd : (φ Γ Δ ◀ ⊗-context Ξ) ∘ ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ) ≡ id
+      dd = ◀.annihilate ((⊗-context-++ Γ Δ) .invr)
+      bb : φ (Γ ++ Δ) Ξ ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to ≡ id
+      bb = (⊗-context-++ (Γ ++ Δ) Ξ) .invr
+
+      QS : (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+         ≡ (⊗-context-++ Γ (Δ ++ Ξ)) .to
+             ∘ ( ++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)) )
+      QS = sym (cancell pp) ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (F-α→ Γ Δ Ξ))
+
+      MID : (⊗-context Γ ▶ φ Δ Ξ)
+              ∘ ( α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+                ∘ ( ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to ) )
+          ≡ (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ ++-assoc-⊗-iso Γ Δ Ξ .to
+      MID =
+          assoc _ _ _
+        ∙ ap (_∘ (((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to)) QS
+        ∙ sym (assoc _ _ _)
+        ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (assoc _ _ _))
+        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w)) (sym (assoc _ _ _))
+        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ w))) (cancell dd)
+        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w)) bb
+        ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (idr _)
+
+      helper : α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
+                 ∘ ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ)
+                 ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to
+             ≡ (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to)
+                 ∘ (⊗-context-++ Γ (Δ ++ Ξ)) .to
+                 ∘ (++-assoc-⊗-iso Γ Δ Ξ) .to
+      helper = sym (cancell qq) ∙ ap ((⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to) ∘_) MID
+
   Mc : Premulticategory _ _
   Mc .Obₘ = Ob
 
@@ -666,7 +713,67 @@ representable-multicategory C M = Mc where
             ∘ plug Φ' Ρ (Ψ ++ Ξ) h
             ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from
           ≡ (plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to
-      gfi0 []        = {!!}
+      gfi0 [] =
+          (⊗-context-++ (y ∷ Ψ) Ξ) .to
+            ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
+            ∘ plug [] Ρ (Ψ ++ Ξ) h
+            ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from
+        ≡⟨ ap (λ w → (⊗-context-++ (y ∷ Ψ) Ξ) .to ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
+                   ∘ w ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from)
+              (plug-nil Ρ (Ψ ++ Ξ) h) ⟩
+          (⊗-context-++ (y ∷ Ψ) Ξ) .to
+            ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
+            ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
+            ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from
+        ≡⟨ ap (λ w → (⊗-context-++ (y ∷ Ψ) Ξ) .to ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
+                   ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to) ∘ w)
+              (flat-from Ρ Ψ Ξ) ⟩
+          (⊗-context-++ (y ∷ Ψ) Ξ) .to
+            ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
+            ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
+            ∘ (++-assoc-⊗-iso Ρ Ψ Ξ) .to
+        ≡⟨ ap ((⊗-context-++ (y ∷ Ψ) Ξ) .to ∘_) (idl _) ⟩
+          (⊗-context-++ (y ∷ Ψ) Ξ) .to
+            ∘ ( ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
+              ∘ (++-assoc-⊗-iso Ρ Ψ Ξ) .to )
+        -- unfold ψ(y∷Ψ) = α← ∘ (y ▶ ψ Ψ Ξ) (pp-cons, definitional), pull α← out.
+        ≡⟨ sym (assoc _ _ _)
+         ∙ ap (α← (y , ⊗-context Ψ , ⊗-context Ξ) ∘_)
+              (ap ((y ▶ (⊗-context-++ Ψ Ξ) .to) ∘_) (sym (assoc _ _ _))) ⟩
+          α← (y , ⊗-context Ψ , ⊗-context Ξ)
+            ∘ ( (y ▶ (⊗-context-++ Ψ Ξ) .to)
+              ∘ ( (h ◀ ⊗-context (Ψ ++ Ξ))
+                ∘ ((⊗-context-++ Ρ (Ψ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Ρ Ψ Ξ) .to) ) )
+        -- bifunctor interchange: slide h past y ▶ ψΨΞ.
+        ≡⟨ ap (α← (y , ⊗-context Ψ , ⊗-context Ξ) ∘_) (extendl (-⊗-.rlmap _ _)) ⟩
+          α← (y , ⊗-context Ψ , ⊗-context Ξ)
+            ∘ ( (h ◀ (⊗-context Ψ ⊗ ⊗-context Ξ))
+              ∘ ( (⊗-context Ρ ▶ (⊗-context-++ Ψ Ξ) .to)
+                ∘ ((⊗-context-++ Ρ (Ψ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Ρ Ψ Ξ) .to) ) )
+        -- the h-free tail is the .to-hexagon F-α→-to Ρ Ψ Ξ.
+        ≡⟨ ap (λ w → α← (y , ⊗-context Ψ , ⊗-context Ξ) ∘ ((h ◀ (⊗-context Ψ ⊗ ⊗-context Ξ)) ∘ w))
+              (F-α→-to Ρ Ψ Ξ) ⟩
+          α← (y , ⊗-context Ψ , ⊗-context Ξ)
+            ∘ ( (h ◀ (⊗-context Ψ ⊗ ⊗-context Ξ))
+              ∘ ( α→ (⊗-context Ρ , ⊗-context Ψ , ⊗-context Ξ)
+                ∘ ( ((⊗-context-++ Ρ Ψ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to ) ) )
+        -- α→ naturality in the first slot (h): pull h out to (h◀⊗Ψ)◀⊗Ξ.
+        ≡⟨ ap (α← (y , ⊗-context Ψ , ⊗-context Ξ) ∘_)
+              (extendl (sym ((◀-assoc {f = ⊗-context Ψ} {g = ⊗-context Ξ}) .Isoⁿ.from .is-natural _ _ h))) ⟩
+          α← (y , ⊗-context Ψ , ⊗-context Ξ)
+            ∘ ( α→ (y , ⊗-context Ψ , ⊗-context Ξ)
+              ∘ ( ((h ◀ ⊗-context Ψ) ◀ ⊗-context Ξ)
+                ∘ ( ((⊗-context-++ Ρ Ψ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to ) ) )
+        -- α← ∘ α→ = id.
+        ≡⟨ cancell (α≅ .invr) ⟩
+          ((h ◀ ⊗-context Ψ) ◀ ⊗-context Ξ)
+            ∘ ( ((⊗-context-++ Ρ Ψ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to )
+        -- fold ◀ and plug-nil to reach the RHS.
+        ≡⟨ assoc _ _ _
+         ∙ ap (_∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to) (sym (◀.F-∘ _ _))
+         ∙ ap (λ w → (w ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to) (sym (plug-nil Ρ Ψ h)) ⟩
+          (plug [] Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to
+        ∎
       gfi0 (b ∷ Φ') =
           (⊗-context-++ ((b ∷ Φ') ++ y ∷ Ψ) Ξ) .to
             ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
