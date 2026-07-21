@@ -791,14 +791,11 @@ representable-multicategory C M = Mc where
       -- like the Θ-cons above; base Φ=[] bottoms out in a Ρ-induction from
       -- assocₘ-flatten with a unit/triangle core).
       plug-assoc [] =
-          (⊗-context-++-++ [] (Φ ++ y ∷ Ψ) Ξ) .to
+          ⌜ (⊗-context-++-++ [] (Φ ++ y ∷ Ψ) Ξ) .to ⌝
             ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
             ∘ plug Φ Ρ (Ψ ++ Ξ) h
             ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from
-        ≡⟨ ap (λ z → z ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
-                   ∘ plug Φ Ρ (Ψ ++ Ξ) h
-                   ∘ (assocₘ-flatten-iso Φ Ρ Ψ Ξ) .from)
-              (split3-nil (Φ ++ y ∷ Ψ) Ξ) ⟩
+        ≡⟨ ap! (split3-nil (Φ ++ y ∷ Ψ) Ξ) ⟩
           (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘ (⊗-context-++ (Φ ++ y ∷ Ψ) Ξ) .to)
             ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
             ∘ plug Φ Ρ (Ψ ++ Ξ) h
@@ -826,25 +823,17 @@ representable-multicategory C M = Mc where
           (⊗-context [] ▶ (plugGH ◀ ⊗-context Ξ)) ∘ (⊗-context-++-++ [] (Φ ++ Ρ ++ Ψ) Ξ) .to
         ∎
       plug-assoc (a ∷ Θ') =
-          (⊗-context-++-++ (a ∷ Θ') (Φ ++ y ∷ Ψ) Ξ) .to
+          ⌜ (⊗-context-++-++ (a ∷ Θ') (Φ ++ y ∷ Ψ) Ξ) .to ⌝
             ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
             ∘ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h
             ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from)
-        ≡⟨ ap (λ z → z ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
-                   ∘ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h
-                   ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from))
-              (split3-cons a Θ' (Φ ++ y ∷ Ψ) Ξ) ⟩
+        ≡⟨ ap! (split3-cons a Θ' (Φ ++ y ∷ Ψ) Ξ) ⟩
           (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
             ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to))
             ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
-            ∘ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h
+            ∘ ⌜ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h ⌝
             ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from)
-        ≡⟨ ap (λ z → (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-                        ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to))
-                     ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
-                     ∘ z
-                     ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from))
-              (plug-cons a (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h) ⟩
+        ≡⟨ ap! (plug-cons a (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h) ⟩
           (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
             ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to))
             ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
@@ -971,11 +960,9 @@ representable-multicategory C M = Mc where
       plug-shift (b ∷ Γ') =
           (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to
             ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
-            ∘ plug ((b ∷ Γ') ++ Μ) Δ Κ h
+            ∘ ⌜ plug ((b ∷ Γ') ++ Μ) Δ Κ h ⌝
             ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from)
-        ≡⟨ ap (λ w → (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
-                   ∘ w ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from))
-              (plug-cons b (Γ' ++ Μ) Δ Κ h) ⟩
+        ≡⟨ ap! (plug-cons b (Γ' ++ Μ) Δ Κ h) ⟩
           (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘ (b ▶ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to))
             ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
             ∘ (b ▶ plug (Γ' ++ Μ) Δ Κ h)
@@ -1013,13 +1000,11 @@ representable-multicategory C M = Mc where
               ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
               ∘ plug Θ' Γ (Μ ++ Δ ++ Κ) g
       plug-interchange [] =
-          plug [] Γ (Μ ++ y ∷ Κ) g
+          ⌜ plug [] Γ (Μ ++ y ∷ Κ) g ⌝
             ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
             ∘ plug ([] ++ Γ ++ Μ) Δ Κ h
             ∘ (ic-boundary-iso [] Γ Μ Δ Κ) .from
-        ≡⟨ ap (λ w → w ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
-                   ∘ plug ([] ++ Γ ++ Μ) Δ Κ h ∘ (ic-boundary-iso [] Γ Μ Δ Κ) .from)
-              (plug-nil Γ (Μ ++ y ∷ Κ) g) ⟩
+        ≡⟨ ap! (plug-nil Γ (Μ ++ y ∷ Κ) g) ⟩
           ((g ◀ ⊗-context (Μ ++ y ∷ Κ)) ∘ (⊗-context-++ Γ (Μ ++ y ∷ Κ)) .to)
             ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
             ∘ plug (Γ ++ Μ) Δ Κ h
@@ -1054,20 +1039,16 @@ representable-multicategory C M = Mc where
             ∘ plug [] Γ (Μ ++ Δ ++ Κ) g
         ∎
       plug-interchange (a ∷ Θ') =
-          plug (a ∷ Θ') Γ (Μ ++ y ∷ Κ) g
+          ⌜ plug (a ∷ Θ') Γ (Μ ++ y ∷ Κ) g ⌝
             ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
             ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h
             ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
-        ≡⟨ ap (λ w → w ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
-                   ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from))
-              (plug-cons a Θ' Γ (Μ ++ y ∷ Κ) g) ⟩
+        ≡⟨ ap! (plug-cons a Θ' Γ (Μ ++ y ∷ Κ) g) ⟩
           (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g)
             ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
-            ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h
+            ∘ ⌜ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h ⌝
             ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
-        ≡⟨ ap (λ w → (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g) ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
-                   ∘ w ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from))
-              (plug-cons a (Θ' ++ Γ ++ Μ) Δ Κ h) ⟩
+        ≡⟨ ap! (plug-cons a (Θ' ++ Γ ++ Μ) Δ Κ h) ⟩
           (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g)
             ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
             ∘ (a ▶ plug (Θ' ++ Γ ++ Μ) Δ Κ h)
@@ -1075,11 +1056,11 @@ representable-multicategory C M = Mc where
         ≡⟨ sym ( ▶.F-∘ _ _
                ∙ ap ((a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g) ∘_)
                     (▶.F-∘ _ _ ∙ ap ((a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from) ∘_) (▶.F-∘ _ _)) ) ⟩
-          a ▶ ( plug Θ' Γ (Μ ++ y ∷ Κ) g
+          a ▶ ⌜ plug Θ' Γ (Μ ++ y ∷ Κ) g
               ∘ (ic-slot₁-iso Θ' Γ Μ y Κ) .from
               ∘ plug (Θ' ++ Γ ++ Μ) Δ Κ h
-              ∘ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from )
-        ≡⟨ ap (a ▶_) (plug-interchange Θ') ⟩
+              ∘ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from ⌝
+        ≡⟨ ap! (plug-interchange Θ') ⟩
           a ▶ ( (ic-slot₀-iso Θ' x Μ y Κ) .from
               ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
               ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
@@ -1088,19 +1069,15 @@ representable-multicategory C M = Mc where
          ∙ ap ((a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘_)
               (▶.F-∘ _ _ ∙ ap ((a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h) ∘_) (▶.F-∘ _ _)) ⟩
           (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
-            ∘ (a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h)
+            ∘ ⌜ a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h ⌝
             ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
             ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g)
-        ≡⟨ ap (λ w → (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘ w
-                   ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from) ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g))
-              (sym (plug-cons a (Θ' ++ x ∷ Μ) Δ Κ h)) ⟩
+        ≡⟨ ap! (sym (plug-cons a (Θ' ++ x ∷ Μ) Δ Κ h)) ⟩
           (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
             ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
             ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
-            ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g)
-        ≡⟨ ap (λ w → (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
-                   ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from) ∘ w)
-              (sym (plug-cons a Θ' Γ (Μ ++ Δ ++ Κ) g)) ⟩
+            ∘ ⌜ a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g ⌝
+        ≡⟨ ap! (sym (plug-cons a Θ' Γ (Μ ++ Δ ++ Κ) g)) ⟩
           (ic-slot₀-iso (a ∷ Θ') x Μ y Κ) .from
             ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
             ∘ (ic-slot₂-iso (a ∷ Θ') x Μ Δ Κ) .from
