@@ -36,7 +36,8 @@ representable-multicategory C M = Mc where
   -- 1-cells are objects of C and the 1-cell tensor is the monoidal ⊗, so the
   -- bicategory's ρ←/λ←/α← (and ▶/◀/⊗) are definitionally the monoidal ones.
   open Cat.Bi.Reasoning (Deloop M) using
-    (triangle-ρ← ; triangle-ρ→ ; triangle-λ← ; triangle-λ→ ; λ←≡ρ← ; λ→≡ρ→ ; ▶-assoc ; ◀-▶-comm ; ◀-assoc)
+    (triangle-ρ← ; triangle-ρ→ ; triangle-λ← ; triangle-λ→ ; λ←≡ρ← ; λ→≡ρ→ ; ▶-assoc ; ◀-▶-comm ; ◀-assoc
+    ; λ→nat ; λ←nat ; ρ→nat ; ρ←nat)
 
   ⊗-context : List Ob → Ob
   ⊗-context []       = Unit
@@ -290,7 +291,7 @@ representable-multicategory C M = Mc where
   dec-nil : (B Ξ' : List Ob)
     → (⊗-context-++-++ [] B Ξ') .to
       ≡ λ→ (⊗-context B ⊗ ⊗-context Ξ') ∘ (⊗-context-++ B Ξ') .to
-  dec-nil B Ξ' = sym (unitor-l .Isoⁿ.to .is-natural _ _ ((⊗-context-++ B Ξ') .to))
+  dec-nil B Ξ' = sym (λ→nat ((⊗-context-++ B Ξ') .to))
 
   -- With no prefix, plug is just the whiskered morphism after the 2-way split.
   plug-nil : ∀ {x} (Γ Ξ' : List Ob) (g : Hom (⊗-context Γ) x)
@@ -300,7 +301,7 @@ representable-multicategory C M = Mc where
     ≡⟨ ap (λ z → λ← (x ⊗ ⊗-context Ξ') ∘ (Unit ▶ (g ◀ ⊗-context Ξ')) ∘ z) (dec-nil Γ Ξ') ⟩
       λ← (x ⊗ ⊗-context Ξ')
         ∘ ((Unit ▶ (g ◀ ⊗-context Ξ')) ∘ (λ→ (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to))
-    ≡⟨ extendl (unitor-l .Isoⁿ.from .is-natural _ _ (g ◀ ⊗-context Ξ')) ⟩
+    ≡⟨ extendl (λ←nat (g ◀ ⊗-context Ξ')) ⟩
       (g ◀ ⊗-context Ξ')
         ∘ (λ← (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (λ→ (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to))
     ≡⟨ ap ((g ◀ ⊗-context Ξ') ∘_) (cancell (λ≅ .invr)) ⟩
@@ -342,7 +343,7 @@ representable-multicategory C M = Mc where
     ∙ ap (φ Δ Ξ ∘_) (sym triangle-λ←)
     ∙ assoc _ _ _
     ∙ ap (λ x → x ∘ α→ (Unit , ⊗-context Δ , ⊗-context Ξ))
-          (sym (unitor-l .Isoⁿ.from .is-natural (⊗-context Δ ⊗ ⊗-context Ξ) (⊗-context (Δ ++ Ξ)) (φ Δ Ξ)))
+          (sym (λ←nat (φ Δ Ξ)))
     ∙ sym (assoc _ _ _)
   F-α→ (a ∷ Γ) Δ Ξ =
         ++-assoc-⊗-iso (a ∷ Γ) Δ Ξ .to ∘ φ ((a ∷ Γ) ++ Δ) Ξ ∘ (φ (a ∷ Γ) Δ ◀ ⊗-context Ξ)
@@ -543,10 +544,10 @@ representable-multicategory C M = Mc where
   Mc .idₘr {Γ = Γ} {z = z} f = to-pathp eq
     where
       -- λ-naturality: ρ←z ∘ λ←(at z⊗Unit) = λ←(at z) ∘ (Unit▶ρ←z).
-      λ-nat-rho = unitor-l .Isoⁿ.from .is-natural (z ⊗ Unit) z (ρ← z)
+      λ-nat-rho = λ←nat (ρ← z)
 
       -- ρ-naturality: ρ←z ∘ (f◀Unit) = f ∘ ρ←(⊗Γ).
-      ρ-nat-f = sym (unitor-r .Isoⁿ.from .is-natural (⊗-context Γ) z f)
+      ρ-nat-f = sym (ρ←nat f)
 
       -- The three-way split ⊗(Γ++[]) ≅ Unit ⊗ (⊗Γ ⊗ Unit) and the ++-idr iso.
       split : ⊗-context (Γ ++ []) ≅ (Unit ⊗ (⊗-context Γ ⊗ Unit))
@@ -564,7 +565,7 @@ representable-multicategory C M = Mc where
       λ→-nat
         : λ→ _ ∘ ρ-idr .from ≡ (Unit ▶ ρ-idr .from) ∘ λ→ (⊗-context Γ)
       λ→-nat =
-        unitor-l .Isoⁿ.to .is-natural (⊗-context Γ) (⊗-context (Γ ++ [])) (ρ-idr .from)
+        λ→nat (ρ-idr .from)
 
       -- intro = (Unit ▶ ρ→(⊗Γ)) ∘ λ→(⊗Γ): the leading [] contributes λ→ and the
       -- trailing [] contributes ρ→ (via ⊗-context-++-[]-ρ).
@@ -605,7 +606,7 @@ representable-multicategory C M = Mc where
 
       -- λ-naturality: λ←_z ∘ (Unit ▶ f) = f ∘ λ←(⊗Γ).
       λ-nat-f : λ← z ∘ (Unit ▶ f) ≡ f ∘ λ← (⊗-context Γ)
-      λ-nat-f = unitor-l .Isoⁿ.from .is-natural (⊗-context Γ) z f
+      λ-nat-f = λ←nat f
 
       -- The core equation.  plug [] Γ [] f unfolds to
       --   λ←(z⊗Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ split.to
@@ -861,7 +862,7 @@ representable-multicategory C M = Mc where
           (λ→ (⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘ (plug Φ Ρ Ψ h ◀ ⊗-context Ξ))
             ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to
         ≡⟨ ap (_∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to)
-              (unitor-l .Isoⁿ.to .is-natural _ _ (plugGH ◀ ⊗-context Ξ)) ⟩
+              (λ→nat (plugGH ◀ ⊗-context Ξ)) ⟩
           ((Unit ▶ (plugGH ◀ ⊗-context Ξ)) ∘ λ→ (⊗-context (Φ ++ Ρ ++ Ψ) ⊗ ⊗-context Ξ))
             ∘ (⊗-context-++ (Φ ++ Ρ ++ Ψ) Ξ) .to
         ≡⟨ sym (assoc _ _ _) ⟩
@@ -1035,7 +1036,7 @@ representable-multicategory C M = Mc where
               ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to
       ic-core [] =
           ap (λ→ (⊗-context (Μ ++ y ∷ Κ)) ∘_) (idl _ ∙ idr _)
-        ∙ unitor-l .Isoⁿ.to .is-natural _ _ (plug Μ Δ Κ h)
+        ∙ λ→nat (plug Μ Δ Κ h)
       ic-core (b ∷ Γ') =
           (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to
             ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
