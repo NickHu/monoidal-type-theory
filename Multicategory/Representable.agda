@@ -292,6 +292,28 @@ representable-multicategory C M = Mc where
       ≡ λ→ (⊗-context B ⊗ ⊗-context Ξ') ∘ (⊗-context-++ B Ξ') .to
   dec-nil B Ξ' = sym (unitor-l .Isoⁿ.to .is-natural _ _ ((⊗-context-++ B Ξ') .to))
 
+  -- With no prefix, plug is just the whiskered morphism after the 2-way split.
+  plug-nil : ∀ {x} (Γ Ξ' : List Ob) (g : Hom (⊗-context Γ) x)
+    → plug [] Γ Ξ' g ≡ (g ◀ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to
+  plug-nil {x} Γ Ξ' g =
+      plug [] Γ Ξ' g
+    ≡⟨ ap (λ z → λ← (x ⊗ ⊗-context Ξ') ∘ (Unit ▶ (g ◀ ⊗-context Ξ')) ∘ z) (dec-nil Γ Ξ') ⟩
+      λ← (x ⊗ ⊗-context Ξ')
+        ∘ ((Unit ▶ (g ◀ ⊗-context Ξ')) ∘ (λ→ (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to))
+    ≡⟨ extendl (unitor-l .Isoⁿ.from .is-natural _ _ (g ◀ ⊗-context Ξ')) ⟩
+      (g ◀ ⊗-context Ξ')
+        ∘ (λ← (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (λ→ (⊗-context Γ ⊗ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to))
+    ≡⟨ ap ((g ◀ ⊗-context Ξ') ∘_) (cancell (λ≅ .invr)) ⟩
+      (g ◀ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to
+    ∎
+
+  -- At empty prefix, assocₘ-flatten's .from is ++-assoc's .to (same direction,
+  -- ⊗((Ρ++Ψ)++Ξ) → ⊗(Ρ++(Ψ++Ξ)); the isos themselves are mutual inverses).
+  flat-from : (Ρ Ψ Ξ' : List Ob)
+    → (assocₘ-flatten-iso [] Ρ Ψ Ξ') .from ≡ (++-assoc-⊗-iso Ρ Ψ Ξ') .to
+  flat-from []      Ψ Ξ' = refl
+  flat-from (b ∷ Ρ) Ψ Ξ' = ap (b ▶_) (flat-from Ρ Ψ Ξ')
+
   Mc : Premulticategory _ _
   Mc .Obₘ = Ob
 
