@@ -56,10 +56,12 @@ Functor reasoning: `▶.F-∘ : ▶.F₁ (f ∘ g) ≡ ▶.F₁ f ∘ ▶.F₁ g
 |------|--------|----------|
 | `idₘl` | ✅ proven | `plug Θ [x] Ξ (ρ← x) ≡ id` via `triangle-α→` |
 | `idₘr` | ✅ proven | Hom-transport over `++-idr` + the `core` chain (naturality squares + unit coherences) |
-| `assocₘ` | ✅ proven | `g-free = gfi Θ` (prefix induction); base via `dec-nil`+`gfi0 Φ`; `gfi0 []` via `plug-nil`/`flat-from`/`-⊗-.rlmap`/`F-α→-to`/`◀-assoc`; all machinery in `dec-cons`/`plug-cons`/`plug-nil`/`F-α→-to` |
-| `interchangeₘ` | ✅ proven | `ic-plug-coherence = ici Θ` (prefix induction, clean cons); base `ici []` via `plug-nil` + `ic-core` (g-free Γ-induction) + `-⊗-.rlmap` (g/h commute) |
+| `assocₘ` | ✅ proven | `g-free = plug-assoc Θ` (prefix induction); base via `split3-nil`+`plug-assoc-nil Φ`; `plug-assoc-nil []` via `plug-nil`/`flat-from`/`-⊗-.rlmap`/`F-α→-to`/`◀-assoc`; machinery in `split3-cons`/`plug-cons`/`plug-nil`/`F-α→-to` |
+| `interchangeₘ` | ✅ proven | `ic-plug-coherence = plug-interchange Θ` (prefix induction, clean cons); base `plug-interchange []` via `plug-nil` + `plug-shift` (g-free Γ-induction) + `-⊗-.rlmap` (g/h commute) |
 
 **🎉 ALL FOUR LAWS PROVEN — `Multicategory/Representable.agda` type-checks with ZERO holes (2026-07-21).** The representable multicategory of a monoidal category is fully formalised.
+
+**Cleanup pass (post-proof).** Naturality squares use `λ→nat`/`λ←nat`/`ρ←nat` (from `Cat.Bi.Reasoning (Deloop M)`), NOT raw `unitor-* .Isoⁿ.* .is-natural`. Transport obligations use module-level `transport-⊗-red` + `subst-⊗-red` (do not re-derive per clause). Verbose `ap (λ z → …context… z …) p` steps use the focus marker `⌜ redex ⌝` + `ap! p`. Helper names: `plug-assoc`/`plug-assoc-nil` (was gfi/gfi0), `plug-interchange`/`plug-shift` (was ici/ic-core), `split3-cons`/`split3-nil` (was dec-cons/dec-nil). See `docs/1lab-reasoning-cheatsheet.md` for the full combinator reference.
 
 **`F-α→` (strong-monoidal-functor hexagon) — ✅ PROVEN (2026-07-21).** `φ Γ Δ = (⊗-context-++ Γ Δ).from`; `F-α→ : ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ++Δ) Ξ ∘ (φ Γ Δ ◀ ⊗Ξ) ≡ φ Γ (Δ++Ξ) ∘ (⊗Γ ▶ φ Δ Ξ) ∘ α→(⊗Γ,⊗Δ,⊗Ξ)`. Base `[]` via `triangle-λ←` + unitor nat. Cons via **coh1** (`◀.F-∘` + `◀-▶-comm` + `▶.F-∘`) → `ap (a▶_) IH` → **coh2** (`▶.F-∘` + `pentagon-α→` + `▶-assoc`).
 
