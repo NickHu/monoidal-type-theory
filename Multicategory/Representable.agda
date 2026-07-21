@@ -1021,6 +1021,53 @@ representable-multicategory C M = Mc where
           transport-⊗-red (ap ⊗-context (interchange-slot₂ Θ x Μ Δ Κ)) M
         ∙ ap (M ∘_) (ap (λ φ → φ .from) (ic-slot₂-⊗ Θ x Μ Δ Κ))
 
+      -- The g-free remainder of the interchange base (Θ=[]), generalised over Γ
+      -- so it can recurse: relates plug (Γ++Μ) h to (⊗Γ ▶ plug Μ h).  Since g has
+      -- been factored out, Γ-induction is legitimate (h, plug Μ h are Γ-fixed).
+      -- Cons mirrors gfi's cons (pp-cons refl + plug-cons + ▶-assoc push-out);
+      -- base Γ=[] is left-unitor naturality.
+      ic-core : (Γ' : List Ob)
+        →   (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
+              ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
+              ∘ plug (Γ' ++ Μ) Δ Κ h
+              ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from
+          ≡   (⊗-context Γ' ▶ plug Μ Δ Κ h)
+              ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to
+      ic-core [] =
+          ap (λ→ (⊗-context (Μ ++ y ∷ Κ)) ∘_) (idl _ ∙ idr _)
+        ∙ unitor-l .Isoⁿ.to .is-natural _ _ (plug Μ Δ Κ h)
+      ic-core (b ∷ Γ') =
+          (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to
+            ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
+            ∘ plug ((b ∷ Γ') ++ Μ) Δ Κ h
+            ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from)
+        ≡⟨ ap (λ w → (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
+                   ∘ w ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from))
+              (plug-cons b (Γ' ++ Μ) Δ Κ h) ⟩
+          (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘ (b ▶ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to))
+            ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
+            ∘ (b ▶ plug (Γ' ++ Μ) Δ Κ h)
+            ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from)
+        ≡⟨ sym (assoc _ _ _)
+         ∙ ap (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘_)
+              (sym ( ▶.F-∘ _ _
+                   ∙ ap ((b ▶ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to) ∘_)
+                        (▶.F-∘ _ _ ∙ ap ((b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
+          α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
+            ∘ (b ▶ ( (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
+                   ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
+                   ∘ plug (Γ' ++ Μ) Δ Κ h
+                   ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from ))
+        ≡⟨ ap (λ w → α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘ (b ▶ w)) (ic-core Γ') ⟩
+          α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
+            ∘ (b ▶ ((⊗-context Γ' ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to))
+        ≡⟨ ap (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘_) (▶.F-∘ _ _) ⟩
+          α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
+            ∘ ( (b ▶ (⊗-context Γ' ▶ plug Μ Δ Κ h)) ∘ (b ▶ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to) )
+        ≡⟨ extendl ((▶-assoc {f = b} {g = ⊗-context Γ'}) .Isoⁿ.from .is-natural _ _ (plug Μ Δ Κ h)) ⟩
+          (⊗-context (b ∷ Γ') ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ (b ∷ Γ') (Μ ++ Δ ++ Κ)) .to
+        ∎
+
       -- the f-free bifunctoriality coherence (the hard piece), by induction on
       -- the prefix Θ.  Cons is clean: every factor is a ▶ (plug is prefix-linear
       -- via plug-cons; the ic-slot isos are ▶.F-map-iso), so no α corrections.
@@ -1033,7 +1080,47 @@ representable-multicategory C M = Mc where
               ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
               ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
               ∘ plug Θ' Γ (Μ ++ Δ ++ Κ) g
-      ici []        = {!!}
+      ici [] =
+          plug [] Γ (Μ ++ y ∷ Κ) g
+            ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
+            ∘ plug ([] ++ Γ ++ Μ) Δ Κ h
+            ∘ (ic-boundary-iso [] Γ Μ Δ Κ) .from
+        ≡⟨ ap (λ w → w ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
+                   ∘ plug ([] ++ Γ ++ Μ) Δ Κ h ∘ (ic-boundary-iso [] Γ Μ Δ Κ) .from)
+              (plug-nil Γ (Μ ++ y ∷ Κ) g) ⟩
+          ((g ◀ ⊗-context (Μ ++ y ∷ Κ)) ∘ (⊗-context-++ Γ (Μ ++ y ∷ Κ)) .to)
+            ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
+            ∘ plug (Γ ++ Μ) Δ Κ h
+            ∘ (ic-flatten-iso Γ Μ Δ Κ) .from
+        ≡⟨ sym (assoc _ _ _) ⟩
+          (g ◀ ⊗-context (Μ ++ y ∷ Κ))
+            ∘ ( (⊗-context-++ Γ (Μ ++ y ∷ Κ)) .to
+              ∘ (ic-slot₁-iso [] Γ Μ y Κ) .from
+              ∘ plug (Γ ++ Μ) Δ Κ h
+              ∘ (ic-flatten-iso Γ Μ Δ Κ) .from )
+        ≡⟨ ap ((g ◀ ⊗-context (Μ ++ y ∷ Κ)) ∘_) (ic-core Γ) ⟩
+          (g ◀ ⊗-context (Μ ++ y ∷ Κ))
+            ∘ ((⊗-context Γ ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ Γ (Μ ++ Δ ++ Κ)) .to)
+        ≡⟨ assoc _ _ _ ⟩
+          ((g ◀ ⊗-context (Μ ++ y ∷ Κ)) ∘ (⊗-context Γ ▶ plug Μ Δ Κ h))
+            ∘ (⊗-context-++ Γ (Μ ++ Δ ++ Κ)) .to
+        ≡⟨ ap (_∘ (⊗-context-++ Γ (Μ ++ Δ ++ Κ)) .to)
+              (sym (-⊗-.rlmap (plug Μ Δ Κ h) g)) ⟩
+          ((x ▶ plug Μ Δ Κ h) ∘ (g ◀ ⊗-context (Μ ++ Δ ++ Κ)))
+            ∘ (⊗-context-++ Γ (Μ ++ Δ ++ Κ)) .to
+        ≡⟨ sym (assoc _ _ _) ⟩
+          (x ▶ plug Μ Δ Κ h)
+            ∘ ((g ◀ ⊗-context (Μ ++ Δ ++ Κ)) ∘ (⊗-context-++ Γ (Μ ++ Δ ++ Κ)) .to)
+        ≡⟨ ap ((x ▶ plug Μ Δ Κ h) ∘_) (sym (plug-nil Γ (Μ ++ Δ ++ Κ) g)) ⟩
+          (x ▶ plug Μ Δ Κ h) ∘ plug [] Γ (Μ ++ Δ ++ Κ) g
+        ≡⟨ ap (_∘ plug [] Γ (Μ ++ Δ ++ Κ) g) (sym (plug-cons x Μ Δ Κ h)) ⟩
+          plug (x ∷ Μ) Δ Κ h ∘ plug [] Γ (Μ ++ Δ ++ Κ) g
+        ≡⟨ ap (plug (x ∷ Μ) Δ Κ h ∘_) (sym (idl _)) ∙ sym (idl _) ⟩
+          (ic-slot₀-iso [] x Μ y Κ) .from
+            ∘ plug (x ∷ Μ) Δ Κ h
+            ∘ (ic-slot₂-iso [] x Μ Δ Κ) .from
+            ∘ plug [] Γ (Μ ++ Δ ++ Κ) g
+        ∎
       ici (a ∷ Θ') =
           plug (a ∷ Θ') Γ (Μ ++ y ∷ Κ) g
             ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
