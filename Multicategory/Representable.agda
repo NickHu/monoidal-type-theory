@@ -36,8 +36,8 @@ representable-multicategory C M = Mc where
   -- 1-cells are objects of C and the 1-cell tensor is the monoidal ⊗, so the
   -- bicategory's ρ←/λ←/α← (and ▶/◀/⊗) are definitionally the monoidal ones.
   open Cat.Bi.Reasoning (Deloop M) using
-    (triangle-ρ← ; triangle-ρ→ ; triangle-λ← ; triangle-λ→ ; λ←≡ρ← ; λ→≡ρ→ ; ▶-assoc ; ◀-▶-comm ; ◀-assoc
-    ; λ→nat ; λ←nat ; ρ→nat ; ρ←nat)
+    (triangle-ρ→ ; triangle-λ← ; λ→≡ρ→ ; ▶-assoc ; ◀-▶-comm ; ◀-assoc
+    ; λ→nat ; λ←nat ; ρ←nat)
 
   ⊗-context : List Ob → Ob
   ⊗-context []       = Unit
