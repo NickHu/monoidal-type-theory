@@ -57,7 +57,9 @@ Functor reasoning: `▶.F-∘ : ▶.F₁ (f ∘ g) ≡ ▶.F₁ f ∘ ▶.F₁ g
 | `idₘl` | ✅ proven | `plug Θ [x] Ξ (ρ← x) ≡ id` via `triangle-α→` |
 | `idₘr` | ✅ proven | Hom-transport over `++-idr` + the `core` chain (naturality squares + unit coherences) |
 | `assocₘ` | ✅ proven | `g-free = gfi Θ` (prefix induction); base via `dec-nil`+`gfi0 Φ`; `gfi0 []` via `plug-nil`/`flat-from`/`-⊗-.rlmap`/`F-α→-to`/`◀-assoc`; all machinery in `dec-cons`/`plug-cons`/`plug-nil`/`F-α→-to` |
-| `interchangeₘ` | 🔧 reduced to `ici []` (1 hole — the ONLY hole left) | `ic-plug-coherence = ici Θ`; `ici` cons PROVEN (clean, all `a▶…` — no α corrections); only the base `ici []` remains (needs `-⊗-.rlmap` interchange + reassoc coherence, cf. `gfi0 []`) |
+| `interchangeₘ` | ✅ proven | `ic-plug-coherence = ici Θ` (prefix induction, clean cons); base `ici []` via `plug-nil` + `ic-core` (g-free Γ-induction) + `-⊗-.rlmap` (g/h commute) |
+
+**🎉 ALL FOUR LAWS PROVEN — `Multicategory/Representable.agda` type-checks with ZERO holes (2026-07-21).** The representable multicategory of a monoidal category is fully formalised.
 
 **`F-α→` (strong-monoidal-functor hexagon) — ✅ PROVEN (2026-07-21).** `φ Γ Δ = (⊗-context-++ Γ Δ).from`; `F-α→ : ++-assoc-⊗-iso Γ Δ Ξ .to ∘ φ (Γ++Δ) Ξ ∘ (φ Γ Δ ◀ ⊗Ξ) ≡ φ Γ (Δ++Ξ) ∘ (⊗Γ ▶ φ Δ Ξ) ∘ α→(⊗Γ,⊗Δ,⊗Ξ)`. Base `[]` via `triangle-λ←` + unitor nat. Cons via **coh1** (`◀.F-∘` + `◀-▶-comm` + `▶.F-∘`) → `ap (a▶_) IH` → **coh2** (`▶.F-∘` + `pentagon-α→` + `▶-assoc`).
 
