@@ -16,6 +16,7 @@ open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 open import Multicategory
 open import Multicategory.Unary
 open import Multicategory.Instances.Monoidal
+open import Monoidal.Strict using (is-strict-monoidal)
 import Multicategory.Representable as Rep
 import Multicategory.Strictification as Strict
 
@@ -53,7 +54,7 @@ module Multicategory.Instances.Monoidal.Coherence
   open Premulticategory Mᵣ using (_∘ₘ_ ; idₘ)
   open Strict Mᵣ rep using
     (Str ; ⊗₀ ; ⊗-arr ; μ ; _⊗ₛ_ ; ⊗ₛ-μ ; restrict₂-equiv ; restrict₂-μ ; Str-monoidal
-    ; ≅to ; ≅to-refl ; ≅from-to)
+    ; Str-is-strict ; ≅to ; ≅to-refl ; ≅from-to)
 
   private module MR = MonR M₀
 
@@ -588,3 +589,20 @@ module Multicategory.Instances.Monoidal.Coherence
     ; ε-inv = id-invertible
     ; F-mult-inv = isoⁿ→is-invertibleⁿ F-mult-iso
     }
+
+  -- ==========================================================================
+  -- The coherence theorem, in one statement: every monoidal category is
+  -- monoidally equivalent to a strict monoidal category — there is a strict
+  -- monoidal category (Str, Str-monoidal) and a strong monoidal functor
+  -- Str → C whose underlying functor is an equivalence of categories.
+  -- ==========================================================================
+  monoidal-strictification
+    : Σ[ Cˢ ∈ Precategory o h ]
+      Σ[ Mˢ ∈ Monoidal-category Cˢ ]
+      ( is-strict-monoidal Mˢ
+      × Σ[ F ∈ Functor Cˢ C ]
+        ( MonF.Monoidal-functor-on Mˢ M₀ F
+        × is-equivalence F ) )
+  monoidal-strictification =
+      Str , Str-monoidal , Str-is-strict
+    , Comparison , Comparison-monoidal , Comparison-is-equivalence

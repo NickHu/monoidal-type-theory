@@ -11,6 +11,7 @@ open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 
 open import Multicategory
 open import Multicategory.Unary
+open import Monoidal.Strict
 import Multicategory.Representable as Rep
 
 -- The strict monoidal category arising from a representable multicategory
@@ -1575,3 +1576,56 @@ module Multicategory.Strictification
       P3 = ap ⊗₀ (ap (A ++_) (sym (++-assoc B C D)))
       Q1 = ap ⊗₀ (sym (++-assoc (A ++ B) C D))
       Q2 = ap ⊗₀ (sym (++-assoc A B (C ++ D)))
+
+  -- ==========================================================================
+  -- The strictification is strict: the tensor on objects is ++, whose monoid
+  -- paths are ++-assoc/refl/++-idr, and Str-monoidal's associator/unitors are
+  -- BY CONSTRUCTION the ≅to's of (ap ⊗₀ of) those paths.  No truncation
+  -- assumption on Obₘ anywhere.
+  -- ==========================================================================
+
+  private
+    module SM = Cat.Morphism Str
+
+    -- Str's own path→iso along a List-level path p is Unary's path→iso along
+    -- ap ⊗₀ p (Str.Hom Γ Δ = Unary.Hom (⊗₀ Γ) (⊗₀ Δ)); bridged by J, both
+    -- ends landing on the identity at refl.
+    str-bridge : {Γ Δ : List Obₘ} (p : Γ ≡ Δ)
+               → path-to {C = Str} p ≡ ≅to (ap ⊗₀ p)
+    str-bridge {Γ} =
+      J (λ Δ p → path-to {C = Str} p ≡ ≅to (ap ⊗₀ p))
+        (ap SM._≅_.to (transport-refl SM.id-iso) ∙ sym ≅to-refl)
+
+    -- Mac Lane's pentagon for the ++-associator, in the α→ direction
+    -- (the mirror of ++-pentagon above).
+    ++-pentagon→ : (A B C D : List Obₘ)
+      → ap (_++ D) (++-assoc A B C) ∙ ++-assoc A (B ++ C) D
+          ∙ ap (A ++_) (++-assoc B C D)
+        ≡ ++-assoc (A ++ B) C D ∙ ++-assoc A B (C ++ D)
+    ++-pentagon→ [] B C D =
+      ∙-idl _ ∙ ∙-idl _ ∙ sym (∙-idr _)
+    ++-pentagon→ (a ∷ A) B C D =
+        ap (ap (a ∷_) p₁ ∙_) (sym (ap-∙ (a ∷_) p₂ p₃))
+      ∙ sym (ap-∙ (a ∷_) p₁ (p₂ ∙ p₃))
+      ∙ ap (ap (a ∷_)) (++-pentagon→ A B C D)
+      ∙ ap-∙ (a ∷_) q₁ q₂
+      where
+        p₁ = ap (_++ D) (++-assoc A B C)
+        p₂ = ++-assoc A (B ++ C) D
+        p₃ = ap (A ++_) (++-assoc B C D)
+        q₁ = ++-assoc (A ++ B) C D
+        q₂ = ++-assoc A B (C ++ D)
+
+  Str-is-strict : is-strict-monoidal Str-monoidal
+  Str-is-strict .is-strict-monoidal.α-path Γ Δ Ε = ++-assoc Γ Δ Ε
+  Str-is-strict .is-strict-monoidal.λ-path Γ     = refl
+  Str-is-strict .is-strict-monoidal.ρ-path Γ     = ++-idr Γ
+  Str-is-strict .is-strict-monoidal.α→-is-path Γ Δ Ε =
+    sym (str-bridge (++-assoc Γ Δ Ε))
+  Str-is-strict .is-strict-monoidal.λ←-is-path Γ =
+    sym (str-bridge refl ∙ ≅to-refl)
+  Str-is-strict .is-strict-monoidal.ρ←-is-path Γ =
+    ≅from-to (ap ⊗₀ (sym (++-idr Γ))) ∙ sym (str-bridge (++-idr Γ))
+  Str-is-strict .is-strict-monoidal.path-triangle Γ Δ =
+    ∙-idr (++-assoc Γ [] Δ) ∙ ++-assoc-nil Γ Δ
+  Str-is-strict .is-strict-monoidal.path-pentagon = ++-pentagon→
