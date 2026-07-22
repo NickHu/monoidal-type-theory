@@ -5,7 +5,7 @@ open import Cat.Base
 open import Data.List
 open import Data.List.Properties
 
-module Multicategory.Instances where
+module Multicategory.Instances.Category where
 
 -- Every category is (trivially) a multicategory: the only inhabited
 -- multihomsets are the unary ones, which agree with the original Homs.
@@ -14,8 +14,8 @@ module Multicategory.Instances where
 -- inhabited only when Γ is a singleton.  When a domain is written Θ ++ x ∷ Ξ
 -- with Θ a non-empty variable, the (++) is stuck, so to expose that the list is
 -- /not/ a singleton we split on the first two elements of each part.
-underlying-multicategory : ∀ {o h} → Precategory o h → Premulticategory o h
-underlying-multicategory C = M where
+category→multicategory : ∀ {o h} → Precategory o h → Premulticategory o h
+category→multicategory C = M where
   open Precategory C
   open Premulticategory
 
