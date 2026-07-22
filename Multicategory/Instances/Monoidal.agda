@@ -5,11 +5,10 @@ open import Cat.Base
 open Cat.Base._=>_ using (is-natural)
 import Cat.Reasoning as Cr
 open import Cat.Monoidal.Base
-open import Cat.Univalent using (path→iso; Hom-transport)
+open import Cat.Univalent using (path→iso; Hom-transport; Hom-pathp-refll)
 open import Cat.Functor.Naturality
 import Cat.Functor.Base as FB
 import Cat.Bi.Reasoning
-import Cat.Bi.Solver
 open import Data.List
 open import Data.List.Properties
 import Multicategory.Representable as Rep
@@ -68,15 +67,17 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
     where open FB.F-iso (-⊗-.Right x)
 
   -- Transporting a morphism along an object path (fixed codomain) is
-  -- precomposition with the induced iso.  Every law uses this to discharge the
-  -- to-pathp obligation; the `subst`-over-⊗-context form composes it with a
-  -- path→iso characterisation.
-  transport-⊗-red : ∀ {z} {A B : Ob} (q : A ≡ B) (m : Hom A z)
-    → transport (λ i → Hom (q i) z) m ≡ m ∘ path→iso q .from
-  transport-⊗-red q m =
-      Hom-transport C q refl m
-    ∙ ap (λ k → k ∘ m ∘ path→iso q .from) (ap (λ i → i .to) path→iso-refl)
-    ∙ idl _
+  -- precomposition with the induced iso; the `subst`-over-⊗-context form
+  -- composes it with a path→iso characterisation.  The inner substs in the
+  -- assocₘ/interchangeₘ statements are reduced with subst-⊗-red; the laws'
+  -- outer transports are discharged directly by Hom-pathp-refll.
+  private
+    transport-⊗-red : ∀ {z} {A B : Ob} (q : A ≡ B) (m : Hom A z)
+      → transport (λ i → Hom (q i) z) m ≡ m ∘ path→iso q .from
+    transport-⊗-red q m =
+        Hom-transport C q refl m
+      ∙ ap (λ k → k ∘ m ∘ path→iso q .from) (ap (λ i → i .to) path→iso-refl)
+      ∙ idl _
 
   subst-⊗-red : ∀ {z} {A B : List Ob} (p : A ≡ B) {i : _ ≅ _}
     → path→iso (ap ⊗-context p) ≡ i → (m : Hom (⊗-context A) z)
@@ -109,150 +110,134 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
     → (⊗-context-++ Γ []) .to ∘ (⊗-context-++-idr Γ) .from ≡ ρ→ (⊗-context Γ)
   ⊗-context-++-[]-ρ []      = idr _ ∙ λ→≡ρ→
   ⊗-context-++-[]-ρ (x ∷ Γ) =
-      (⊗-context-++ (x ∷ Γ) []) .to ∘ (⊗-context-++-idr (x ∷ Γ)) .from
-    ≡⟨⟩
-      (α← _ ∘ (x ▶ (⊗-context-++ Γ []) .to)) ∘ (x ▶ (⊗-context-++-idr Γ) .from)
-    ≡⟨ sym (assoc _ _ _) ⟩
-      α← _ ∘ ((x ▶ (⊗-context-++ Γ []) .to) ∘ (x ▶ (⊗-context-++-idr Γ) .from))
-    ≡⟨ ap (α← _ ∘_) (sym (▶.F-∘ _ _)) ⟩
-      α← _ ∘ (x ▶ ((⊗-context-++ Γ []) .to ∘ (⊗-context-++-idr Γ) .from))
-    ≡⟨ ap (α← _ ∘_) (ap (x ▶_) (⊗-context-++-[]-ρ Γ)) ⟩
-      α← _ ∘ (x ▶ ρ→ (⊗-context Γ))
-    ≡⟨ sym triangle-ρ→ ⟩
-      ρ→ (x ⊗ ⊗-context Γ)
-    ∎
+      sym (assoc _ _ _)
+    ∙ ap (α← _ ∘_) (▶.collapse (⊗-context-++-[]-ρ Γ))
+    ∙ sym triangle-ρ→
 
-  -- path→iso (ap ⊗-context (++-assoc Φ Ψ Ξ)) is the cons-by-cons ▶-chain
-  -- (an instance of ⊗-context being invariant under list reassociation).
+  ----------------------------------------------------------------------
+  -- path→iso characterisations for the law transports.
+  --
+  -- Every law boundary in Multicategory.agda is a list-reassociation path
+  -- built from refl and ++-assoc by `ap (a ∷_)` and `sym`, and ⊗-context is
+  -- invariant under list reassociation: path→iso of each boundary is a
+  -- cons-by-cons ▶-chain of id-iso.  A ⊗-chain packages that ▶-chain iso
+  -- together with its path→iso characterisation, so the three combinators
+  -- below (refl, cons, sym) generate every characterisation by one short
+  -- recursion per boundary.  The .⊗iso projections reduce definitionally at
+  -- cons (to ▶.F-map-iso of the tail), which the equational displays in the
+  -- law proofs rely on.
+  ----------------------------------------------------------------------
+
+  record ⊗-chain {Γ Δ : List Ob} (p : Γ ≡ Δ) : Type h where
+    constructor chain
+    field
+      ⊗iso : ⊗-context Γ ≅ ⊗-context Δ
+      char : path→iso (ap ⊗-context p) ≡ ⊗iso
+
+  open ⊗-chain
+
+  chain-refl : {Γ : List Ob} → ⊗-chain (refl {x = Γ})
+  chain-refl = chain id-iso path→iso-refl
+
+  chain-∷ : (a : Ob) {Γ Δ : List Ob} {p : Γ ≡ Δ}
+    → ⊗-chain p → ⊗-chain (ap (a ∷_) p)
+  chain-∷ a {p = p} (chain i e) =
+    chain (▶.F-map-iso i) (path→iso-ap-⊗ a (ap ⊗-context p) ∙ ap ▶.F-map-iso e)
+
+  path→iso-sym : {A B : Ob} (p : A ≡ B) → path→iso (sym p) ≡ path→iso p Iso⁻¹
+  path→iso-sym = J (λ _ p → path→iso (sym p) ≡ path→iso p Iso⁻¹)
+    (path→iso-refl ∙ ≅-path refl ∙ sym (ap _Iso⁻¹ path→iso-refl))
+
+  chain-sym : {Γ Δ : List Ob} {p : Γ ≡ Δ} → ⊗-chain p → ⊗-chain (sym p)
+  chain-sym {p = p} (chain i e) =
+    chain (i Iso⁻¹) (path→iso-sym (ap ⊗-context p) ∙ ap _Iso⁻¹ e)
+
+  -- The shared base: ++-assoc.  (++-assoc-⊗-iso/-path is the public face,
+  -- used by F-α→ below and by Multicategory.Instances.Monoidal.Coherence.)
+  ++-assoc-chain : (Φ Ψ Ξ : List Ob) → ⊗-chain (++-assoc Φ Ψ Ξ)
+  ++-assoc-chain []      Ψ Ξ = chain-refl
+  ++-assoc-chain (a ∷ Φ) Ψ Ξ = chain-∷ a (++-assoc-chain Φ Ψ Ξ)
+
   ++-assoc-⊗-iso : (Φ Ψ Ξ : List Ob)
     → ⊗-context ((Φ ++ Ψ) ++ Ξ) ≅ ⊗-context (Φ ++ (Ψ ++ Ξ))
-  ++-assoc-⊗-iso []      Ψ Ξ = id-iso
-  ++-assoc-⊗-iso (a ∷ Φ) Ψ Ξ = ▶.F-map-iso (++-assoc-⊗-iso Φ Ψ Ξ)
+  ++-assoc-⊗-iso Φ Ψ Ξ = ++-assoc-chain Φ Ψ Ξ .⊗iso
 
   ++-assoc-⊗-path : (Φ Ψ Ξ : List Ob)
     → path→iso (ap ⊗-context (++-assoc Φ Ψ Ξ)) ≡ ++-assoc-⊗-iso Φ Ψ Ξ
-  ++-assoc-⊗-path []      Ψ Ξ = path→iso-refl
-  ++-assoc-⊗-path (a ∷ Φ) Ψ Ξ =
-      path→iso-ap-⊗ a (ap ⊗-context (++-assoc Φ Ψ Ξ))
-    ∙ ap ▶.F-map-iso (++-assoc-⊗-path Φ Ψ Ξ)
+  ++-assoc-⊗-path Φ Ψ Ξ = ++-assoc-chain Φ Ψ Ξ .char
 
-  -- path→iso (ap ⊗-context (slot-unbury Θ Φ y Ψ Ξ)): relocating the marked
-  -- slot from Φ into (Θ++Φ) is a ▶-chain (over Θ and Φ) of the ++-assoc iso.
+  -- assocₘ boundaries: relocating the marked slot from Φ into (Θ ++ Φ), and
+  -- the flattening of the composite boundary.  chain-sym absorbs what was an
+  -- inner Ρ-recursion in assocₘ-flatten.
+  slot-unbury-chain : (Θ Φ : List Ob) (y : Ob) (Ψ Ξ : List Ob)
+    → ⊗-chain (slot-unbury Θ Φ y Ψ Ξ)
+  slot-unbury-chain []      Φ y Ψ Ξ = ++-assoc-chain Φ (y ∷ Ψ) Ξ
+  slot-unbury-chain (a ∷ Θ) Φ y Ψ Ξ = chain-∷ a (slot-unbury-chain Θ Φ y Ψ Ξ)
+
+  assocₘ-flatten-chain : (Φ Ρ Ψ Ξ : List Ob) → ⊗-chain (assocₘ-flatten Φ Ρ Ψ Ξ)
+  assocₘ-flatten-chain []      Ρ Ψ Ξ = chain-sym (++-assoc-chain Ρ Ψ Ξ)
+  assocₘ-flatten-chain (a ∷ Φ) Ρ Ψ Ξ = chain-∷ a (assocₘ-flatten-chain Φ Ρ Ψ Ξ)
+
+  assocₘ-boundary-chain : (Θ Φ Ρ Ψ Ξ : List Ob) → ⊗-chain (assocₘ-boundary Θ Φ Ρ Ψ Ξ)
+  assocₘ-boundary-chain []      Φ Ρ Ψ Ξ = assocₘ-flatten-chain Φ Ρ Ψ Ξ
+  assocₘ-boundary-chain (a ∷ Θ) Φ Ρ Ψ Ξ = chain-∷ a (assocₘ-boundary-chain Θ Φ Ρ Ψ Ξ)
+
+  -- interchangeₘ boundaries (f has two slots x,y: Θ ++ x ∷ Μ ++ y ∷ Κ).
+  -- slot₀, slot₂ and flatten are (sym of) ++-assoc paths outright, so their
+  -- chains need no recursion of their own; slot₁ and the boundary recurse on
+  -- the prefix Θ.
+  ic-slot₀-chain : (Θ : List Ob) (x : Ob) (Μ : List Ob) (y : Ob) (Κ : List Ob)
+    → ⊗-chain (interchange-slot₀ Θ x Μ y Κ)
+  ic-slot₀-chain Θ x Μ y Κ = chain-sym (++-assoc-chain Θ (x ∷ Μ) (y ∷ Κ))
+
+  ic-slot₁-chain : (Θ Γ Μ : List Ob) (y : Ob) (Κ : List Ob)
+    → ⊗-chain (interchange-slot₁ Θ Γ Μ y Κ)
+  ic-slot₁-chain []      Γ Μ y Κ = chain-sym (++-assoc-chain Γ Μ (y ∷ Κ))
+  ic-slot₁-chain (a ∷ Θ) Γ Μ y Κ = chain-∷ a (ic-slot₁-chain Θ Γ Μ y Κ)
+
+  ic-slot₂-chain : (Θ : List Ob) (x : Ob) (Μ Δ Κ : List Ob)
+    → ⊗-chain (interchange-slot₂ Θ x Μ Δ Κ)
+  ic-slot₂-chain Θ x Μ Δ Κ = ++-assoc-chain Θ (x ∷ Μ) (Δ ++ Κ)
+
+  ic-flatten-chain : (Γ Μ Δ Κ : List Ob) → ⊗-chain (interchange-flatten Γ Μ Δ Κ)
+  ic-flatten-chain Γ Μ Δ Κ = ++-assoc-chain Γ Μ (Δ ++ Κ)
+
+  ic-boundary-chain : (Θ Γ Μ Δ Κ : List Ob) → ⊗-chain (interchangeₘ-boundary Θ Γ Μ Δ Κ)
+  ic-boundary-chain []      Γ Μ Δ Κ = ic-flatten-chain Γ Μ Δ Κ
+  ic-boundary-chain (a ∷ Θ) Γ Μ Δ Κ = chain-∷ a (ic-boundary-chain Θ Γ Μ Δ Κ)
+
+  -- Iso aliases: the names the law proofs' equational displays use.
   slot-unbury-iso : (Θ Φ : List Ob) (y : Ob) (Ψ Ξ : List Ob)
     → ⊗-context (Θ ++ ((Φ ++ y ∷ Ψ) ++ Ξ)) ≅ ⊗-context ((Θ ++ Φ) ++ y ∷ (Ψ ++ Ξ))
-  slot-unbury-iso []      Φ y Ψ Ξ = ++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ
-  slot-unbury-iso (a ∷ Θ) Φ y Ψ Ξ = ▶.F-map-iso (slot-unbury-iso Θ Φ y Ψ Ξ)
+  slot-unbury-iso Θ Φ y Ψ Ξ = slot-unbury-chain Θ Φ y Ψ Ξ .⊗iso
 
-  slot-unbury-⊗ : (Θ Φ : List Ob) (y : Ob) (Ψ Ξ : List Ob)
-    → path→iso (ap ⊗-context (slot-unbury Θ Φ y Ψ Ξ)) ≡ slot-unbury-iso Θ Φ y Ψ Ξ
-  slot-unbury-⊗ []      Φ y Ψ Ξ = ++-assoc-⊗-path Φ (y ∷ Ψ) Ξ
-  slot-unbury-⊗ (a ∷ Θ) Φ y Ψ Ξ =
-      path→iso-ap-⊗ a (ap ⊗-context (slot-unbury Θ Φ y Ψ Ξ))
-    ∙ ap ▶.F-map-iso (slot-unbury-⊗ Θ Φ y Ψ Ξ)
-
-  -- path→iso (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ)).
   assocₘ-flatten-iso : (Φ Ρ Ψ Ξ : List Ob)
     → ⊗-context (Φ ++ Ρ ++ (Ψ ++ Ξ)) ≅ ⊗-context ((Φ ++ Ρ ++ Ψ) ++ Ξ)
-  assocₘ-flatten-iso []      []      Ψ Ξ = id-iso
-  assocₘ-flatten-iso []      (b ∷ Ρ) Ψ Ξ = ▶.F-map-iso (assocₘ-flatten-iso [] Ρ Ψ Ξ)
-  assocₘ-flatten-iso (a ∷ Φ) Ρ       Ψ Ξ = ▶.F-map-iso (assocₘ-flatten-iso Φ Ρ Ψ Ξ)
-
-  assocₘ-flatten-⊗ : (Φ Ρ Ψ Ξ : List Ob)
-    → path→iso (ap ⊗-context (assocₘ-flatten Φ Ρ Ψ Ξ)) ≡ assocₘ-flatten-iso Φ Ρ Ψ Ξ
-  assocₘ-flatten-⊗ []      []      Ψ Ξ = path→iso-refl
-  assocₘ-flatten-⊗ []      (b ∷ Ρ) Ψ Ξ =
-      path→iso-ap-⊗ b (ap ⊗-context (assocₘ-flatten [] Ρ Ψ Ξ))
-    ∙ ap ▶.F-map-iso (assocₘ-flatten-⊗ [] Ρ Ψ Ξ)
-  assocₘ-flatten-⊗ (a ∷ Φ) Ρ       Ψ Ξ =
-      path→iso-ap-⊗ a (ap ⊗-context (assocₘ-flatten Φ Ρ Ψ Ξ))
-    ∙ ap ▶.F-map-iso (assocₘ-flatten-⊗ Φ Ρ Ψ Ξ)
+  assocₘ-flatten-iso Φ Ρ Ψ Ξ = assocₘ-flatten-chain Φ Ρ Ψ Ξ .⊗iso
 
   assocₘ-boundary-iso : (Θ Φ Ρ Ψ Ξ : List Ob)
     → ⊗-context ((Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ)) ≅ ⊗-context (Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ))
-  assocₘ-boundary-iso []      Φ Ρ Ψ Ξ = assocₘ-flatten-iso Φ Ρ Ψ Ξ
-  assocₘ-boundary-iso (a ∷ Θ) Φ Ρ Ψ Ξ = ▶.F-map-iso (assocₘ-boundary-iso Θ Φ Ρ Ψ Ξ)
+  assocₘ-boundary-iso Θ Φ Ρ Ψ Ξ = assocₘ-boundary-chain Θ Φ Ρ Ψ Ξ .⊗iso
 
-  assocₘ-boundary-⊗ : (Θ Φ Ρ Ψ Ξ : List Ob)
-    → path→iso (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ)) ≡ assocₘ-boundary-iso Θ Φ Ρ Ψ Ξ
-  assocₘ-boundary-⊗ []      Φ Ρ Ψ Ξ = assocₘ-flatten-⊗ Φ Ρ Ψ Ξ
-  assocₘ-boundary-⊗ (a ∷ Θ) Φ Ρ Ψ Ξ =
-      path→iso-ap-⊗ a (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ))
-    ∙ ap ▶.F-map-iso (assocₘ-boundary-⊗ Θ Φ Ρ Ψ Ξ)
-
-  ----------------------------------------------------------------------
-  -- interchangeₘ path→iso characterisations (cons-by-cons ▶-chains, mirroring
-  -- the assocₘ ones).  f has two slots x,y: Θ ++ x ∷ Μ ++ y ∷ Κ.
-  ----------------------------------------------------------------------
-
-  -- interchange-slot₀ : Θ ++ x ∷ Μ ++ y ∷ Κ ≡ (Θ ++ x ∷ Μ) ++ y ∷ Κ  (expose y)
   ic-slot₀-iso : (Θ : List Ob) (x : Ob) (Μ : List Ob) (y : Ob) (Κ : List Ob)
     → ⊗-context (Θ ++ x ∷ Μ ++ y ∷ Κ) ≅ ⊗-context ((Θ ++ x ∷ Μ) ++ y ∷ Κ)
-  ic-slot₀-iso []      x Μ y Κ = id-iso
-  ic-slot₀-iso (a ∷ Θ) x Μ y Κ = ▶.F-map-iso (ic-slot₀-iso Θ x Μ y Κ)
+  ic-slot₀-iso Θ x Μ y Κ = ic-slot₀-chain Θ x Μ y Κ .⊗iso
 
-  ic-slot₀-⊗ : (Θ : List Ob) (x : Ob) (Μ : List Ob) (y : Ob) (Κ : List Ob)
-    → path→iso (ap ⊗-context (interchange-slot₀ Θ x Μ y Κ)) ≡ ic-slot₀-iso Θ x Μ y Κ
-  ic-slot₀-⊗ []      x Μ y Κ = path→iso-refl
-  ic-slot₀-⊗ (a ∷ Θ) x Μ y Κ =
-      path→iso-ap-⊗ a (ap ⊗-context (interchange-slot₀ Θ x Μ y Κ))
-    ∙ ap ▶.F-map-iso (ic-slot₀-⊗ Θ x Μ y Κ)
-
-  -- interchange-slot₂ : (Θ ++ x ∷ Μ) ++ Δ ++ Κ ≡ Θ ++ x ∷ (Μ ++ Δ ++ Κ)
-  ic-slot₂-iso : (Θ : List Ob) (x : Ob) (Μ Δ Κ : List Ob)
-    → ⊗-context ((Θ ++ x ∷ Μ) ++ Δ ++ Κ) ≅ ⊗-context (Θ ++ x ∷ (Μ ++ Δ ++ Κ))
-  ic-slot₂-iso []      x Μ Δ Κ = id-iso
-  ic-slot₂-iso (a ∷ Θ) x Μ Δ Κ = ▶.F-map-iso (ic-slot₂-iso Θ x Μ Δ Κ)
-
-  ic-slot₂-⊗ : (Θ : List Ob) (x : Ob) (Μ Δ Κ : List Ob)
-    → path→iso (ap ⊗-context (interchange-slot₂ Θ x Μ Δ Κ)) ≡ ic-slot₂-iso Θ x Μ Δ Κ
-  ic-slot₂-⊗ []      x Μ Δ Κ = path→iso-refl
-  ic-slot₂-⊗ (a ∷ Θ) x Μ Δ Κ =
-      path→iso-ap-⊗ a (ap ⊗-context (interchange-slot₂ Θ x Μ Δ Κ))
-    ∙ ap ▶.F-map-iso (ic-slot₂-⊗ Θ x Μ Δ Κ)
-
-  -- interchange-flatten : (Γ ++ Μ) ++ Δ ++ Κ ≡ Γ ++ (Μ ++ Δ ++ Κ)
-  ic-flatten-iso : (Γ Μ Δ Κ : List Ob)
-    → ⊗-context ((Γ ++ Μ) ++ Δ ++ Κ) ≅ ⊗-context (Γ ++ (Μ ++ Δ ++ Κ))
-  ic-flatten-iso []      Μ Δ Κ = id-iso
-  ic-flatten-iso (a ∷ Γ) Μ Δ Κ = ▶.F-map-iso (ic-flatten-iso Γ Μ Δ Κ)
-
-  ic-flatten-⊗ : (Γ Μ Δ Κ : List Ob)
-    → path→iso (ap ⊗-context (interchange-flatten Γ Μ Δ Κ)) ≡ ic-flatten-iso Γ Μ Δ Κ
-  ic-flatten-⊗ []      Μ Δ Κ = path→iso-refl
-  ic-flatten-⊗ (a ∷ Γ) Μ Δ Κ =
-      path→iso-ap-⊗ a (ap ⊗-context (interchange-flatten Γ Μ Δ Κ))
-    ∙ ap ▶.F-map-iso (ic-flatten-⊗ Γ Μ Δ Κ)
-
-  -- interchangeₘ-boundary : (Θ ++ Γ ++ Μ) ++ Δ ++ Κ ≡ Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
-  ic-boundary-iso : (Θ Γ Μ Δ Κ : List Ob)
-    → ⊗-context ((Θ ++ Γ ++ Μ) ++ Δ ++ Κ) ≅ ⊗-context (Θ ++ Γ ++ (Μ ++ Δ ++ Κ))
-  ic-boundary-iso []      Γ Μ Δ Κ = ic-flatten-iso Γ Μ Δ Κ
-  ic-boundary-iso (a ∷ Θ) Γ Μ Δ Κ = ▶.F-map-iso (ic-boundary-iso Θ Γ Μ Δ Κ)
-
-  ic-boundary-⊗ : (Θ Γ Μ Δ Κ : List Ob)
-    → path→iso (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ)) ≡ ic-boundary-iso Θ Γ Μ Δ Κ
-  ic-boundary-⊗ []      Γ Μ Δ Κ = ic-flatten-⊗ Γ Μ Δ Κ
-  ic-boundary-⊗ (a ∷ Θ) Γ Μ Δ Κ =
-      path→iso-ap-⊗ a (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ))
-    ∙ ap ▶.F-map-iso (ic-boundary-⊗ Θ Γ Μ Δ Κ)
-
-  -- interchange-slot₁ : Θ ++ Γ ++ Μ ++ y ∷ Κ ≡ (Θ ++ Γ ++ Μ) ++ y ∷ Κ
-  -- (double induction on Θ then Γ, since the [] base is sym (++-assoc Γ Μ (y ∷ Κ))).
   ic-slot₁-iso : (Θ Γ Μ : List Ob) (y : Ob) (Κ : List Ob)
     → ⊗-context (Θ ++ Γ ++ Μ ++ y ∷ Κ) ≅ ⊗-context ((Θ ++ Γ ++ Μ) ++ y ∷ Κ)
-  ic-slot₁-iso []      []      Μ y Κ = id-iso
-  ic-slot₁-iso []      (b ∷ Γ) Μ y Κ = ▶.F-map-iso (ic-slot₁-iso [] Γ Μ y Κ)
-  ic-slot₁-iso (a ∷ Θ) Γ       Μ y Κ = ▶.F-map-iso (ic-slot₁-iso Θ Γ Μ y Κ)
+  ic-slot₁-iso Θ Γ Μ y Κ = ic-slot₁-chain Θ Γ Μ y Κ .⊗iso
 
-  ic-slot₁-⊗ : (Θ Γ Μ : List Ob) (y : Ob) (Κ : List Ob)
-    → path→iso (ap ⊗-context (interchange-slot₁ Θ Γ Μ y Κ)) ≡ ic-slot₁-iso Θ Γ Μ y Κ
-  ic-slot₁-⊗ []      []      Μ y Κ = path→iso-refl
-  ic-slot₁-⊗ []      (b ∷ Γ) Μ y Κ =
-      path→iso-ap-⊗ b (ap ⊗-context (interchange-slot₁ [] Γ Μ y Κ))
-    ∙ ap ▶.F-map-iso (ic-slot₁-⊗ [] Γ Μ y Κ)
-  ic-slot₁-⊗ (a ∷ Θ) Γ Μ y Κ =
-      path→iso-ap-⊗ a (ap ⊗-context (interchange-slot₁ Θ Γ Μ y Κ))
-    ∙ ap ▶.F-map-iso (ic-slot₁-⊗ Θ Γ Μ y Κ)
+  ic-slot₂-iso : (Θ : List Ob) (x : Ob) (Μ Δ Κ : List Ob)
+    → ⊗-context ((Θ ++ x ∷ Μ) ++ Δ ++ Κ) ≅ ⊗-context (Θ ++ x ∷ (Μ ++ Δ ++ Κ))
+  ic-slot₂-iso Θ x Μ Δ Κ = ic-slot₂-chain Θ x Μ Δ Κ .⊗iso
+
+  ic-flatten-iso : (Γ Μ Δ Κ : List Ob)
+    → ⊗-context ((Γ ++ Μ) ++ Δ ++ Κ) ≅ ⊗-context (Γ ++ (Μ ++ Δ ++ Κ))
+  ic-flatten-iso Γ Μ Δ Κ = ic-flatten-chain Γ Μ Δ Κ .⊗iso
+
+  ic-boundary-iso : (Θ Γ Μ Δ Κ : List Ob)
+    → ⊗-context ((Θ ++ Γ ++ Μ) ++ Δ ++ Κ) ≅ ⊗-context (Θ ++ Γ ++ (Μ ++ Δ ++ Κ))
+  ic-boundary-iso Θ Γ Μ Δ Κ = ic-boundary-chain Θ Γ Μ Δ Κ .⊗iso
 
   -- Plug g into the slot x of f's domain: rebracket ⊗(Θ ++ Γ ++ Ξ) so that ⊗Γ
   -- sits where x was, apply g there (whiskered with identities), and rebracket
@@ -327,12 +312,42 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
       (g ◀ ⊗-context Ξ') ∘ (⊗-context-++ Γ Ξ') .to
     ∎
 
-  -- At empty prefix, assocₘ-flatten's .from is ++-assoc's .to (same direction,
-  -- ⊗((Ρ++Ψ)++Ξ) → ⊗(Ρ++(Ψ++Ξ)); the isos themselves are mutual inverses).
-  flat-from : (Ρ Ψ Ξ' : List Ob)
-    → (assocₘ-flatten-iso [] Ρ Ψ Ξ') .from ≡ (++-assoc-⊗-iso Ρ Ψ Ξ') .to
-  flat-from []      Ψ Ξ' = refl
-  flat-from (b ∷ Ρ) Ψ Ξ' = ap (b ▶_) (flat-from Ρ Ψ Ξ')
+  ----------------------------------------------------------------------
+  -- The shared cons-step of the prefix inductions (plug-assoc-nil, plug-assoc,
+  -- plug-shift, plug-interchange): rewrite plug (b ∷ Ω) by plug-cons, merge
+  -- the four ▶-factors, apply the induction hypothesis inside the ▶, unmerge
+  -- once, and slide the naturality square k ∘ (b ▶ X) ≡ X' ∘ k'.
+  ----------------------------------------------------------------------
+
+  -- b ▶_ distributed over a 4-composite.
+  ▶-∘₄ : (b : Ob) {A₀ A₁ A₂ A₃ A₄ : Ob}
+    (p : Hom A₃ A₄) (q : Hom A₂ A₃) (r : Hom A₁ A₂) (s : Hom A₀ A₁)
+    → b ▶ (p ∘ q ∘ r ∘ s) ≡ (b ▶ p) ∘ (b ▶ q) ∘ (b ▶ r) ∘ (b ▶ s)
+  ▶-∘₄ b p q r s =
+    ▶.F-∘ _ _ ∙ ap ((b ▶ p) ∘_) (▶.F-∘ _ _ ∙ ap ((b ▶ q) ∘_) (▶.F-∘ _ _))
+
+  cons-step : {b : Ob} {A₀ A₁ A₂ A₃ A₄ W U V : Ob}
+    {s : Hom A₃ A₄} {i₁ : Hom A₂ A₃} {P : Hom A₁ A₂} {i₂ : Hom A₀ A₁}
+    {X : Hom W A₄} {t : Hom A₀ W}
+    {k : Hom (b ⊗ A₄) V} {k' : Hom (b ⊗ W) U} {X' : Hom U V}
+    → s ∘ i₁ ∘ P ∘ i₂ ≡ X ∘ t
+    → k ∘ (b ▶ X) ≡ X' ∘ k'
+    → (k ∘ (b ▶ s)) ∘ (b ▶ i₁) ∘ (b ▶ P) ∘ (b ▶ i₂) ≡ X' ∘ k' ∘ (b ▶ t)
+  cons-step {b = b} {s = s} {i₁} {P} {i₂} ih nat =
+      sym (assoc _ _ _)
+    ∙ ap (_ ∘_) (sym (▶-∘₄ b s i₁ P i₂) ∙ ap (b ▶_) ih ∙ ▶.F-∘ _ _)
+    ∙ extendl nat
+
+  -- The k-free variant, for plug-interchange's cons (all four factors are
+  -- ▶-whiskered; no α← correction, no naturality square).
+  ▶-weave₄ : (b : Ob) {A₀ A₁ A₂ A₃ A₄ B₁ B₂ B₃ : Ob}
+    {p : Hom A₃ A₄} {q : Hom A₂ A₃} {r : Hom A₁ A₂} {s : Hom A₀ A₁}
+    {p' : Hom B₃ A₄} {q' : Hom B₂ B₃} {r' : Hom B₁ B₂} {s' : Hom A₀ B₁}
+    → p ∘ q ∘ r ∘ s ≡ p' ∘ q' ∘ r' ∘ s'
+    → (b ▶ p) ∘ (b ▶ q) ∘ (b ▶ r) ∘ (b ▶ s)
+    ≡ (b ▶ p') ∘ (b ▶ q') ∘ (b ▶ r') ∘ (b ▶ s')
+  ▶-weave₄ b {p = p} {q} {r} {s} {p'} {q'} {r'} {s'} eq =
+    sym (▶-∘₄ b p q r s) ∙ ap (b ▶_) eq ∙ ▶-∘₄ b p' q' r' s'
 
   ----------------------------------------------------------------------
   -- The monoidal-functor associativity hexagon for ⊗-context, stated
@@ -431,15 +446,13 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
       ∘ α→ (a , ⊗-context Γ , ⊗-context (Δ ++ Ξ))
       ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ)
       ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-      -- fold φ (a ∷ Γ) (Δ ++ Ξ) back (definitional, φ-cons) after reassoc.
-      ≡⟨ assoc _ _ _
-       ∙ ap (_∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ))
-            (sym (φ-cons a Γ (Δ ++ Ξ))) ⟩
+      -- regrouping folds φ (a ∷ Γ) (Δ ++ Ξ) back (definitional, φ-cons).
+      ≡⟨ assoc _ _ _ ⟩
         φ (a ∷ Γ) (Δ ++ Ξ) ∘ ((a ⊗ ⊗-context Γ) ▶ φ Δ Ξ) ∘ α→ (a ⊗ ⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
       ∎
 
-  -- The .to-direction of the hexagon (ψ = .to everywhere; obtained from F-α→
-  -- by inverting every factor).  Used for the assocₘ base plug-assoc-nil [].
+  -- The .to-direction of the hexagon (every factor inverted; a swizzle of
+  -- F-α→, no induction of its own).  Used for the assocₘ base plug-assoc-nil [].
   F-α→-to : (Γ Δ Ξ : List Ob)
     →   (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to)
       ∘ (⊗-context-++ Γ (Δ ++ Ξ)) .to
@@ -447,38 +460,16 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
     ≡   α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
       ∘ ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ)
       ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to
-  F-α→-to Γ Δ Ξ = sym hexagon-to
+  F-α→-to Γ Δ Ξ =
+      ap ((⊗-context Γ ▶ P₄ .to) ∘_)
+         ( swizzle (F-α→ Γ Δ Ξ) (◀.cancel-inner (P₁ .invr) ∙ P₂ .invr) (P₃ .invl)
+         ∙ sym (assoc _ _ _) )
+    ∙ ▶.cancell (P₄ .invl)
     where
-      QS : (⊗-context Γ ▶ φ Δ Ξ) ∘ α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-         ≡ (⊗-context-++ Γ (Δ ++ Ξ)) .to
-             ∘ ( ++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ (φ Γ Δ ◀ ⊗-context Ξ)) )
-      QS = sym (cancell ((⊗-context-++ Γ (Δ ++ Ξ)) .invl))
-         ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (F-α→ Γ Δ Ξ))
-
-      MID : (⊗-context Γ ▶ φ Δ Ξ)
-              ∘ ( α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-                ∘ ( ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to ) )
-          ≡ (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ ++-assoc-⊗-iso Γ Δ Ξ .to
-      MID =
-          assoc _ _ _
-        ∙ ap (_∘ (((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to)) QS
-        ∙ sym (assoc _ _ _)
-        ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (sym (assoc _ _ _))
-        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w)) (sym (assoc _ _ _))
-        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ (φ (Γ ++ Δ) Ξ ∘ w)))
-             (cancell (◀.annihilate ((⊗-context-++ Γ Δ) .invr)))
-        ∙ ap (λ w → (⊗-context-++ Γ (Δ ++ Ξ)) .to ∘ (++-assoc-⊗-iso Γ Δ Ξ .to ∘ w))
-             ((⊗-context-++ (Γ ++ Δ) Ξ) .invr)
-        ∙ ap ((⊗-context-++ Γ (Δ ++ Ξ)) .to ∘_) (idr _)
-
-      hexagon-to : α→ (⊗-context Γ , ⊗-context Δ , ⊗-context Ξ)
-                 ∘ ((⊗-context-++ Γ Δ) .to ◀ ⊗-context Ξ)
-                 ∘ (⊗-context-++ (Γ ++ Δ) Ξ) .to
-             ≡ (⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to)
-                 ∘ (⊗-context-++ Γ (Δ ++ Ξ)) .to
-                 ∘ (++-assoc-⊗-iso Γ Δ Ξ) .to
-      hexagon-to = sym (cancell (▶.annihilate ((⊗-context-++ Δ Ξ) .invl)))
-             ∙ ap ((⊗-context Γ ▶ (⊗-context-++ Δ Ξ) .to) ∘_) MID
+      P₁ = ⊗-context-++ Γ Δ
+      P₂ = ⊗-context-++ (Γ ++ Δ) Ξ
+      P₃ = ⊗-context-++ Γ (Δ ++ Ξ)
+      P₄ = ⊗-context-++ Δ Ξ
 
   Mc : Premulticategory _ _
   Mc .Obₘ = Ob
@@ -506,146 +497,64 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
       ψ : ⊗-context (x ∷ Ξ) ≅ (⊗-context (x ∷ []) ⊗ ⊗-context Ξ)
       ψ = ⊗-context-++ (x ∷ []) Ξ
 
-      -- ψ .from = ρ← x ◀ ⊗-context Ξ  (φ.from reduces to the LHS of the
-      -- triangle identity triangle-α→).
-      φ-from : ψ .from ≡ ρ← x ◀ ⊗-context Ξ
-      φ-from = triangle-α→
-
-      -- (apply ρ←) ∘ (insert unit) is the identity: ρ← undoes the unit.
-      mid≡id : (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (ψ .to)) ≡ id
-      mid≡id =
-          (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (ψ .to))
-        ≡⟨ sym (▶.F-∘ _ _) ⟩
-          ⊗-context Θ ▶ (((ρ← x) ◀ ⊗-context Ξ) ∘ ψ .to)
-        ≡⟨ ap (⊗-context Θ ▶_) (ap (_∘ ψ .to) (sym φ-from)) ⟩
-          ⊗-context Θ ▶ (ψ .from ∘ ψ .to)
-        ≡⟨ ap (⊗-context Θ ▶_) (ψ .invr) ⟩
-          ⊗-context Θ ▶ id
-        ≡⟨ ▶.F-id ⟩
-          id
-        ∎
-
-      -- plug with g = ρ← is the identity: rebracket (split), apply the
-      -- ρ←/unit-cancellation (mid≡id), and rebracket back.
+      -- plug with g = ρ← is the identity: ψ .from IS ρ← x ◀ ⊗Ξ (the monoidal
+      -- triangle, triangle-α→), so the whiskered middle (⊗Θ ▶ _) annihilates
+      -- and the outer split cancels itself.
       plug-ρ : plug Θ (x ∷ []) Ξ (ρ← x) ≡ id
       plug-ρ =
-          plug Θ (x ∷ []) Ξ (ρ← x)
-        ≡⟨⟩
-          split .from ∘ (⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ))
-            ∘ ((⊗-context Θ ▶ (ψ .to)) ∘ split .to)
-        ≡⟨ ap (split .from ∘_) (assoc _ _ _) ⟩
-          split .from ∘ (((⊗-context Θ ▶ ((ρ← x) ◀ ⊗-context Ξ)) ∘ (⊗-context Θ ▶ (ψ .to))) ∘ split .to)
-        ≡⟨ ap (λ p → split .from ∘ (p ∘ split .to)) mid≡id ⟩
-          split .from ∘ (id ∘ split .to)
-        ≡⟨ ap (split .from ∘_) (idl _) ⟩
-          split .from ∘ split .to
-        ≡⟨ split .invr ⟩
-          id
-        ∎
+          ap (split .from ∘_)
+             (cancell (▶.annihilate (ap (_∘ ψ .to) (sym triangle-α→) ∙ ψ .invr)))
+        ∙ split .invr
 
-  Mc .idₘr {Γ = Γ} {z = z} f = to-pathp eq
+  -- Right identity: the PathP over ++-idr Γ is precomposition with the
+  -- boundary iso (Hom-pathp-refll); ⊗-context-++-idr-path characterises that
+  -- iso, and the residual plug-unit-core reduces by the unit coherences.
+  Mc .idₘr {Γ = Γ} {z = z} f = Hom-pathp-refll C
+    ( ap ((ρ← z ∘ plug [] Γ [] f) ∘_)
+         (ap (λ i → i .from) (⊗-context-++-idr-path Γ))
+    ∙ plug-unit-core )
     where
-      -- The three-way split ⊗(Γ++[]) ≅ Unit ⊗ (⊗Γ ⊗ Unit) and the ++-idr iso.
-      split : ⊗-context (Γ ++ []) ≅ (Unit ⊗ (⊗-context Γ ⊗ Unit))
-      split = ⊗-context-++-++ [] Γ []
-
       ρ-idr : ⊗-context (Γ ++ []) ≅ ⊗-context Γ
       ρ-idr = ⊗-context-++-idr Γ
 
-      -- intro : ⊗Γ → Unit ⊗ (⊗Γ ⊗ Unit) introduces a unit on each side of ⊗Γ
-      -- (the leading [] on the left, the trailing [] on the right).
+      -- intro : ⊗Γ → Unit ⊗ (⊗Γ ⊗ Unit) introduces a unit on each side of ⊗Γ:
+      -- the leading [] contributes λ→, the trailing [] contributes ρ→ (via
+      -- ⊗-context-++-[]-ρ, slid across λ→'s naturality square).
       intro : Hom (⊗-context Γ) (Unit ⊗ (⊗-context Γ ⊗ Unit))
-      intro = split .to ∘ ρ-idr .from
+      intro = (⊗-context-++-++ [] Γ []) .to ∘ ρ-idr .from
 
-      -- intro = (Unit ▶ ρ→(⊗Γ)) ∘ λ→(⊗Γ): the leading [] contributes λ→ and the
-      -- trailing [] contributes ρ→ (via ⊗-context-++-[]-ρ).
       intro-eq : intro ≡ (Unit ▶ ρ→ (⊗-context Γ)) ∘ λ→ (⊗-context Γ)
       intro-eq =
-          intro
-        ≡⟨⟩
-          ((Unit ▶ (⊗-context-++ Γ []) .to) ∘ λ→ _) ∘ ρ-idr .from
-        ≡⟨ sym (assoc _ _ _) ⟩
-          (Unit ▶ (⊗-context-++ Γ []) .to) ∘ ⌜ λ→ _ ∘ ρ-idr .from ⌝
-        ≡⟨ ap! (λ→nat (ρ-idr .from)) ⟩
-          (Unit ▶ (⊗-context-++ Γ []) .to) ∘ ((Unit ▶ ρ-idr .from) ∘ λ→ (⊗-context Γ))
-        ≡⟨ assoc _ _ _ ⟩
-          ((Unit ▶ (⊗-context-++ Γ []) .to) ∘ (Unit ▶ ρ-idr .from)) ∘ λ→ (⊗-context Γ)
-        ≡⟨ ap (_∘ λ→ (⊗-context Γ)) (sym (▶.F-∘ _ _)) ⟩
-          (Unit ▶ ⌜ (⊗-context-++ Γ []) .to ∘ ρ-idr .from ⌝) ∘ λ→ (⊗-context Γ)
-        ≡⟨ ap! (⊗-context-++-[]-ρ Γ) ⟩
-          (Unit ▶ ρ→ (⊗-context Γ)) ∘ λ→ (⊗-context Γ)
-        ∎
+          sym (assoc _ _ _)
+        ∙ ap ((Unit ▶ (⊗-context-++ Γ []) .to) ∘_) (λ→nat (ρ-idr .from))
+        ∙ ▶.pulll (⊗-context-++-[]-ρ Γ)
 
-      -- (Unit ▶ ρ←(⊗Γ)) ∘ intro = λ→(⊗Γ): ρ← undoes the ρ→ that intro-eq inserted.
+      -- (Unit ▶ ρ←(⊗Γ)) ∘ intro = λ→(⊗Γ): ρ← undoes the ρ→ intro inserted.
       unit-cancel : (Unit ▶ ρ← (⊗-context Γ)) ∘ intro ≡ λ→ (⊗-context Γ)
       unit-cancel =
-          (Unit ▶ ρ← (⊗-context Γ)) ∘ ⌜ intro ⌝
-        ≡⟨ ap! intro-eq ⟩
-          (Unit ▶ ρ← (⊗-context Γ)) ∘ ((Unit ▶ ρ→ (⊗-context Γ)) ∘ λ→ (⊗-context Γ))
-        ≡⟨ assoc _ _ _ ⟩
-          ((Unit ▶ ρ← (⊗-context Γ)) ∘ (Unit ▶ ρ→ (⊗-context Γ))) ∘ λ→ (⊗-context Γ)
-        ≡⟨ ap (_∘ λ→ (⊗-context Γ)) (sym (▶.F-∘ _ _)) ⟩
-          (Unit ▶ ⌜ ρ← (⊗-context Γ) ∘ ρ→ (⊗-context Γ) ⌝) ∘ λ→ (⊗-context Γ)
-        ≡⟨ ap! (ρ≅ .invr) ⟩
-          (Unit ▶ id) ∘ λ→ (⊗-context Γ)
-        ≡⟨ ap (_∘ λ→ (⊗-context Γ)) ▶.F-id ⟩
-          id ∘ λ→ (⊗-context Γ)
-        ≡⟨ idl _ ⟩
-          λ→ (⊗-context Γ)
-        ∎
+        ap ((Unit ▶ ρ← (⊗-context Γ)) ∘_) intro-eq ∙ ▶.cancell (ρ≅ .invr)
 
       -- The core equation.  plug [] Γ [] f unfolds to
-      --   λ←(z⊗Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ split.to
-      -- and split.to ∘ ρ-idr.from = intro, so after regrouping we reduce
-      --   ρ←z ∘ λ←(z⊗Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ intro
-      -- by the unitor naturality squares (λ←nat, ρ←nat) and the unit
-      -- coherences (▶.F-∘, unit-cancel, λ≅.invr) to f.
+      --   λ←(z⊗Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ split.to,
+      -- and split.to ∘ ρ-idr.from = intro; slide ρ← z inward across the
+      -- unitor naturality squares (λ←nat, ρ←nat) and cancel the units
+      -- (unit-cancel, λ≅.invr).
       plug-unit-core : (ρ← z ∘ plug [] Γ [] f) ∘ ρ-idr .from ≡ f
       plug-unit-core =
-          (ρ← z ∘ plug [] Γ [] f) ∘ ρ-idr .from
-        ≡⟨⟩
-          (ρ← z ∘ (λ← (z ⊗ Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ split .to)) ∘ ρ-idr .from
-        ≡⟨ sym (assoc _ _ _) ⟩
-          ρ← z ∘ ((λ← (z ⊗ Unit) ∘ (Unit ▶ (f ◀ Unit)) ∘ split .to) ∘ ρ-idr .from)
-        ≡⟨ ap (ρ← z ∘_) (sym (assoc _ _ _)) ⟩
-          ρ← z ∘ (λ← (z ⊗ Unit) ∘ ((Unit ▶ (f ◀ Unit)) ∘ split .to) ∘ ρ-idr .from)
-        ≡⟨ ap (ρ← z ∘_) (ap (λ← (z ⊗ Unit) ∘_) (sym (assoc _ _ _))) ⟩
-          ρ← z ∘ (λ← (z ⊗ Unit) ∘ ((Unit ▶ (f ◀ Unit)) ∘ (split .to ∘ ρ-idr .from)))
-        ≡⟨⟩
-          ρ← z ∘ (λ← (z ⊗ Unit) ∘ ((Unit ▶ (f ◀ Unit)) ∘ intro))
-        ≡⟨ pulll (sym (λ←nat (ρ← z))) ⟩
-          (λ← z ∘ (Unit ▶ ρ← z)) ∘ ((Unit ▶ (f ◀ Unit)) ∘ intro)
-        ≡⟨ sym (assoc _ _ _) ⟩
-          λ← z ∘ ((Unit ▶ ρ← z) ∘ ((Unit ▶ (f ◀ Unit)) ∘ intro))
-        ≡⟨ ap (λ← z ∘_) (pulll (sym (▶.F-∘ _ _))) ⟩
-          λ← z ∘ ((Unit ▶ (ρ← z ∘ (f ◀ Unit))) ∘ intro)
-        ≡⟨ ap (λ← z ∘_) (ap (_∘ intro) (ap (Unit ▶_) (ρ←nat f))) ⟩
-          λ← z ∘ ((Unit ▶ (f ∘ ρ← (⊗-context Γ))) ∘ intro)
-        ≡⟨ ap (λ← z ∘_) (ap (_∘ intro) (▶.F-∘ _ _)) ⟩
-          λ← z ∘ (((Unit ▶ f) ∘ (Unit ▶ ρ← (⊗-context Γ))) ∘ intro)
-        ≡⟨ ap (λ← z ∘_) (sym (assoc _ _ _)) ⟩
-          λ← z ∘ ((Unit ▶ f) ∘ ((Unit ▶ ρ← (⊗-context Γ)) ∘ intro))
-        ≡⟨ ap (λ← z ∘_) (ap ((Unit ▶ f) ∘_) unit-cancel) ⟩
-          λ← z ∘ ((Unit ▶ f) ∘ λ→ (⊗-context Γ))
-        ≡⟨ pulll (λ←nat f) ⟩
-          (f ∘ λ← (⊗-context Γ)) ∘ λ→ (⊗-context Γ)
-        ≡⟨ sym (assoc _ _ _) ⟩
-          f ∘ (λ← (⊗-context Γ) ∘ λ→ (⊗-context Γ))
-        ≡⟨ ap (f ∘_) (λ≅ .invr) ⟩
-          f ∘ id
-        ≡⟨ idr _ ⟩
-          f
-        ∎
+          sym (assoc _ _ _)
+        ∙ ap (ρ← z ∘_)
+             (sym (assoc _ _ _) ∙ ap (λ← (z ⊗ Unit) ∘_) (sym (assoc _ _ _)))
+        ∙ pulll (sym (λ←nat (ρ← z)))
+        ∙ sym (assoc _ _ _)
+        ∙ ap (λ← z ∘_)
+            ( ▶.pulll (ρ←nat f)
+            ∙ ▶.pushl refl
+            ∙ ap ((Unit ▶ f) ∘_) unit-cancel )
+        ∙ pulll (λ←nat f)
+        ∙ cancelr (λ≅ .invr)
 
-      eq : transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f) ≡ f
-      eq =
-          transport (λ i → Hom (⊗-context (++-idr Γ i)) z) (ρ← z ∘ plug [] Γ [] f)
-        ≡⟨ subst-⊗-red (++-idr Γ) (⊗-context-++-idr-path Γ) (ρ← z ∘ plug [] Γ [] f) ⟩
-          (ρ← z ∘ plug [] Γ [] f) ∘ (⊗-context-++-idr Γ) .from
-        ≡⟨ plug-unit-core ⟩
-          f
-        ∎
-  Mc .assocₘ {Θ = Θ} {Ξ = Ξ} {Φ = Φ} {Ψ = Ψ} {Ρ = Ρ} {x = x} {y = y} {z = z} f g h = to-pathp eq
+  Mc .assocₘ {Θ = Θ} {Ξ = Ξ} {Φ = Φ} {Ψ = Ψ} {Ρ = Ρ} {x = x} {y = y} {z = z} f g h =
+    Hom-pathp-refll C eq
     where
       slot-iso : ⊗-context (Θ ++ ((Φ ++ y ∷ Ψ) ++ Ξ)) ≅ ⊗-context ((Θ ++ Φ) ++ y ∷ (Ψ ++ Ξ))
       slot-iso = slot-unbury-iso Θ Φ y Ψ Ξ
@@ -660,7 +569,7 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
 
       subst-red : subst (λ Ω → Hom (⊗-context Ω) z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ plugL)
                   ≡ (f ∘ plugL) ∘ slot-iso .from
-      subst-red = subst-⊗-red (slot-unbury Θ Φ y Ψ Ξ) (slot-unbury-⊗ Θ Φ y Ψ Ξ) (f ∘ plugL)
+      subst-red = subst-⊗-red (slot-unbury Θ Φ y Ψ Ξ) (slot-unbury-chain Θ Φ y Ψ Ξ .char) (f ∘ plugL)
 
       -- The f-free plug coherence (the pentagon): plugging h into the relocated
       -- slot of (f∘ₘg) equals plugging (g∘ₘh) into f's slot.  f is cancelled by
@@ -672,10 +581,8 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
       decR   = ⊗-context-++-++ Θ (Φ ++ Ρ ++ Ψ) Ξ
 
       -- The Θ=[] core, generalised over Φ so it can recurse: the 2-way-split
-      -- version of plug-assoc (⊗-context-++/++-assoc-⊗/assocₘ-flatten in place of the
-      -- -++-++/slot-unbury/assocₘ-boundary isos).  Cons on Φ mirrors plug-assoc's cons
-      -- (pp-cons is refl, so the ⊗-context-++ split unfolds definitionally);
-      -- the RHS plug also carries a prefix, pushed out with ◀-▶-comm.
+      -- version of plug-assoc (⊗-context-++ / ++-assoc-⊗ / assocₘ-flatten in
+      -- place of the -++-++ / slot-unbury / assocₘ-boundary isos).
       plug-assoc-nil : (Φ' : List Ob)
         → (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
             ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
@@ -687,21 +594,19 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
             ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
             ∘ ⌜ plug [] Ρ (Ψ ++ Ξ) h ⌝
             ∘ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from
+        -- (assocₘ-flatten-iso [] Ρ Ψ Ξ).from is (++-assoc-⊗-iso Ρ Ψ Ξ).to and
+        -- (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ).from is id, definitionally (chains).
         ≡⟨ ap! (plug-nil Ρ (Ψ ++ Ξ) h) ⟩
           (⊗-context-++ (y ∷ Ψ) Ξ) .to
-            ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
-            ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
-            ∘ ⌜ (assocₘ-flatten-iso [] Ρ Ψ Ξ) .from ⌝
-        ≡⟨ ap! (flat-from Ρ Ψ Ξ) ⟩
-          (⊗-context-++ (y ∷ Ψ) Ξ) .to
-            ∘ (++-assoc-⊗-iso [] (y ∷ Ψ) Ξ) .from
+            ∘ id
             ∘ ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
             ∘ (++-assoc-⊗-iso Ρ Ψ Ξ) .to
         ≡⟨ ap ((⊗-context-++ (y ∷ Ψ) Ξ) .to ∘_) (idl _) ⟩
           (⊗-context-++ (y ∷ Ψ) Ξ) .to
             ∘ ( ((h ◀ ⊗-context (Ψ ++ Ξ)) ∘ (⊗-context-++ Ρ (Ψ ++ Ξ)) .to)
               ∘ (++-assoc-⊗-iso Ρ Ψ Ξ) .to )
-        -- unfold ψ(y∷Ψ) = α← ∘ (y ▶ ψ Ψ Ξ) (pp-cons, definitional), pull α← out.
+        -- unfold ψ(y∷Ψ) = α← ∘ (y ▶ ψ Ψ Ξ) (⊗-context-++ cons, definitional),
+        -- pull α← out.
         ≡⟨ sym (assoc _ _ _)
          ∙ ap (α← (y , ⊗-context Ψ , ⊗-context Ξ) ∘_)
               (ap ((y ▶ (⊗-context-++ Ψ Ξ) .to) ∘_) (sym (assoc _ _ _))) ⟩
@@ -738,41 +643,20 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
          ∙ ap (λ w → (w ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to) (sym (plug-nil Ρ Ψ h)) ⟩
           (plug [] Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Ρ ++ Ψ) Ξ) .to
         ∎
+      -- Cons: plug-cons, then the shared cons-step (naturality square:
+      -- ◀-▶-comm slides the ▶-whiskered plug past the α← that the split's
+      -- cons unfolding contributes), then fold plug (b ∷ Φ') back.
       plug-assoc-nil (b ∷ Φ') =
-          (⊗-context-++ ((b ∷ Φ') ++ y ∷ Ψ) Ξ) .to
-            ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
-            ∘ ⌜ plug (b ∷ Φ') Ρ (Ψ ++ Ξ) h ⌝
-            ∘ (b ▶ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from)
-        ≡⟨ ap! (plug-cons b Φ' Ρ (Ψ ++ Ξ) h) ⟩
-          (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
-            ∘ (b ▶ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to))
-            ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
-            ∘ (b ▶ plug Φ' Ρ (Ψ ++ Ξ) h)
-            ∘ (b ▶ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from)
-        ≡⟨ sym (assoc _ _ _)
-         ∙ ap (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘_)
-              (sym ( ▶.F-∘ _ _
-                   ∙ ap ((b ▶ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to) ∘_)
-                        (▶.F-∘ _ _ ∙ ap ((b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
-          α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
-            ∘ (b ▶ ⌜ (⊗-context-++ (Φ' ++ y ∷ Ψ) Ξ) .to
-                   ∘ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from
-                   ∘ plug Φ' Ρ (Ψ ++ Ξ) h
-                   ∘ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from ⌝)
-        ≡⟨ ap! (plug-assoc-nil Φ') ⟩
-          α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
-            ∘ (b ▶ ((plug Φ' Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to))
-        ≡⟨ ap (α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ) ∘_) (▶.F-∘ _ _) ⟩
-          α← (b , ⊗-context (Φ' ++ y ∷ Ψ) , ⊗-context Ξ)
-            ∘ ( (b ▶ (plug Φ' Ρ Ψ h ◀ ⊗-context Ξ))
-              ∘ (b ▶ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to) )
-        ≡⟨ extendl ((◀-▶-comm {f = ⊗-context Ξ} {g = b}) .Isoⁿ.from .is-natural _ _ (plug Φ' Ρ Ψ h)) ⟩
-          (⌜ b ▶ plug Φ' Ρ Ψ h ⌝ ◀ ⊗-context Ξ)
-            ∘ ( α← (b , ⊗-context (Φ' ++ Ρ ++ Ψ) , ⊗-context Ξ)
-              ∘ (b ▶ (⊗-context-++ (Φ' ++ Ρ ++ Ψ) Ξ) .to) )
-        ≡⟨ ap! (sym (plug-cons b Φ' Ρ Ψ h)) ⟩
-          (plug (b ∷ Φ') Ρ Ψ h ◀ ⊗-context Ξ) ∘ (⊗-context-++ ((b ∷ Φ') ++ Ρ ++ Ψ) Ξ) .to
-        ∎
+          ap (λ w → (⊗-context-++ ((b ∷ Φ') ++ y ∷ Ψ) Ξ) .to
+                  ∘ (b ▶ (++-assoc-⊗-iso Φ' (y ∷ Ψ) Ξ) .from)
+                  ∘ w
+                  ∘ (b ▶ (assocₘ-flatten-iso Φ' Ρ Ψ Ξ) .from))
+             (plug-cons b Φ' Ρ (Ψ ++ Ξ) h)
+        ∙ cons-step (plug-assoc-nil Φ')
+            ((◀-▶-comm {f = ⊗-context Ξ} {g = b}) .Isoⁿ.from .is-natural _ _
+              (plug Φ' Ρ Ψ h))
+        ∙ ap (λ w → (w ◀ ⊗-context Ξ) ∘ (⊗-context-++ ((b ∷ Φ') ++ Ρ ++ Ψ) Ξ) .to)
+             (sym (plug-cons b Φ' Ρ Ψ h))
 
       -- g cancelled: decL.to ∘ slot-iso.from ∘ plugH ∘ bdry-iso.from
       --              = (⊗Θ ▶ (plugGH ◀ ⊗Ξ)) ∘ decR.to   (only h remains).
@@ -787,11 +671,8 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
             ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to
       -- Base: no outer prefix.  Reduces (via λ→ naturality on the ⊗-context-++-++ []
       -- = λ→ ∘ ⊗-context-++ unfolding, see split3-nil) to the Φ-indexed coherence
-      -- plug-assoc-nil (same statement with ⊗-context-++ / ++-assoc-⊗ / assocₘ-flatten in
-      -- place of the -++-++ / slot-unbury / assocₘ-boundary isos), provable by a
-      -- further induction on Φ (cons: pp-cons refl + plug-cons + ▶-assoc, exactly
-      -- like the Θ-cons above; base Φ=[] bottoms out in a Ρ-induction from
-      -- assocₘ-flatten with a unit/triangle core).
+      -- plug-assoc-nil, whose own base Φ=[] unfolds plug (plug-nil) and bottoms
+      -- out in the .to-hexagon F-α→-to plus α→ first-slot naturality.
       plug-assoc [] =
           ⌜ (⊗-context-++-++ [] (Φ ++ y ∷ Ψ) Ξ) .to ⌝
             ∘ (++-assoc-⊗-iso Φ (y ∷ Ψ) Ξ) .from
@@ -823,50 +704,21 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
         ≡⟨ ap! (sym (split3-nil (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
           (⊗-context [] ▶ (plugGH ◀ ⊗-context Ξ)) ∘ (⊗-context-++-++ [] (Φ ++ Ρ ++ Ψ) Ξ) .to
         ∎
+      -- Cons: split3-cons + plug-cons expose the four ▶-factors, cons-step
+      -- runs the IH (naturality square: ▶-assoc slides the doubly-whiskered
+      -- plugGH past the α← correction), and split3-cons folds back.
       plug-assoc (a ∷ Θ') =
-          ⌜ (⊗-context-++-++ (a ∷ Θ') (Φ ++ y ∷ Ψ) Ξ) .to ⌝
-            ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
-            ∘ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h
-            ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from)
-        ≡⟨ ap! (split3-cons a Θ' (Φ ++ y ∷ Ψ) Ξ) ⟩
-          (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-            ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to))
-            ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
-            ∘ ⌜ plug ((a ∷ Θ') ++ Φ) Ρ (Ψ ++ Ξ) h ⌝
-            ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from)
-        ≡⟨ ap! (plug-cons a (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h) ⟩
-          (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-            ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to))
-            ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
-            ∘ (a ▶ plug (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h)
-            ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from)
-        ≡⟨ sym (assoc _ _ _)
-         ∙ ap (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘_)
-              (sym ( ▶.F-∘ _ _
-                   ∙ ap ((a ▶ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to) ∘_)
-                        (▶.F-∘ _ _ ∙ ap ((a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
-          α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-            ∘ (a ▶ ⌜ (⊗-context-++-++ Θ' (Φ ++ y ∷ Ψ) Ξ) .to
-                   ∘ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from
-                   ∘ plug (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h
-                   ∘ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from ⌝)
-        ≡⟨ ap! (plug-assoc Θ') ⟩
-          α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-            ∘ (a ▶ ( (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ))
-                   ∘ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to ))
-        ≡⟨ ap (α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ) ∘_) (▶.F-∘ _ _) ⟩
-          α← (a , ⊗-context Θ' , ⊗-context (Φ ++ y ∷ Ψ) ⊗ ⊗-context Ξ)
-            ∘ ( (a ▶ (⊗-context Θ' ▶ (plugGH ◀ ⊗-context Ξ)))
-              ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to) )
-        ≡⟨ extendl ((▶-assoc {f = a} {g = ⊗-context Θ'}) .Isoⁿ.from .is-natural _ _ (plugGH ◀ ⊗-context Ξ)) ⟩
-          ((a ⊗ ⊗-context Θ') ▶ (plugGH ◀ ⊗-context Ξ))
-            ∘ ( α← (a , ⊗-context Θ' , ⊗-context (Φ ++ Ρ ++ Ψ) ⊗ ⊗-context Ξ)
-              ∘ (a ▶ (⊗-context-++-++ Θ' (Φ ++ Ρ ++ Ψ) Ξ) .to) )
-        ≡⟨ ap (((a ⊗ ⊗-context Θ') ▶ (plugGH ◀ ⊗-context Ξ)) ∘_)
-              (sym (split3-cons a Θ' (Φ ++ Ρ ++ Ψ) Ξ)) ⟩
-          (⊗-context (a ∷ Θ') ▶ (plugGH ◀ ⊗-context Ξ))
-            ∘ (⊗-context-++-++ (a ∷ Θ') (Φ ++ Ρ ++ Ψ) Ξ) .to
-        ∎
+          ap₂ (λ u w → u
+                     ∘ (a ▶ (slot-unbury-iso Θ' Φ y Ψ Ξ) .from)
+                     ∘ w
+                     ∘ (a ▶ (assocₘ-boundary-iso Θ' Φ Ρ Ψ Ξ) .from))
+              (split3-cons a Θ' (Φ ++ y ∷ Ψ) Ξ)
+              (plug-cons a (Θ' ++ Φ) Ρ (Ψ ++ Ξ) h)
+        ∙ cons-step (plug-assoc Θ')
+            ((▶-assoc {f = a} {g = ⊗-context Θ'}) .Isoⁿ.from .is-natural _ _
+              (plugGH ◀ ⊗-context Ξ))
+        ∙ ap ((⊗-context (a ∷ Θ') ▶ (plugGH ◀ ⊗-context Ξ)) ∘_)
+             (sym (split3-cons a Θ' (Φ ++ Ρ ++ Ψ) Ξ))
 
       g-free : decL .to ∘ slot-iso .from ∘ plugH ∘ bdry-iso .from
                ≡ (⊗-context Θ ▶ (plugGH ◀ ⊗-context Ξ)) ∘ decR .to
@@ -896,29 +748,30 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
           plugR
         ∎
 
-      eq : transport (λ i → Hom (⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ i)) z)
-              (subst (λ Ω → Hom (⊗-context Ω) z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ plugL) ∘ plugH)
-            ≡ (f ∘ plugR)
+      -- The PathP over the assocₘ boundary is precomposition with the boundary
+      -- iso (Hom-pathp-refll); the chain characterisations turn the inner
+      -- subst and the boundary path→iso into the ▶-chain isos, leaving the
+      -- f-free plug-coherence.
+      eq : (subst (λ Ω → Hom (⊗-context Ω) z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ plugL) ∘ plugH)
+             ∘ path→iso (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ)) .from
+           ≡ f ∘ plugR
       eq =
-          transport (λ i → Hom (⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ i)) z)
-            (subst (λ Ω → Hom (⊗-context Ω) z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ plugL) ∘ plugH)
-        ≡⟨ ap (λ ◆ → transport (λ i → Hom (⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ i)) z) (◆ ∘ plugH))
+          (subst (λ Ω → Hom (⊗-context Ω) z) (slot-unbury Θ Φ y Ψ Ξ) (f ∘ plugL) ∘ plugH)
+            ∘ path→iso (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ)) .from
+        ≡⟨ ap (λ u → (u ∘ plugH) ∘ path→iso (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ)) .from)
               subst-red ⟩
-          transport (λ i → Hom (⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ i)) z)
-            (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH)
-        ≡⟨ subst-⊗-red (assocₘ-boundary Θ Φ Ρ Ψ Ξ) (assocₘ-boundary-⊗ Θ Φ Ρ Ψ Ξ)
-              (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH) ⟩
+          (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH)
+            ∘ ⌜ path→iso (ap ⊗-context (assocₘ-boundary Θ Φ Ρ Ψ Ξ)) .from ⌝
+        ≡⟨ ap! (ap (λ i → i .from) (assocₘ-boundary-chain Θ Φ Ρ Ψ Ξ .char)) ⟩
           (((f ∘ plugL) ∘ slot-iso .from) ∘ plugH) ∘ bdry-iso .from
-        ≡⟨ sym (assoc _ _ _) ⟩
-          ((f ∘ plugL) ∘ slot-iso .from) ∘ (plugH ∘ bdry-iso .from)
-        ≡⟨ sym (assoc _ _ _) ⟩
-          (f ∘ plugL) ∘ (slot-iso .from ∘ (plugH ∘ bdry-iso .from))
-        ≡⟨ sym (assoc _ _ _) ⟩
-          f ∘ ⌜ plugL ∘ (slot-iso .from ∘ (plugH ∘ bdry-iso .from)) ⌝
+        ≡⟨ sym (assoc _ _ _) ∙ sym (assoc _ _ _) ∙ sym (assoc _ _ _) ⟩
+          f ∘ ⌜ plugL ∘ slot-iso .from ∘ plugH ∘ bdry-iso .from ⌝
         ≡⟨ ap! plug-coherence ⟩
           f ∘ plugR
         ∎
-  Mc .interchangeₘ {Θ = Θ} {Μ = Μ} {Κ = Κ} {Γ = Γ} {Δ = Δ} {x = x} {y = y} {z = z} f g h = to-pathp eq
+
+  Mc .interchangeₘ {Θ = Θ} {Μ = Μ} {Κ = Κ} {Γ = Γ} {Δ = Δ} {x = x} {y = y} {z = z} f g h =
+    Hom-pathp-refll C eq
     where
       -- f's two slots are x (at Θ++x∷Μ) and y (at Μ++y∷Κ).  Plugs:
       plugg   = plug Θ Γ (Μ ++ y ∷ Κ) g            -- g into x's slot
@@ -933,21 +786,20 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
 
       subst₀ : subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₀ Θ x Μ y Κ) f
                ≡ f ∘ slot₀-iso .from
-      subst₀ = subst-⊗-red (interchange-slot₀ Θ x Μ y Κ) (ic-slot₀-⊗ Θ x Μ y Κ) f
+      subst₀ = subst-⊗-red (interchange-slot₀ Θ x Μ y Κ) (ic-slot₀-chain Θ x Μ y Κ .char) f
 
       subst₁ : subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ plugg)
                ≡ (f ∘ plugg) ∘ slot₁-iso .from
-      subst₁ = subst-⊗-red (interchange-slot₁ Θ Γ Μ y Κ) (ic-slot₁-⊗ Θ Γ Μ y Κ) (f ∘ plugg)
+      subst₁ = subst-⊗-red (interchange-slot₁ Θ Γ Μ y Κ) (ic-slot₁-chain Θ Γ Μ y Κ .char) (f ∘ plugg)
 
       subst₂-red : (M : Hom (⊗-context ((Θ ++ x ∷ Μ) ++ Δ ++ Κ)) z)
         → subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₂ Θ x Μ Δ Κ) M ≡ M ∘ slot₂-iso .from
-      subst₂-red = subst-⊗-red (interchange-slot₂ Θ x Μ Δ Κ) (ic-slot₂-⊗ Θ x Μ Δ Κ)
+      subst₂-red = subst-⊗-red (interchange-slot₂ Θ x Μ Δ Κ) (ic-slot₂-chain Θ x Μ Δ Κ .char)
 
       -- The g-free remainder of the interchange base (Θ=[]), generalised over Γ
       -- so it can recurse: relates plug (Γ++Μ) h to (⊗Γ ▶ plug Μ h).  Since g has
       -- been factored out, Γ-induction is legitimate (h, plug Μ h are Γ-fixed).
-      -- Cons mirrors plug-assoc's cons (pp-cons refl + plug-cons + ▶-assoc push-out);
-      -- base Γ=[] is left-unitor naturality.
+      -- Cons is the shared cons-step; base Γ=[] is left-unitor naturality.
       plug-shift : (Γ' : List Ob)
         →   (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
               ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
@@ -958,35 +810,19 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
       plug-shift [] =
           ap (λ→ (⊗-context (Μ ++ y ∷ Κ)) ∘_) (idl _ ∙ idr _)
         ∙ λ→nat (plug Μ Δ Κ h)
+      -- Cons: plug-cons, then the shared cons-step (naturality square:
+      -- ▶-assoc slides the doubly-whiskered plug past the α← that the
+      -- ⊗-context-++ cons unfolding contributes).  Nothing to fold back:
+      -- both RHS factors reduce at (b ∷ Γ') definitionally.
       plug-shift (b ∷ Γ') =
-          (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to
-            ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
-            ∘ ⌜ plug ((b ∷ Γ') ++ Μ) Δ Κ h ⌝
-            ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from)
-        ≡⟨ ap! (plug-cons b (Γ' ++ Μ) Δ Κ h) ⟩
-          (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘ (b ▶ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to))
-            ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
-            ∘ (b ▶ plug (Γ' ++ Μ) Δ Κ h)
-            ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from)
-        ≡⟨ sym (assoc _ _ _)
-         ∙ ap (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘_)
-              (sym ( ▶.F-∘ _ _
-                   ∙ ap ((b ▶ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to) ∘_)
-                        (▶.F-∘ _ _ ∙ ap ((b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from) ∘_) (▶.F-∘ _ _)) )) ⟩
-          α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
-            ∘ (b ▶ ⌜ (⊗-context-++ Γ' (Μ ++ y ∷ Κ)) .to
-                   ∘ (ic-slot₁-iso [] Γ' Μ y Κ) .from
-                   ∘ plug (Γ' ++ Μ) Δ Κ h
-                   ∘ (ic-flatten-iso Γ' Μ Δ Κ) .from ⌝)
-        ≡⟨ ap! (plug-shift Γ') ⟩
-          α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
-            ∘ (b ▶ ((⊗-context Γ' ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to))
-        ≡⟨ ap (α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ)) ∘_) (▶.F-∘ _ _) ⟩
-          α← (b , ⊗-context Γ' , ⊗-context (Μ ++ y ∷ Κ))
-            ∘ ( (b ▶ (⊗-context Γ' ▶ plug Μ Δ Κ h)) ∘ (b ▶ (⊗-context-++ Γ' (Μ ++ Δ ++ Κ)) .to) )
-        ≡⟨ extendl ((▶-assoc {f = b} {g = ⊗-context Γ'}) .Isoⁿ.from .is-natural _ _ (plug Μ Δ Κ h)) ⟩
-          (⊗-context (b ∷ Γ') ▶ plug Μ Δ Κ h) ∘ (⊗-context-++ (b ∷ Γ') (Μ ++ Δ ++ Κ)) .to
-        ∎
+          ap (λ w → (⊗-context-++ (b ∷ Γ') (Μ ++ y ∷ Κ)) .to
+                  ∘ (b ▶ (ic-slot₁-iso [] Γ' Μ y Κ) .from)
+                  ∘ w
+                  ∘ (b ▶ (ic-flatten-iso Γ' Μ Δ Κ) .from))
+             (plug-cons b (Γ' ++ Μ) Δ Κ h)
+        ∙ cons-step (plug-shift Γ')
+            ((▶-assoc {f = b} {g = ⊗-context Γ'}) .Isoⁿ.from .is-natural _ _
+              (plug Μ Δ Κ h))
 
       -- the f-free bifunctoriality coherence (the hard piece), by induction on
       -- the prefix Θ.  Cons is clean: every factor is a ▶ (plug is prefix-linear
@@ -1038,51 +874,23 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
             ∘ (ic-slot₂-iso [] x Μ Δ Κ) .from
             ∘ plug [] Γ (Μ ++ Δ ++ Κ) g
         ∎
+      -- Cons: both plugs unfold by plug-cons, ▶-weave₄ runs the IH inside the
+      -- ▶ (no α corrections: every factor is a ▶), and the two plugs fold
+      -- back one at a time (two sequential aps).
       plug-interchange (a ∷ Θ') =
-          ⌜ plug (a ∷ Θ') Γ (Μ ++ y ∷ Κ) g ⌝
-            ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
-            ∘ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h
-            ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
-        ≡⟨ ap! (plug-cons a Θ' Γ (Μ ++ y ∷ Κ) g) ⟩
-          (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g)
-            ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
-            ∘ ⌜ plug ((a ∷ Θ') ++ Γ ++ Μ) Δ Κ h ⌝
-            ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
-        ≡⟨ ap! (plug-cons a (Θ' ++ Γ ++ Μ) Δ Κ h) ⟩
-          (a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g)
-            ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
-            ∘ (a ▶ plug (Θ' ++ Γ ++ Μ) Δ Κ h)
-            ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from)
-        ≡⟨ sym ( ▶.F-∘ _ _
-               ∙ ap ((a ▶ plug Θ' Γ (Μ ++ y ∷ Κ) g) ∘_)
-                    (▶.F-∘ _ _ ∙ ap ((a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from) ∘_) (▶.F-∘ _ _)) ) ⟩
-          a ▶ ⌜ plug Θ' Γ (Μ ++ y ∷ Κ) g
-              ∘ (ic-slot₁-iso Θ' Γ Μ y Κ) .from
-              ∘ plug (Θ' ++ Γ ++ Μ) Δ Κ h
-              ∘ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from ⌝
-        ≡⟨ ap! (plug-interchange Θ') ⟩
-          a ▶ ( (ic-slot₀-iso Θ' x Μ y Κ) .from
-              ∘ plug (Θ' ++ x ∷ Μ) Δ Κ h
-              ∘ (ic-slot₂-iso Θ' x Μ Δ Κ) .from
-              ∘ plug Θ' Γ (Μ ++ Δ ++ Κ) g )
-        ≡⟨ ▶.F-∘ _ _
-         ∙ ap ((a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from) ∘_)
-              (▶.F-∘ _ _ ∙ ap ((a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h) ∘_) (▶.F-∘ _ _)) ⟩
-          (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
-            ∘ ⌜ a ▶ plug (Θ' ++ x ∷ Μ) Δ Κ h ⌝
-            ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
-            ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g)
-        ≡⟨ ap! (sym (plug-cons a (Θ' ++ x ∷ Μ) Δ Κ h)) ⟩
-          (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
-            ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
-            ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
-            ∘ ⌜ a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g ⌝
-        ≡⟨ ap! (sym (plug-cons a Θ' Γ (Μ ++ Δ ++ Κ) g)) ⟩
-          (ic-slot₀-iso (a ∷ Θ') x Μ y Κ) .from
-            ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
-            ∘ (ic-slot₂-iso (a ∷ Θ') x Μ Δ Κ) .from
-            ∘ plug (a ∷ Θ') Γ (Μ ++ Δ ++ Κ) g
-        ∎
+          ap₂ (λ u w → u ∘ (a ▶ (ic-slot₁-iso Θ' Γ Μ y Κ) .from)
+                         ∘ w ∘ (a ▶ (ic-boundary-iso Θ' Γ Μ Δ Κ) .from))
+              (plug-cons a Θ' Γ (Μ ++ y ∷ Κ) g)
+              (plug-cons a (Θ' ++ Γ ++ Μ) Δ Κ h)
+        ∙ ▶-weave₄ a (plug-interchange Θ')
+        ∙ ap (λ u → (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
+                  ∘ u ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from)
+                  ∘ (a ▶ plug Θ' Γ (Μ ++ Δ ++ Κ) g))
+             (sym (plug-cons a (Θ' ++ x ∷ Μ) Δ Κ h))
+        ∙ ap (λ w → (a ▶ (ic-slot₀-iso Θ' x Μ y Κ) .from)
+                  ∘ plug ((a ∷ Θ') ++ x ∷ Μ) Δ Κ h
+                  ∘ (a ▶ (ic-slot₂-iso Θ' x Μ Δ Κ) .from) ∘ w)
+             (sym (plug-cons a Θ' Γ (Μ ++ Δ ++ Κ) g))
 
       ic-plug-coherence
         :   plugg ∘ slot₁-iso .from ∘ plugh₁ ∘ bdry-iso .from
@@ -1101,26 +909,23 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
         ∙ sym (assoc _ _ _)
         ∙ sym (assoc _ _ _)
 
-      eq : transport (λ i → Hom (⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ i)) z)
-              (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ plugg) ∘ plugh₁)
-            ≡ (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₂ Θ x Μ Δ Κ)
-                (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₀ Θ x Μ y Κ) f ∘ plugh₂) ∘ plugg₂)
+      -- As in assocₘ: the PathP is precomposition with the boundary iso, the
+      -- chains characterise it, and the residual is ic-plug-coherence.
+      eq : (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ plugg) ∘ plugh₁)
+             ∘ path→iso (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ)) .from
+           ≡ subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₂ Θ x Μ Δ Κ)
+               (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₀ Θ x Μ y Κ) f ∘ plugh₂) ∘ plugg₂
       eq =
-          transport (λ i → Hom (⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ i)) z)
-            (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ plugg) ∘ plugh₁)
-        ≡⟨ ap (λ ◆ → transport (λ i → Hom (⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ i)) z) (◆ ∘ plugh₁))
+          (subst (λ Ω → Hom (⊗-context Ω) z) (interchange-slot₁ Θ Γ Μ y Κ) (f ∘ plugg) ∘ plugh₁)
+            ∘ path→iso (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ)) .from
+        ≡⟨ ap (λ u → (u ∘ plugh₁) ∘ path→iso (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ)) .from)
               subst₁ ⟩
-          transport (λ i → Hom (⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ i)) z)
-            (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁)
-        ≡⟨ subst-⊗-red (interchangeₘ-boundary Θ Γ Μ Δ Κ) (ic-boundary-⊗ Θ Γ Μ Δ Κ)
-              (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁) ⟩
+          (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁)
+            ∘ ⌜ path→iso (ap ⊗-context (interchangeₘ-boundary Θ Γ Μ Δ Κ)) .from ⌝
+        ≡⟨ ap! (ap (λ i → i .from) (ic-boundary-chain Θ Γ Μ Δ Κ .char)) ⟩
           (((f ∘ plugg) ∘ slot₁-iso .from) ∘ plugh₁) ∘ bdry-iso .from
-        ≡⟨ sym (assoc _ _ _) ⟩
-          ((f ∘ plugg) ∘ slot₁-iso .from) ∘ (plugh₁ ∘ bdry-iso .from)
-        ≡⟨ sym (assoc _ _ _) ⟩
-          (f ∘ plugg) ∘ (slot₁-iso .from ∘ (plugh₁ ∘ bdry-iso .from))
-        ≡⟨ sym (assoc _ _ _) ⟩
-          f ∘ ⌜ plugg ∘ (slot₁-iso .from ∘ (plugh₁ ∘ bdry-iso .from)) ⌝
+        ≡⟨ sym (assoc _ _ _) ∙ sym (assoc _ _ _) ∙ sym (assoc _ _ _) ⟩
+          f ∘ ⌜ plugg ∘ slot₁-iso .from ∘ plugh₁ ∘ bdry-iso .from ⌝
         ≡⟨ ap! ic-plug-coherence ⟩
           f ∘ rest₂
         ≡⟨ sym RHS-red ⟩
