@@ -77,8 +77,8 @@ FIXED (committed) / REJECTED (experiment refutes; keep as-is, record why).
   multicategory" but the record has `idₘ` and both unit laws.  Status: OPEN.
 - [F3] **SUBOPTIMAL/M**: `Monoidal/Free.agda` + `Monoidal/Free/Signature.agda`
   are an abandoned exploratory stub (constructors and instances commented
-  out); unreferenced by everything else.  Plan: delete on this branch
-  (recoverable from git history).  Status: OPEN.
+  out); unreferenced by everything else.  Deleted on this branch (recoverable
+  from git history).  Status: FIXED.
 - [F4] **OPEN/M**: `is-multicategory = is-category (Unary M)` is defined but
   never used downstream; `Representable.agda`'s is-prop results take
   `is-category (Unary M)` directly.  Decide: use it or drop it.
