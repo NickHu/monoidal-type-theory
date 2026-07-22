@@ -9,7 +9,7 @@ import Cat.Monoidal.Reasoning as MonR
 import Cat.Bi.Reasoning
 open import Cat.Functor.Properties
 open import Cat.Functor.Equivalence
-open import Cat.Functor.Bifunctor using (Bifunctor ; biiso→isoⁿ)
+open import Cat.Functor.Bifunctor using (biiso→isoⁿ)
 open import Cat.Functor.Compose using (precompose₂ ; postcompose₂)
 import Cat.Monoidal.Functor as MonF
 open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
@@ -139,12 +139,6 @@ module Multicategory.Instances.Monoidal.Coherence
   -- ==========================================================================
   -- Monoidal structure ingredients (toward `Monoidal-functor-on Comparison`).
   -- ==========================================================================
-
-  -- The comparison map φ Γ Δ = (⊗-context-++ Γ Δ).from : ⊗Γ ⊗ ⊗Δ → ⊗(Γ++Δ) is
-  -- invertible (it is one leg of the ⊗-context-++ iso).  This is the F-mult-inv
-  -- ingredient of the strong monoidal structure.
-  φ-inv : (Γ Δ : List Ob) → is-invertible (φ Γ Δ)
-  φ-inv Γ Δ = iso→invertible (⊗-context-++ Γ Δ Iso⁻¹)
 
   -- Bundling coherence (the heart of the μ ↔ φ bridge).  `restrict₂.to` of the
   -- unit-adjusted φ reduces, via `⊗-arr = id`, to two `plug _ _ _ id` legs.
