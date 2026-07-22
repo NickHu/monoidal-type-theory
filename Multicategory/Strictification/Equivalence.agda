@@ -16,6 +16,12 @@ import Multicategory.Strictification as Strict
 -- comparison functor `Reindex : Str → Unary M` is the identity on hom-sets
 -- (hence fully faithful) and split essentially surjective (every object y is the
 -- tensor of the singleton context [y], via the universal arrow ⊗-arr [y]).
+--
+-- This module underlies the coherence theorem: in
+-- Multicategory.Instances.Monoidal.Coherence, the comparison functor of
+-- `monoidal-strictification` is defined as `Unwrap F∘ Reindex`, and its
+-- equivalence proof composes `Reindex-is-equivalence` with the (monoidal-
+-- specific) equivalence `Unary Mᵣ ≃ C`.
 module Multicategory.Strictification.Equivalence
   {o h} (M : Premulticategory o h) (rep : Rep.is-representable M) where
 

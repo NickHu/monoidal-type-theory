@@ -6,6 +6,7 @@ open import Cat.Monoidal.Base
 open import Cat.Univalent using (path→iso ; Hom-transport)
 open import Cat.Functor.Naturality
 import Cat.Monoidal.Reasoning as MonR
+import Cat.Bi.Reasoning
 open import Cat.Functor.Properties
 open import Cat.Functor.Equivalence
 open import Cat.Functor.Bifunctor using (Bifunctor ; biiso→isoⁿ)
@@ -19,30 +20,38 @@ open import Multicategory.Instances.Monoidal
 open import Monoidal.Strict using (is-strict-monoidal)
 import Multicategory.Representable as Rep
 import Multicategory.Strictification as Strict
+import Multicategory.Strictification.Equivalence as StrEq
 
--- The strictification of the representable multicategory of a monoidal category
--- C is equivalent, as a plain category, to C itself.  This is the underlying
--- (category-level) content of the coherence theorem: the strict monoidal
--- category `C^str = Str` and the original C have equivalent underlying
--- categories.
+-- The coherence theorem for monoidal categories: every monoidal category C is
+-- monoidally equivalent to a strict one.  The file culminates in the packaged
+-- statement `monoidal-strictification`: there is a strict monoidal category
+-- (`Str`, `Str-monoidal`, the strictification of the representable
+-- multicategory of C) and a strong monoidal functor `Comparison : Str → C`
+-- whose underlying functor is an equivalence of categories.
 --
--- The comparison functor `Str → C` sends a context Γ to its tensor ⊗-context Γ
--- and a strict morphism f : (⊗Γ ⊗ Unit) → ⊗Δ to `f ∘ ρ→` : ⊗Γ → ⊗Δ.  The key
--- computation is that the multicategory composition, at singleton contexts,
--- reduces to plain composition conjugated by the right unitor:
+-- The comparison functor factors through the general (multicategory-level)
+-- equivalence of Multicategory.Strictification.Equivalence:
+--
+--   Str --Reindex--> Unary Mᵣ --Unwrap--> C
+--
+-- so it sends a context Γ to its tensor ⊗-context Γ and a strict morphism
+-- f : (⊗Γ ⊗ Unit) → ⊗Δ to `f ∘ ρ→` : ⊗Γ → ⊗Δ.  The key computation is that
+-- the multicategory composition, at singleton contexts, reduces to plain
+-- composition conjugated by the right unitor:
 --   plug [] (a ∷ []) [] m = ρ→ b ∘ m ,
--- so the functor's compositionality is pure associativity, and it is fully
--- faithful (precomposition with the unitor iso ρ→) and essentially surjective
--- (every object c is ⊗-context (c ∷ []) = c ⊗ Unit ≅ c).
+-- so `Unwrap`'s compositionality is pure associativity, and it is fully
+-- faithful (precomposition with the unitor iso ρ→) and split essentially
+-- surjective on the nose; the monoidal structure on the composite is built
+-- from the μ ↔ φ bridge (`bundle`/`compute`/`μ-φ`) below.
 module Multicategory.Instances.Monoidal.Coherence
   {o h} (C : Precategory o h) (M₀ : Monoidal-category C) where
 
   open Cr C
   open Monoidal-category M₀
   open Repr C M₀ using
-    (⊗-context ; plug ; plug-nil ; plug-cons ; plug-id ; ⊗-context-++ ; ⊗-context-++-idr
-    ; ⊗-context-++-idr-path ; ⊗-context-++-[]-ρ ; path→iso-ap-⊗ ; path→iso-refl ; φ
-    ; ++-assoc-⊗-iso ; ++-assoc-⊗-path ; F-α→)
+    (⊗-context ; plug ; plug-nil ; plug-cons ; plug-id ; Piso ; ⊗-context-++
+    ; ⊗-context-++-idr ; ⊗-context-++-idr-path ; ⊗-context-++-[]-ρ ; path→iso-ap-⊗
+    ; path→iso-refl ; φ ; ++-assoc-⊗-iso ; ++-assoc-⊗-path ; F-α→)
 
   private
     Mᵣ : Premulticategory o h
@@ -55,38 +64,62 @@ module Multicategory.Instances.Monoidal.Coherence
   open Strict Mᵣ rep using
     (Str ; ⊗₀ ; ⊗-arr ; μ ; _⊗ₛ_ ; ⊗ₛ-μ ; restrict₂-equiv ; restrict₂-μ ; Str-monoidal
     ; Str-is-strict ; ≅to ; ≅to-refl ; ≅from-to)
+  open StrEq Mᵣ rep using (Reindex ; Reindex-is-equivalence)
 
   private module MR = MonR M₀
 
+  -- `import` (not `open import`): the parameterised module's λ≅/ρ≅ would clash
+  -- with Monoidal-category's, so only the triangle coherence is brought in.
+  open Cat.Bi.Reasoning (Deloop M₀) using (triangle-inv)
+
+
+  -- The `.to` of the unit-appending iso factors as ρ→ after the ++[] reindex:
+  -- (⊗-context-++ Γ []).to = ρ→ (⊗Γ) ∘ (⊗-context-++-idr Γ).to.  This is the
+  -- workhorse form of `⊗-context-++-[]-ρ`, shared by `plug-sing`, `bundle`,
+  -- `plug-tail` and `ρ←-reindex` below.
+  ++[]-to-ρ→ : (Γ : List Ob)
+    → (⊗-context-++ Γ []) .to ≡ ρ→ (⊗-context Γ) ∘ (⊗-context-++-idr Γ) .to
+  ++[]-to-ρ→ Γ = intror (⊗-context-++-idr Γ .invr) ∙ pulll (⊗-context-++-[]-ρ Γ)
 
   -- Singleton plug = right-unitor conjugation.  Uses `plug-nil`, the identity
-  -- `(⊗-context-++ (a∷[]) []).to = ρ→ (a ⊗ Unit)` (from ⊗-context-++-[]-ρ, whose
-  -- ++-idr factor is `▶ id = id`), and naturality of ρ→.
+  -- `(⊗-context-++ (a∷[]) []).to = ρ→ (a ⊗ Unit)` (from ++[]-to-ρ→, whose
+  -- ++-idr factor is `a ▶ id = id`), and naturality of ρ→.
   plug-sing : (a b : Ob) (m : Hom (a ⊗ Unit) b)
     → plug [] (a ∷ []) [] m ≡ ρ→ b ∘ m
   plug-sing a b m =
       plug-nil (a ∷ []) [] m
-    ∙ ap ((m ◀ Unit) ∘_) to≡ρ→
-    ∙ sym (unitor-r.to .is-natural (a ⊗ Unit) b m)
-    where
-      to≡ρ→ : (⊗-context-++ (a ∷ []) []) .to ≡ ρ→ (a ⊗ Unit)
-      to≡ρ→ =
-          sym (idr _)
-        ∙ ap ((⊗-context-++ (a ∷ []) []) .to ∘_) (sym ▶.F-id)
-        ∙ ⊗-context-++-[]-ρ (a ∷ [])
+    ∙ ap ((m ◀ Unit) ∘_) (++[]-to-ρ→ (a ∷ []) ∙ elimr ▶.F-id)
+    ∙ sym (MR.ρ→nat m)
 
-  -- The comparison functor Str → C.
+  -- The monoidal-specific half of the comparison: Unary Mᵣ ≃ C by unwrapping
+  -- the unit (F₀ = identity on objects, F₁ = precompose ρ→; compositionality
+  -- is `plug-sing` + associativity).
+  Unwrap : Functor (Unary Mᵣ) C
+  Unwrap .Functor.F₀ x     = x
+  Unwrap .Functor.F₁ {x} m = m ∘ ρ→ x
+  Unwrap .Functor.F-id     = ρ≅ .invr
+  Unwrap .Functor.F-∘ {x} g f =
+      ap (_∘ ρ→ x) (ap (g ∘_) (plug-sing x _ f))
+    ∙ pullr (sym (assoc _ _ _))
+    ∙ assoc _ _ _
+
+  -- Fully faithful (precomposition with the iso ρ→) and split eso (on the
+  -- nose): an equivalence.
+  Unwrap-is-equivalence : is-equivalence Unwrap
+  Unwrap-is-equivalence = ff+split-eso→is-equivalence
+    (λ {x} {y} → invertible-precomp-equiv (iso→invertible (ρ≅ {x})))
+    (λ y → y , id-iso)
+
+  -- The comparison functor Str → C factors through the general (multicategory-
+  -- level) comparison of Multicategory.Strictification.Equivalence:
+  --
+  --   Str --Reindex--> Unary Mᵣ --Unwrap--> C
+  --
+  -- On objects and morphisms the composite still reduces definitionally to
+  -- Γ ↦ ⊗-context Γ and f ↦ f ∘ ρ→ (⊗-context Γ), so everything below can
+  -- compute through it as if it were defined directly.
   Comparison : Functor Str C
-  Comparison .Functor.F₀ Γ     = ⊗-context Γ
-  Comparison .Functor.F₁ {Γ} f = f ∘ ρ→ (⊗-context Γ)
-  -- F₁ id_Str = ρ← (⊗Γ) ∘ ρ→ (⊗Γ) = id  (id_Str = idₘ = ρ←).
-  Comparison .Functor.F-id     = ρ≅ .invr
-  -- F₁ (g ∘ₛ f) = (g ∘ ρ→⊗Δ ∘ f) ∘ ρ→⊗Γ = (g ∘ ρ→⊗Δ) ∘ (f ∘ ρ→⊗Γ) = F₁ g ∘ F₁ f.
-  Comparison .Functor.F-∘ {Γ} {Δ} {Ε} g f =
-      ap (_∘ ρ→ (⊗-context Γ)) (ap (g ∘_) (plug-sing (⊗-context Γ) (⊗-context Δ) f))
-    ∙ sym (assoc g (ρ→ (⊗-context Δ) ∘ f) (ρ→ (⊗-context Γ)))
-    ∙ ap (g ∘_) (sym (assoc (ρ→ (⊗-context Δ)) f (ρ→ (⊗-context Γ))))
-    ∙ assoc g (ρ→ (⊗-context Δ)) (f ∘ ρ→ (⊗-context Γ))
+  Comparison = Unwrap F∘ Reindex
 
   -- Fully faithful: the hom-action is precomposition with the iso ρ→ (⊗Γ).
   Comparison-ff : is-fully-faithful Comparison
@@ -97,10 +130,11 @@ module Multicategory.Instances.Monoidal.Coherence
   Comparison-eso : is-split-eso Comparison
   Comparison-eso c = (c ∷ []) , (ρ≅ {c} Iso⁻¹)
 
-  -- Hence Str and C have equivalent underlying categories: C ≃ C^str.
+  -- Hence Str and C have equivalent underlying categories: C ≃ C^str.  The
+  -- equivalence is the composite of the two equivalences above.
   Comparison-is-equivalence : is-equivalence Comparison
   Comparison-is-equivalence =
-    ff+split-eso→is-equivalence (λ {x} {y} → Comparison-ff {x} {y}) Comparison-eso
+    is-equivalence-∘ Unwrap-is-equivalence Reindex-is-equivalence
 
   -- ==========================================================================
   -- Monoidal structure ingredients (toward `Monoidal-functor-on Comparison`).
@@ -113,135 +147,53 @@ module Multicategory.Instances.Monoidal.Coherence
   φ-inv Γ Δ = iso→invertible (⊗-context-++ Γ Δ Iso⁻¹)
 
   -- Bundling coherence (the heart of the μ ↔ φ bridge).  `restrict₂.to` of the
-  -- unit-adjusted φ reduces, via `⊗-arr = id`, to two `plug _ _ _ id` legs; this
-  -- lemma shows the whole composite is the list-reindexing iso, by induction on Γ.
+  -- unit-adjusted φ reduces, via `⊗-arr = id`, to two `plug _ _ _ id` legs.
+  -- Rewriting both legs with `plug-id` upfront (they are the isos `Piso`) leaves
+  -- the *pure-iso* coherence `bundle-core`: no `plug` in sight, and every
+  -- constituent (⊗-context-++, Piso, φ) is structural, so both cases of the
+  -- Γ-induction reduce definitionally — cons is α-mid + an α≅ cancellation +
+  -- ▶.F-∘ folds, and the base collapses via λ→-naturality + `++[]-to-ρ→`.
   -- Associator naturality in the third slot (whiskering h): α→ slides a
   -- whiskered map from (a⊗b)▶h to a▶(b▶h).
   α-mid : (a b : Ob) {X Y : Ob} (h : Hom X Y)
     → α→ (a , b , Y) ∘ ((a ⊗ b) ▶ h) ≡ (a ▶ (b ▶ h)) ∘ α→ (a , b , X)
   α-mid a b {X} {Y} h = MR.▶-assoc {f = a} {g = b} .Isoⁿ.to .is-natural X Y h
 
+  private
+    bundle-core : (Γ Δ : List Ob)
+      → ((φ Γ Δ ∘ (⊗-context Γ ▶ ρ← (⊗-context Δ)))
+          ∘ (⊗-context-++ Γ (⊗₀ Δ ∷ [])) .to) ∘ Piso Γ Δ [] .to
+        ≡ path→iso (ap ⊗-context (ap (Γ ++_) (++-idr Δ))) .to
+    bundle-core [] Δ =
+        ap (_∘ (⊗-context-++ Δ []) .to)
+           (pullr (sym (MR.λ→nat (ρ← D))) ∙ cancell (λ≅ .invr))
+      ∙ ap (ρ← D ∘_) (++[]-to-ρ→ Δ)
+      ∙ cancell (ρ≅ .invr)
+      ∙ ap (λ i → i .to) (sym (⊗-context-++-idr-path Δ))
+      where D = ⊗-context Δ
+    bundle-core (a ∷ Γ) Δ =
+        ap (_∘ (a ▶ Piso Γ Δ [] .to))
+           ( ap (_∘ (α← _ ∘ (a ▶ ψ .to))) (pullr (α-mid a (⊗-context Γ) (ρ← D)))
+           ∙ pullr (pullr (cancell (α≅ .invl)))
+           ∙ ap ((a ▶ φ Γ Δ) ∘_) (sym (▶.F-∘ _ _))
+           ∙ sym (▶.F-∘ _ _) )
+      ∙ sym (▶.F-∘ _ _)
+      ∙ ap (a ▶_) (ap (_∘ Piso Γ Δ [] .to) (assoc _ _ _) ∙ bundle-core Γ Δ)
+      ∙ ap (λ i → i .to) (sym (path→iso-ap-⊗ a (ap ⊗-context (ap (Γ ++_) (++-idr Δ)))))
+      where
+        D = ⊗-context Δ
+        ψ = ⊗-context-++ Γ (⊗₀ Δ ∷ [])
+
   bundle : (Γ Δ : List Ob)
     → ((φ Γ Δ ∘ (⊗-context Γ ▶ ρ← (⊗-context Δ)))
         ∘ plug [] Γ (⊗₀ Δ ∷ []) id) ∘ plug Γ Δ [] id
       ≡ path→iso (ap ⊗-context (ap (Γ ++_) (++-idr Δ))) .to
-  bundle [] Δ =
-      ((φ [] Δ ∘ (⊗-context [] ▶ ρ← D)) ∘ ⌜ plug [] [] (D ∷ []) id ⌝) ∘ plug [] Δ [] id
-    ≡⟨ ap! plugA ⟩
-      ((λ← D ∘ (Unit ▶ ρ← D)) ∘ λ→ (D ⊗ Unit)) ∘ ⌜ plug [] Δ [] id ⌝
-    ≡⟨ ap! plugB ⟩
-      ((λ← D ∘ (Unit ▶ ρ← D)) ∘ λ→ (D ⊗ Unit)) ∘ (⊗-context-++ Δ []) .to
-    ≡⟨ ap (_∘ (⊗-context-++ Δ []) .to) (sym (assoc _ _ _)) ⟩
-      (λ← D ∘ ((Unit ▶ ρ← D) ∘ λ→ (D ⊗ Unit))) ∘ (⊗-context-++ Δ []) .to
-    ≡⟨ ap (λ w → (λ← D ∘ w) ∘ (⊗-context-++ Δ []) .to)
-          (sym (unitor-l.to .is-natural _ _ (ρ← D))) ⟩
-      (λ← D ∘ (λ→ D ∘ ρ← D)) ∘ (⊗-context-++ Δ []) .to
-    ≡⟨ ap (_∘ (⊗-context-++ Δ []) .to) (assoc _ _ _) ⟩
-      ((λ← D ∘ λ→ D) ∘ ρ← D) ∘ (⊗-context-++ Δ []) .to
-    ≡⟨ ap (λ w → (w ∘ ρ← D) ∘ (⊗-context-++ Δ []) .to) (λ≅ .invr) ⟩
-      (id ∘ ρ← D) ∘ (⊗-context-++ Δ []) .to
-    ≡⟨ ap (_∘ (⊗-context-++ Δ []) .to) (idl _) ⟩
-      ρ← D ∘ (⊗-context-++ Δ []) .to
-    ≡⟨ ρ-reindex ⟩
-      (⊗-context-++-idr Δ) .to
-    ≡⟨ ap (λ i → i .to) (sym (⊗-context-++-idr-path Δ)) ⟩
-      path→iso (ap ⊗-context (++-idr Δ)) .to
-    ∎
-    where
-      D = ⊗-context Δ
-      plugA : plug [] [] (D ∷ []) id ≡ λ→ (D ⊗ Unit)
-      plugA = plug-nil [] (D ∷ []) id
-            ∙ ap (_∘ (⊗-context-++ [] (D ∷ [])) .to) ◀.F-id ∙ idl _
-      plugB : plug [] Δ [] id ≡ (⊗-context-++ Δ []) .to
-      plugB = plug-nil Δ [] id
-            ∙ ap (_∘ (⊗-context-++ Δ []) .to) ◀.F-id ∙ idl _
-      ρ-reindex : ρ← D ∘ (⊗-context-++ Δ []) .to ≡ (⊗-context-++-idr Δ) .to
-      ρ-reindex =
-          sym (idr _)
-        ∙ ap ((ρ← D ∘ (⊗-context-++ Δ []) .to) ∘_) (sym (⊗-context-++-idr Δ .invr))
-        ∙ assoc _ _ _
-        ∙ ap (_∘ (⊗-context-++-idr Δ) .to)
-             ( sym (assoc _ _ _)
-             ∙ ap (ρ← D ∘_) (⊗-context-++-[]-ρ Δ)
-             ∙ ρ≅ .invr )
-        ∙ idl _
-  bundle (a ∷ Γ) Δ =
-      step-▶ ∙ ap (a ▶_) (bundle Γ Δ)
-    ∙ ap (λ i → i .to)
-         (sym (path→iso-ap-⊗ a (ap ⊗-context (ap (Γ ++_) (++-idr Δ)))))
-    where
-      D = ⊗-context Δ
-      plug-cons-id : plug [] (a ∷ Γ) (⊗₀ Δ ∷ []) id
-          ≡ α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)
-      plug-cons-id = plug-id [] (a ∷ Γ) (⊗₀ Δ ∷ [])
-          ∙ ap (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘_)
-               (ap (a ▶_) (sym (plug-id [] Γ (⊗₀ Δ ∷ []))))
-      step-▶ :
-          ((φ (a ∷ Γ) Δ ∘ (⊗-context (a ∷ Γ) ▶ ρ← D)) ∘ plug [] (a ∷ Γ) (⊗₀ Δ ∷ []) id)
-            ∘ plug (a ∷ Γ) Δ [] id
-        ≡ a ▶ (((φ Γ Δ ∘ (⊗-context Γ ▶ ρ← D)) ∘ plug [] Γ (⊗₀ Δ ∷ []) id) ∘ plug Γ Δ [] id)
-      step-▶ =
-          ((⌜ φ (a ∷ Γ) Δ ⌝ ∘ (⊗-context (a ∷ Γ) ▶ ρ← D)) ∘ plug [] (a ∷ Γ) (⊗₀ Δ ∷ []) id)
-            ∘ plug (a ∷ Γ) Δ [] id
-        ≡⟨ refl ⟩
-          ((((a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , D)) ∘ (⊗-context (a ∷ Γ) ▶ ρ← D))
-            ∘ ⌜ plug [] (a ∷ Γ) (⊗₀ Δ ∷ []) id ⌝) ∘ plug (a ∷ Γ) Δ [] id
-        ≡⟨ ap! plug-cons-id ⟩
-          ((((a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , D)) ∘ ((a ⊗ ⊗-context Γ) ▶ ρ← D))
-            ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ ⌜ plug (a ∷ Γ) Δ [] id ⌝
-        ≡⟨ ap! (plug-cons a Γ Δ [] id) ⟩
-          ((((a ▶ φ Γ Δ) ∘ α→ (a , ⊗-context Γ , D)) ∘ ((a ⊗ ⊗-context Γ) ▶ ρ← D))
-            ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → (z ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-                     ∘ (a ▶ plug Γ Δ [] id))
-              (sym (assoc _ _ _)) ⟩
-          (((a ▶ φ Γ Δ) ∘ (α→ (a , ⊗-context Γ , D) ∘ ((a ⊗ ⊗-context Γ) ▶ ρ← D)))
-            ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → (((a ▶ φ Γ Δ) ∘ z)
-                       ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-                     ∘ (a ▶ plug Γ Δ [] id))
-              (α-mid a (⊗-context Γ) (ρ← D)) ⟩
-          (((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ α→ (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit)))
-            ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (_∘ (a ▶ plug Γ Δ [] id)) (sym (assoc _ _ _)) ⟩
-          ((a ▶ φ Γ Δ) ∘ (((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ α→ (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit))
-            ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id))))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → ((a ▶ φ Γ Δ) ∘ z) ∘ (a ▶ plug Γ Δ [] id)) (sym (assoc _ _ _)) ⟩
-          ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D))
-            ∘ (α→ (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit)
-               ∘ (α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ z)) ∘ (a ▶ plug Γ Δ [] id))
-              (assoc _ _ _) ⟩
-          ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D))
-            ∘ ((α→ (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit) ∘ α← (a , ⊗-context Γ , ⊗₀ Δ ⊗ Unit))
-               ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id))))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ (z ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id))))
-                     ∘ (a ▶ plug Γ Δ [] id))
-              (α≅ .invl) ⟩
-          ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ (id ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id))))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ z)) ∘ (a ▶ plug Γ Δ [] id))
-              (idl _) ⟩
-          ((a ▶ φ Γ Δ) ∘ ((a ▶ (⊗-context Γ ▶ ρ← D)) ∘ (a ▶ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → ((a ▶ φ Γ Δ) ∘ z) ∘ (a ▶ plug Γ Δ [] id)) (sym (▶.F-∘ _ _)) ⟩
-          ((a ▶ φ Γ Δ) ∘ (a ▶ ((⊗-context Γ ▶ ρ← D) ∘ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ ap (_∘ (a ▶ plug Γ Δ [] id)) (sym (▶.F-∘ _ _)) ⟩
-          (a ▶ (φ Γ Δ ∘ ((⊗-context Γ ▶ ρ← D) ∘ plug [] Γ (⊗₀ Δ ∷ []) id)))
-            ∘ (a ▶ plug Γ Δ [] id)
-        ≡⟨ sym (▶.F-∘ _ _) ⟩
-          a ▶ ((φ Γ Δ ∘ ((⊗-context Γ ▶ ρ← D) ∘ plug [] Γ (⊗₀ Δ ∷ []) id)) ∘ plug Γ Δ [] id)
-        ≡⟨ ap (λ z → a ▶ (z ∘ plug Γ Δ [] id)) (assoc _ _ _) ⟩
-          a ▶ (((φ Γ Δ ∘ (⊗-context Γ ▶ ρ← D)) ∘ plug [] Γ (⊗₀ Δ ∷ []) id) ∘ plug Γ Δ [] id)
-        ∎
+  bundle Γ Δ =
+      ap₂ (λ (u : Hom (⊗-context (Γ ++ ⊗₀ Δ ∷ [])) (⊗-context Γ ⊗ (⊗₀ Δ ⊗ Unit)))
+             (v : Hom (⊗-context (Γ ++ Δ ++ [])) (⊗-context (Γ ++ ⊗₀ Δ ∷ [])))
+           → ((φ Γ Δ ∘ (⊗-context Γ ▶ ρ← (⊗-context Δ))) ∘ u) ∘ v)
+          (plug-id [] Γ (⊗₀ Δ ∷ [])) (plug-id Γ Δ [])
+    ∙ bundle-core Γ Δ
 
   -- restrict₂.to of the unit-adjusted φ is the identity (⊗-arr = id).
   compute : (Γ Δ : List Ob)
@@ -271,17 +223,8 @@ module Multicategory.Instances.Monoidal.Coherence
     → plug [] Γᵃ [] m ≡ (ρ→ x ∘ m) ∘ (⊗-context-++-idr Γᵃ) .to
   plug-tail Γᵃ {x} m =
       plug-nil Γᵃ [] m
-    ∙ ap ((m ◀ Unit) ∘_) to≡
-    ∙ assoc _ _ _
-    ∙ ap (_∘ (⊗-context-++-idr Γᵃ) .to) (sym (unitor-r.to .is-natural _ _ m))
-    where
-      to≡ : (⊗-context-++ Γᵃ []) .to
-          ≡ ρ→ (⊗-context Γᵃ) ∘ (⊗-context-++-idr Γᵃ) .to
-      to≡ =
-          sym (idr _)
-        ∙ ap ((⊗-context-++ Γᵃ []) .to ∘_) (sym (⊗-context-++-idr Γᵃ .invr))
-        ∙ assoc _ _ _
-        ∙ ap (_∘ (⊗-context-++-idr Γᵃ) .to) (⊗-context-++-[]-ρ Γᵃ)
+    ∙ ap ((m ◀ Unit) ∘_) (++[]-to-ρ→ Γᵃ)
+    ∙ pulll (sym (MR.ρ→nat m))
 
   -- The ++[] reindex on a 2-element context is the identity (++-idr = refl there).
   idr-2elt : (a b : Ob) → (⊗-context-++-idr (a ∷ b ∷ [])) .to ≡ id
@@ -296,14 +239,9 @@ module Multicategory.Instances.Monoidal.Coherence
 
   -- φ expressed via μ (inverse of μ-φ): φ Γ Δ = μ Γ Δ ∘ (⊗Γ ▶ ρ→⊗Δ).
   φ≡μ : (Γ Δ : List Ob) → φ Γ Δ ≡ μ Γ Δ ∘ (⊗-context Γ ▶ ρ→ (⊗-context Δ))
-  φ≡μ Γ Δ =
-      sym (idr (φ Γ Δ))
-    ∙ ap (φ Γ Δ ∘_)
-         ( sym ▶.F-id
-         ∙ ap (⊗-context Γ ▶_) (sym (ρ≅ {⊗-context Δ} .invr))
-         ∙ ▶.F-∘ _ _ )
-    ∙ assoc (φ Γ Δ) (⊗-context Γ ▶ ρ← (⊗-context Δ)) (⊗-context Γ ▶ ρ→ (⊗-context Δ))
-    ∙ ap (_∘ (⊗-context Γ ▶ ρ→ (⊗-context Δ))) (sym (μ-φ Γ Δ))
+  φ≡μ Γ Δ = sym
+    ( ap (_∘ (⊗-context Γ ▶ ρ→ (⊗-context Δ))) (μ-φ Γ Δ)
+    ∙ cancelr (▶.annihilate (ρ≅ .invr)) )
 
   -- ==========================================================================
   -- The strong monoidal structure on `Comparison`.
@@ -317,27 +255,10 @@ module Multicategory.Instances.Monoidal.Coherence
      → Hom (⊗-context Γ ⊗ Unit) (⊗-context Δ) → Hom (⊗-context Γ) (⊗-context Δ)
   Fₘ Γ Δ f = f ∘ ρ→ (⊗-context Γ)
 
-  -- The "reversed triangle": α← ∘ (a ▶ λ→) = ρ→ ◀ (the inverse of triangle-α→).
+  -- The "reversed triangle": α← ∘ (a ▶ λ→) = ρ→ ◀.  This is 1lab's
+  -- `triangle-inv` (Cat.Bi.Reasoning), instantiated at the delooping of M₀.
   tri← : (a x : Ob) → α← (a , Unit , x) ∘ (a ▶ λ→ x) ≡ ρ→ a ◀ x
-  tri← a x =
-      sym (idl _)
-    ∙ ap (_∘ (α← (a , Unit , x) ∘ (a ▶ λ→ x))) (sym pinv)
-    ∙ sym (assoc _ _ _)
-    ∙ ap ((ρ→ a ◀ x) ∘_) PQ
-    ∙ idr _
-    where
-      pinv : (ρ→ a ◀ x) ∘ (ρ← a ◀ x) ≡ id
-      pinv = sym (◀.F-∘ _ _) ∙ ap (_◀ x) (ρ≅ {a} .invl) ∙ ◀.F-id
-      PQ : (ρ← a ◀ x) ∘ (α← (a , Unit , x) ∘ (a ▶ λ→ x)) ≡ id
-      PQ =
-          ap (_∘ (α← (a , Unit , x) ∘ (a ▶ λ→ x))) (sym triangle-α→)
-        ∙ sym (assoc _ _ _)
-        ∙ ap ((a ▶ λ← x) ∘_) (assoc _ _ _)
-        ∙ ap (λ w → (a ▶ λ← x) ∘ (w ∘ (a ▶ λ→ x))) (α≅ .invl)
-        ∙ ap ((a ▶ λ← x) ∘_) (idl _)
-        ∙ sym (▶.F-∘ _ _)
-        ∙ ap (a ▶_) (λ≅ {x} .invr)
-        ∙ ▶.F-id
+  tri← a x = triangle-inv {f = a} {g = x}
 
   -- Collapsing the multicat composite (f⊗ₛg) ∘ₘ μ into plain C-composition,
   -- WITHOUT unfolding `plug` through the opaque μ: `plug-tail` + `idr-2elt` are
@@ -386,24 +307,11 @@ module Multicategory.Instances.Monoidal.Coherence
         ∙ ap (λ z → (μ Γ' Δ' ∘ z) ∘ (A ▶ (ρ→ B' ∘ g)))
              (plug-nil (⊗₀ Γ ∷ []) (⊗₀ Δ' ∷ []) f)
 
-      -- The bifunctor coherence at the heart of naturality.
+      -- The bifunctor coherence at the heart of naturality: interchange
+      -- (-⊗-.rlmap) slides Ff past the ρ-whiskers, which then annihilate.
       ρ-whisker-collapse-to-φ : (A' ▶ ρ← B') ∘ ((Ff ◀ (B' ⊗ Unit)) ∘ (A ▶ ρ→ B')) ≡ Ff ◀ B'
       ρ-whisker-collapse-to-φ =
-          assoc _ _ _
-        ∙ ap (_∘ (A ▶ ρ→ B')) step-a
-        ∙ ap ((Ff ⊗₁ ρ← B') ∘_) (-⊗-.rmap-◆ (ρ→ B'))
-        ∙ sym (-⊗-.◆-∘ {f = Ff} {g = id} {f' = ρ← B'} {g' = ρ→ B'})
-        ∙ ap (λ z → z ⊗₁ (ρ← B' ∘ ρ→ B')) (idr Ff)
-        ∙ ap (Ff ⊗₁_) (ρ≅ {B'} .invr)
-        ∙ sym (-⊗-.lmap-◆ Ff)
-        where
-          step-a : (A' ▶ ρ← B') ∘ (Ff ◀ (B' ⊗ Unit)) ≡ Ff ⊗₁ ρ← B'
-          step-a =
-              ap (_∘ (Ff ◀ (B' ⊗ Unit))) (-⊗-.rmap-◆ (ρ← B'))
-            ∙ ap ((id ⊗₁ ρ← B') ∘_) (-⊗-.lmap-◆ Ff)
-            ∙ sym (-⊗-.◆-∘ {f = id} {g = Ff} {f' = ρ← B'} {g' = id})
-            ∙ ap (λ z → z ⊗₁ (ρ← B' ∘ id)) (idl Ff)
-            ∙ ap (Ff ⊗₁_) (idr (ρ← B'))
+        pulll (-⊗-.rlmap _ _) ∙ cancelr (▶.annihilate (ρ≅ .invr))
 
       -- The coherence: the unfolded RHS of ⊗ₛ-μ, post-composed with (A ▶ ρ→ B),
       -- collapses to φ Γ' Δ' ∘ (Ff ⊗₁ Fg).
@@ -421,28 +329,17 @@ module Multicategory.Instances.Monoidal.Coherence
         where
           -- (A ▶ (ρ→ B' ∘ g)) ∘ (A ▶ ρ→ B) = (A ▶ ρ→ B') ∘ (A ▶ Fg)
           g-split : (A ▶ (ρ→ B' ∘ g)) ∘ (A ▶ ρ→ B) ≡ (A ▶ ρ→ B') ∘ (A ▶ Fg)
-          g-split =
-              sym (▶.F-∘ (ρ→ B' ∘ g) (ρ→ B))
-            ∙ ap (A ▶_) (sym (assoc (ρ→ B') g (ρ→ B)))
-            ∙ ▶.F-∘ (ρ→ B') Fg
+          g-split = ▶.weave (sym (assoc (ρ→ B') g (ρ→ B)))
           reshape :
               ((φ Γ' Δ' ∘ (A' ▶ ρ← B')) ∘ (Ff ◀ (B' ⊗ Unit))) ∘ ((A ▶ ρ→ B') ∘ (A ▶ Fg))
             ≡ φ Γ' Δ' ∘ (Ff ⊗₁ Fg)
-          reshape =
-              ap (_∘ ((A ▶ ρ→ B') ∘ (A ▶ Fg))) (sym (assoc _ _ _))
-            ∙ sym (assoc _ _ _)
-            ∙ ap (φ Γ' Δ' ∘_)
-                 ( assoc _ _ _
-                 ∙ ap (_∘ (A ▶ Fg))
-                      ( sym (assoc (A' ▶ ρ← B') (Ff ◀ (B' ⊗ Unit)) (A ▶ ρ→ B'))
-                      ∙ ρ-whisker-collapse-to-φ ) )
+          reshape = pullr (assoc _ _ _) ∙ pullr (pulll ρ-whisker-collapse-to-φ)
           merge-g :
               ((μ Γ' Δ' ∘ (Ff ◀ (B' ⊗ Unit))) ∘ (A ▶ (ρ→ B' ∘ g))) ∘ (A ▶ ρ→ B)
             ≡ φ Γ' Δ' ∘ (Ff ⊗₁ Fg)
           merge-g =
-              sym (assoc _ _ _)
-            ∙ ap ((μ Γ' Δ' ∘ (Ff ◀ (B' ⊗ Unit))) ∘_) g-split
-            ∙ ap (_∘ ((A ▶ ρ→ B') ∘ (A ▶ Fg))) (ap (_∘ (Ff ◀ (B' ⊗ Unit))) (μ-φ Γ' Δ'))
+              pullr g-split
+            ∙ ap (λ z → (z ∘ (Ff ◀ (B' ⊗ Unit))) ∘ ((A ▶ ρ→ B') ∘ (A ▶ Fg))) (μ-φ Γ' Δ')
             ∙ reshape
 
       main :
@@ -506,28 +403,13 @@ module Multicategory.Instances.Monoidal.Coherence
     ∙ ap (λ i → i .to) (++-assoc-⊗-path A B C')
 
   -- The right-unitor reindex: (⊗-context-++-idr A).to ∘ φ A [] = ρ← (⊗A).
+  -- From `++[]-to-ρ→`: idr.to = ρ← ∘ ++[].to, and the ++[] iso cancels.
   ρ←-reindex : (A : List Ob)
     → (⊗-context-++-idr A) .to ∘ (⊗-context-++ A []) .from ≡ ρ← (⊗-context A)
   ρ←-reindex A =
-      sym (idl _)
-    ∙ ap (_∘ (h′ ∘ gi)) (sym (ρ≅ {⊗-context A} .invr))
-    ∙ sym (assoc _ _ _)
-    ∙ ap (ρ← (⊗-context A) ∘_) ρ→-cancel
-    ∙ idr _
-    where
-      g  = (⊗-context-++ A []) .to
-      gi = (⊗-context-++ A []) .from
-      h′ = (⊗-context-++-idr A) .to
-      hi = (⊗-context-++-idr A) .from
-      ρ→-cancel : ρ→ (⊗-context A) ∘ (h′ ∘ gi) ≡ id
-      ρ→-cancel =
-          ap (_∘ (h′ ∘ gi)) (sym (⊗-context-++-[]-ρ A))
-        ∙ sym (assoc _ _ _)
-        ∙ ap (g ∘_)
-             ( assoc _ _ _
-             ∙ ap (_∘ gi) (⊗-context-++-idr A .invr)
-             ∙ idl _ )
-        ∙ ⊗-context-++ A [] .invl
+      ap (_∘ (⊗-context-++ A []) .from)
+         (introl (ρ≅ .invr) ∙ pullr (sym (++[]-to-ρ→ A)))
+    ∙ cancelr (⊗-context-++ A [] .invl)
 
   -- The image of Str's strict right unitor.
   F₁-ρ← : (A : List Ob)
