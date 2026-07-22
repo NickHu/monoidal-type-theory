@@ -72,7 +72,18 @@ FIXED (committed) / REJECTED (experiment refutes; keep as-is, record why).
   unitors are `path→iso`s of object-type paths coming from a monoid structure
   on Ob), prove it for `Str-monoidal` (should be near-refl: they are *defined*
   as path→isos), and state the final coherence theorem in one place.
-  Status: OPEN.
+  VALIDATED (Scratch/E1.agda, typechecks): `is-strict-monoidal` record =
+  (α/λ/ρ object-type paths) + (descent: α→/λ←/ρ← ≡ path→iso legs) +
+  (path-level pentagon & triangle — REQUIRED on non-set Ob to make the
+  object monoid coherent; automatically satisfiable when Ob is a set,
+  proven as `set→is-strict-monoidal`).  `Str-is-strict` for ANY representable
+  multicategory via one J-bridge `path-to {Str} p ≡ ≅to (ap ⊗₀ p)`;
+  α-path = ++-assoc, λ-path = refl, ρ-path = ++-idr; path-pentagon needs a
+  fresh α→-direction `++-pentagon→` spine induction.  Headline Σ-statement
+  assembles from existing exports.  Bonus identified: a generic
+  "coherent path-monoid ⇒ monoidal structure" constructor could DERIVE
+  Str-monoidal's triangle/pentagon fields (~45 lines of ap-∙ shuffling)
+  from path-triangle/path-pentagon.  Status: VALIDATED.
 - [F2] **WRONG/L** (comment): `Multicategory.agda` header says "A (non-unital)
   multicategory" but the record has `idₘ` and both unit laws.  Status: OPEN.
 - [F3] **SUBOPTIMAL/M**: `Monoidal/Free.agda` + `Monoidal/Free/Signature.agda`
@@ -91,21 +102,30 @@ FIXED (committed) / REJECTED (experiment refutes; keep as-is, record why).
   `Corepresentation`, `corepresentation-unique`, `Corepresentation-is-prop`.
   Hypothesis: package the unary part of `is-universal` as a
   `Corepresentation` of `Homₘ Γ -` : Unary M → Sets and derive
-  `Representation-is-prop` from 1lab's.  Needs experiment (the arrow
-  component and the non-unary part of `is-universal` must still be handled;
-  may not pay off).  Status: OPEN.
+  `Representation-is-prop` from 1lab's.  VALIDATED (Scratch/A2.agda): pays
+  off — `HomΓ : List Obₘ → Functor (Unary M) (Sets h)` (with F-∘ = plug-nat
+  at an ARBITRARY u, exposing that plug-nat is functoriality — universality
+  not needed), `Rep→Corep`, then `Representation-is-prop` via 1lab's
+  `Corepresentation-is-prop`; deletes `retract` and `subst-cod` (both
+  bespoke univalence arguments).  ≈ −10 lines net, big leverage win.
+  Status: VALIDATED.
 - [F6] **SUBOPTIMAL/M**: generic transport-shuffling lemmas proven by J six+
   times (`∘ₘ-substr` ×2 — literally duplicated in Representable and
   Strictification — `∘ₘ-substl`, `∘ₘ-substrG`, `∘ₘ-subst-suf`,
   `subst-dom-cod`, `transp-decomp`).  `∘ₘ-substr` is an instance of
-  `∘ₘ-substrG`.  Hypothesis: ONE lemma `∘ₘ-subst` (transport all indices at
-  once, by J) subsumes the family; check 1lab for generic subst-naturality
-  first.  Status: OPEN.
+  `∘ₘ-substrG`.  VALIDATED (Scratch/A1.agda): ONE `∘ₘ-subst` (all indices at
+  once) subsumes the family, provable WITHOUT J — it is `_∘ₘ_` applied under
+  the interval to transport-fillers; all five original statements derive in
+  ≤2 lines.  1lab has no generic subst-application lemma (survey).
+  Status: VALIDATED.
 - [F7] **SUBOPTIMAL/H**: `Strictification.agda` re-proves, for the specific
   universal arrow `⊗-arr Γ`, lemmas `Representable.agda` proves for an
   arbitrary universal arrow (`restrict-nat` vs `plug-nat` — the latter's
   comment even says "Ports Strictification.restrict-nat"; `restrict-equiv` vs
-  `restrE`).  Strictification should import and instantiate.  Status: OPEN.
+  `restrE`).  Strictification should import and instantiate.  VALIDATED
+  (Scratch/A5.agda, Scratch/C1.agda): `S.restrict ≡ Rep.restr M (⊗-arr Γ)`
+  by refl; `Rep.plug-nat M (⊗-arr Γ)` inhabits `restrict-nat`'s type as a
+  drop-in; `∘ₘ-substr` verbatim-identical.  ≈ −55 lines.  Status: VALIDATED.
 
 ### Strategy-level
 
@@ -114,8 +134,13 @@ FIXED (committed) / REJECTED (experiment refutes; keep as-is, record why).
   `assocₘ-flatten-iso/-⊗`, `assocₘ-boundary-iso/-⊗`, `ic-slot₀/₁/₂-iso/-⊗`,
   `ic-flatten-iso/-⊗`, `ic-boundary-iso/-⊗`; ≈ 115 lines of identical
   scaffolding).  All have the shape "path is `ap (a ∷_)`-recursive ⇒ iso is
-  `▶.F-map-iso`-recursive".  Hoist one induction principle, or avoid
-  pre-characterisation by reworking `subst-⊗-red` call sites.  Status: OPEN.
+  `▶.F-map-iso`-recursive".  Naive route REFUTED (Scratch/B1refute.agda:
+  helper paths do NOT equal `ap (Θ ++_)` of their base — endpoints differ as
+  neutral terms).  Working design VALIDATED (Scratch/B1.agda): a record
+  `⊗-chain p` bundling {⊗iso; char : path→iso (ap ⊗-context p) ≡ ⊗iso} with
+  combinators chain-refl / chain-∷ / chain-sym (record, not Σ — needed for
+  inference; eta keeps projections reducing; chain-sym absorbs the inner
+  recursions and makes `flat-from` refl).  ≈ −87 lines.  Status: VALIDATED.
 - [F9] **SUBOPTIMAL/H**: `Strictification.agda`'s `splitμ`, `splitμ-l`,
   `μ-block`, `μ-hex`, `assoc-nat`, `unitor-r-nat`, `μg-collapse`, `μ-unit-r`
   are ≈ 700 lines of raw `subst-∙`/`ap-∙` path algebra.  Look for a
@@ -123,13 +148,24 @@ FIXED (committed) / REJECTED (experiment refutes; keep as-is, record why).
   transport-absorbed unary composition with its laws proven once, or
   PathP-style reasoning à la 1lab's `Hom-pathp` combinators) rather than
   shuffling them around.  Single biggest readability win available.
-  Status: OPEN.
+  VALIDATED (Scratch/C2.agda + Scratch/C3.agda): kit = `∘ₘ-pathp` (free
+  heterogeneous congruence — `_∘ₘ_` under the interval), `hom-over` (base
+  path reconciliation), `ic₂` (binary interchange with all transport junk
+  absorbed once, HOMOGENEOUS statement), `assocˢ/ᵘ` wrappers.  Measured:
+  μ-block 45→4, swap-eq 33→5, μg-collapse 47→3, eqΓ 10→1, full splitμ
+  113+83dep → ~99 readable lines.  Caveat: plug arrows into PathP segments
+  BEFORE ∙P-composing (∙-composites are hcomps, not cons-headed).
+  Estimated ≥ 250 lines saved.  Status: VALIDATED.
 - [F10] **OPEN/M**: the law proofs in `Instances/Monoidal.agda` share a
   "prefix induction over plugs" pattern (`plug-assoc`, `plug-assoc-nil`,
   `plug-shift`, `plug-interchange` all have the same cons-step: plug-cons +
   ▶.F-∘-merge + IH + ▶-assoc/◀-▶-comm naturality + refold).  Candidate: a
   general "an equation between prefix-linear composites holds if it holds at
-  []" lemma, or a shared cons-step combinator.  Needs a crisp formulation.
+  []" lemma, or a shared cons-step combinator.  VALIDATED (Scratch/B2.agda):
+  `▶-∘₄` (4-factor whisker distribution) + `cons-step` (IH + one naturality
+  square → whole cons case) + `▶-weave₄`; plug-shift re-proved 39→15 lines,
+  plug-interchange cons 45→12.  ≈ −100 lines over the four inductions.
+  Status: VALIDATED.
 - [F11] **OPEN/M**: `F-α→`/`F-α→-to` + `⊗-context-++-[]-ρ` + `φ-cons` say
   "(⊗-context, φ) is a strong monoidal functor out of the list monoid".
   `Coherence.agda` then *re-assembles* exactly this into
@@ -141,6 +177,79 @@ FIXED (committed) / REJECTED (experiment refutes; keep as-is, record why).
 - [F12] **OPEN/L**: `Premulticategory` law statements mix PathP (outer) with
   `subst` (inner).  Explore a uniform formulation (e.g. composition along a
   decomposition path) — only worth it if instances demonstrably simplify.
+
+### Further findings from the audit fan-out (2026-07-23)
+
+- [F17] **SUBOPTIMAL/M** VALIDATED (Scratch/A3.agda): a subst-free
+  "PathP-graph" formulation of assocₘ/interchangeₘ (quantify over the
+  reshaped composite + a PathP witnessing it) is interderivable with the
+  current fields and kills the `transport-refl` fixups at every degenerate-
+  context consumer (Unary.assoc, restrict-nat's e0, eqΓ, …).  Porting
+  touches all instances; adopt only if the C2/B-refactors leave the fixups
+  visible.  DEFERRED for now.
+- [F18] **SUBOPTIMAL/M** VALIDATED (Scratch/A4.agda): three list-reassoc
+  helpers (`interchange-slot₀/₂`, `interchange-flatten`) are definitionally
+  `sym ∘ ++-assoc` / `++-assoc` instances (both clauses refl); alias them,
+  keeping names.  −12 lines + downstream characterisation mergers.
+- [F19] **SUBOPTIMAL/M** VALIDATED (Scratch/B3.agda): idₘl/idₘr machinery
+  shrinks 4–6× with functor-reasoning combinators (▶.annihilate, ▶.pulll,
+  ▶.cancell, cancell/pulll): plug-ρ 26→4, intro-eq 15→4, unit-cancel 15→2,
+  plug-unit-core 35→11.  Also `Hom-pathp-refll C` subsumes the
+  to-pathp+transport-⊗-red discharge of all three PathP laws (idₘr' proven).
+  Keep F-α→'s display-style cons proof (mathematical heart).
+- [F20] **SUBOPTIMAL/M** VALIDATED (Scratch/B4.agda): `F-α→-to` is a 4-line
+  corollary of `F-α→` via `Cat.Reasoning.swizzle` + ▶/◀.cancel; the 32-line
+  QS/MID/hexagon-to manual inversion goes.  −30 lines.
+- [F21] **SUBOPTIMAL/L**: dead code in Strictification (`arr-nat`,
+  `≅from-refl`, `◀-bridge`, `▶-bridge`, ~21 lines, grep-verified unused) and
+  a dead `import Cat.Bi.Solver` in Instances/Monoidal (grep-verified).
+- [F22] **INFO/M** (C5 inventory): only 13 Strictification names are
+  consumed downstream (Str, ⊗₀, ⊗-arr, ⊗-arr-univ, μ, _⊗ₛ_, ⊗ₛ-μ,
+  restrict₂-equiv, restrict₂-μ, Str-monoidal, ≅to, ≅to-refl, ≅from-to) —
+  everything else is free to reshape/privatise.
+- [F23] **WRONG/L** VALIDATED: three Strictification comments falsely claim
+  `is-set` usage (lines ~293, ~322, ~596-599 describe abandoned strategies;
+  the proofs beneath use spine lemmas / homotopy-natural / apd — NO is-set
+  anywhere in the file).  Also Multicategory.agda:109 mislabels assocₘ "the
+  pentagon", and Representable's restr/plug-nat docstrings claim universality
+  is needed when it is not.
+- [F24] **SUBOPTIMAL/H** VALIDATED (Scratch/D3.agda): Coherence's `bundle`
+  121→~30 lines by rewriting both plug legs with the already-exported
+  `plug-id`/`Piso` upfront (pure-iso induction remains; `Piso` must join the
+  Repr using-list).
+- [F25] **SUBOPTIMAL/M** VALIDATED (Scratch/D1/D5.agda): `tri←` is verbatim
+  1lab `Cat.Bi.Reasoning.triangle-inv` (at Deloop M₀); `step-a` is
+  `-⊗-.rlmap`; `ρ-whisker-collapse-to-φ` = pulll rlmap ∙ cancelr
+  (▶.annihilate); `φ≡μ` 9→2 lines; `ρ←-reindex` 22→6; one shared
+  `(⊗-context-++ Γ []).to ≡ ρ→ ∘ (⊗-context-++-idr Γ).to` lemma serves four
+  sites (−30 lines).
+- [F26] **SUBOPTIMAL/M** VALIDATED (Scratch/D2.agda): `Comparison` factors
+  definitionally through Equivalence.agda's `Reindex`:
+  `Unwrap : Functor (Unary Mᵣ) C` (an independently meaningful equivalence
+  "Unary of the representable multicat of C is C") with
+  `Comparison ≡ Unwrap F∘ Reindex` by `Functor-path refl refl`.  Line-
+  neutral in Coherence but makes Equivalence.agda load-bearing.  Adopt by
+  DEFINING Comparison as the composite (F₁ still reduces definitionally).
+- [F27] **SUBOPTIMAL/M** VALIDATED (Scratch/D4.agda, Scratch/E1.agda): the
+  headline theorem packaged as
+  `monoidal-strictification : Σ Cˢ, Σ Mˢ, is-strict-monoidal Mˢ ×
+   Σ F : Cˢ → C, Monoidal-functor-on × is-equivalence` — assembles from
+  existing exports; 1lab has nothing to reuse for "monoidal equivalence".
+- [F28] **STYLISTIC/M** (B5): Instances/Monoidal conflates a reusable
+  ⊗-context/plug toolkit (~400 lines; exactly what Coherence imports) with
+  the law proofs (~500 lines post-refactor).  Option: split into
+  `…/Monoidal/Tensor.agda` + laws; or mark law-machinery private.  Decide
+  during implementation.
+- [F29] **INFO** (survey highlights for implementation): `Cat.Univalent`'s
+  Hom-pathp/-refll/-reflr family is the idiomatic discharge for
+  Hom-over-object-path goals; `1Lab.Path.Reasoning` (∙-pulll/∙-swapl/
+  ∙-cancelsl/⟩∙⟨) mechanises the hand-fought list-path coherences
+  (++-pentagon, splitμ-inner, idr-assoc-coh); 1lab has NO ≡[]-style
+  dependent-path reasoning syntax (idioms: to/from-pathp, ◁/▷, ∙P,
+  Hom-pathp); `Regularity.reduce!/precise!` can kill transport-refl noise;
+  MonR (Cat.Monoidal.Reasoning) does NOT re-export triangle-ρ→/λ→≡ρ→/
+  triangle-inv (those need the Cat.Bi.Reasoning open); Data.List.Properties
+  has no nil-reindex/naturality/pentagon lemmas (spine block stays local).
 
 ### Local / stylistic
 
@@ -179,15 +288,22 @@ Phase 0 — setup
 - [x] Branch `refactor`, this REVIEW.md.
 
 Phase 1 — fact-finding (parallel agents; results land in this file)
-- [ ] 1lab leverage survey (transport/PathP combinators in 1Lab.Path &
-      Cat.Reasoning; Hom-pathp family; monoidal reasoning combinators;
-      Cat.Bi.Reasoning exports; list-monoid material).
-- [ ] Per-file deep audits with concrete simplification hypotheses:
-      (a) Multicategory.agda + Unary + Representable;
-      (b) Instances/Monoidal.agda;
-      (c) Strictification.agda;
-      (d) Coherence.agda + Equivalence.agda.
-- [ ] Design for F1 (strictness statement).
+- [x] 1lab leverage survey (see F29; full catalogue in the workflow journal).
+- [x] Per-file deep audits — all done, 19 scratch modules under `Scratch/`
+      (A1-A5, B1-B4 + B1refute, C1-C3, D1-D5, E1), every hypothesis
+      validated or refuted by the typechecker.
+- [x] Design for F1 (strictness statement) — Scratch/E1.agda typechecks.
+
+Implementation order (dependency-driven):
+1. Multicategory.agda: F2/F23 comments, ∘ₘ-subst (F6), helper aliases (F18),
+   hoist shared spine lemma(s).  [me]
+2. Representable.agda: A2/F5 Corepresentation rewrite, docstrings, F4.  [me]
+3. Monoidal/Strict.agda (new): is-strict-monoidal + set→is-strict
+   (+ possibly the generic path-monoid⇒monoidal constructor).  [me]
+4. In parallel: Instances/Monoidal.agda (F8/F10/F19/F20/F21/F28) ∥
+   Strictification.agda (F7/F9/F21/F22/F23 + Str-is-strict).  [agents]
+5. Coherence.agda + Equivalence.agda: F24/F25/F26/F27 + headline.  [agent/me]
+6. Polish: F13/F16, delete Scratch/, clean-cache timing run.
 
 Phase 2 — statement-level fixes (before detail work)
 - [ ] F1: is-strict + final theorem statement.
