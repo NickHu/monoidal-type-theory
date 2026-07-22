@@ -371,3 +371,49 @@ Phase 5 — polish
   lines with a clearly-sectioned toolkit/laws boundary; a physical split
   would churn module paths for marginal gain.  The reuse boundary is
   documented by Coherence's using-list.
+
+## Final status summary (end of session 1)
+
+All planned work is DONE except items explicitly REJECTED above.  Findings:
+F1-F10, F18-F27 FIXED (commits below); F11/F12/F17/F28 REJECTED with reasons;
+F13 folded into the rewrites (naming made consistent as files were touched);
+F15 no-op; F16 done (CLAUDE.md rewritten; cheatsheet checked, still accurate).
+The `Scratch/` validation modules (never committed) are deleted — they
+validated designs against the PRE-refactor code and are recorded per-finding
+above; the refactored code itself is now the evidence.
+
+Line counts (before → after, excluding REVIEW.md/docs):
+```
+Multicategory.agda                       130 → 163  (+∘ₘ-subst, ++-assoc-nil)
+Multicategory/Unary.agda                  35 → 35
+Multicategory/Representable.agda         172 → 163  (Corepresentation leverage)
+Multicategory/Instances/Category.agda     56 → 56
+Multicategory/Instances/Monoidal.agda   1181 → 986
+Multicategory/Strictification.agda      1580 → 1369 (incl. +Str-is-strict)
+…/Strictification/Equivalence.agda        71 → 77   (now load-bearing)
+…/Instances/Monoidal/Coherence.agda      590 → 484  (incl. +headline theorem)
+Monoidal/Free* (dead)                     95 → 0
+Monoidal/Strict.agda                       0 → 87   (NEW: strictness predicate)
+total                                   3910 → 3420
+```
+Net −490 lines while ADDING the previously-missing strictness predicate,
+Str-is-strict, the packaged headline theorem, the HomΓ/corepresentation
+bridge, and three reusable proof kits (⊗-chain, cons-step, the PathP kit).
+
+Commit sequence (each typechecks): 9647524 plan · a6a7114 F3 · a33d8ec audit
+results · 7db435e Multicategory base · 731e681 Representable · 7f4d061 F1
+headline · dedd39b/62e35d7 bookkeeping · 4d8845a Instances/Monoidal rewrite ·
+91f7457 Strictification rewrite · 4d9437c Coherence/Equivalence rewrite ·
+(this commit) polish + docs.
+
+Possible future work (deliberately not done):
+- Generic "coherent path-monoid + natural transports ⇒ monoidal structure"
+  constructor in Monoidal/Strict.agda, deriving Str-monoidal's
+  triangle/pentagon fields from path-triangle/path-pentagon (would delete
+  ~45 more lines of ap-∙ shuffling in Strictification and give the converse
+  direction of the strictness story).  Sketched in the F1 design notes.
+- η-arr and restrict₂-nat keep small subst cores (kit-resistant for reasons
+  documented inline); a two-parameter dom+cod PathP composition helper would
+  clean them if ever needed elsewhere.
+- Upstreaming candidates for 1lab: path→iso-sym, is-strict-monoidal,
+  triangle-inv usage patterns; the multicategory development itself.
