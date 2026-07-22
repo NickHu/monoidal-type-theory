@@ -306,22 +306,33 @@ Implementation order (dependency-driven):
 6. Polish: F13/F16, delete Scratch/, clean-cache timing run.
 
 Phase 2 — statement-level fixes (before detail work)
-- [ ] F1: is-strict + final theorem statement.
-- [ ] F2: fix header comment.
-- [ ] F3: delete Monoidal/Free*.
-- [ ] F4: resolve is-multicategory usage.
+- [x] F1: is-strict + final theorem statement (commit 7f4d061:
+      Monoidal/Strict.agda, Str-is-strict in Strictification,
+      monoidal-strictification in Coherence).
+- [x] F2: fix header comment (7db435e).
+- [x] F3: delete Monoidal/Free* (a6a7114).
+- [x] F4: Representable's univalence hypothesis is now is-multicategory M
+      (731e681).
 
 Phase 3 — deduplication & leverage (each its own commit, typecheck gate)
-- [ ] F7: Strictification imports Representable's general lemmas.
-- [ ] F6: one transport-lemma family.
-- [ ] F5: Corepresentation experiment (adopt or REJECT with reasons).
-- [ ] F8: one induction principle for the path→iso characterisations.
+- [~] F7: Strictification dedup — in progress (rewrite agent).
+- [x] F6: ∘ₘ-subst + ++-assoc-nil shared in Multicategory (7db435e);
+      Representable migrated (731e681); Strictification migration in the
+      rewrite agent.
+- [x] F5: Corepresentation rewrite of Representable (731e681, −9 lines,
+      removes retract/subst-cod/Univalent machinery).
+- [x] F18: three helpers aliased to ++-assoc (7db435e).
+- [~] F8: ⊗-chain refactor — in progress (rewrite agent).
 
 Phase 4 — the big rewrites (design first, then implement)
-- [ ] F9: Strictification transport-algebra rework.
-- [ ] F10: prefix-induction factoring in Instances/Monoidal.
-- [ ] F11: ⊗-context-as-strong-monoidal-functor reorganisation (+ F14).
-- [ ] F12: law-formulation experiment (only if F10/F11 point that way).
+- [~] F9: Strictification PathP-kit rework — in progress (rewrite agent,
+      spec = validated Scratch/C1-C3 + dead-code F21 + comments F23).
+- [~] F10/F19/F20: Instances/Monoidal rework — in progress (rewrite agent,
+      spec = validated Scratch/B1-B4).
+- [ ] F11: ⊗-context-as-strong-monoidal-functor reorganisation (+ F14) —
+      assess after the rewrites land.
+- [ ] F12/F17: law-formulation change — DEFERRED unless post-rewrite noise
+      justifies it.
 
 Phase 5 — polish
 - [ ] F13 naming pass; F15; F16 docs refresh; final CLAUDE.md update.
@@ -332,5 +343,12 @@ Phase 5 — polish
 
 - **2026-07-23 (session 1)**: read everything; baseline OK; branch created;
   REVIEW.md written; initial 1lab survey (no upstream multicats or
-  strictification; Corepresentation machinery exists).  Next: parallel deep
-  audits (Phase 1), then Phase 2.
+  strictification; Corepresentation machinery exists).  Audit fan-out (6
+  agents, 19 typechecked scratch modules) — all major hypotheses validated,
+  one refuted (B1 naive route).  Commits: 9647524 (plan), a6a7114 (F3),
+  a33d8ec (audit results), 7db435e (Multicategory base), 731e681
+  (Representable/Corepresentation), 7f4d061 (F1 headline theorem).  Two
+  rewrite agents launched in parallel on Instances/Monoidal.agda and
+  Strictification.agda (specs in the Phase-4 items; validated scratch as
+  source).  After they land: cross-check all roots, commit, then
+  Coherence/Equivalence pass (F24-F27), then polish.
