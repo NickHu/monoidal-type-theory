@@ -352,3 +352,22 @@ Phase 5 — polish
   Strictification.agda (specs in the Phase-4 items; validated scratch as
   source).  After they land: cross-check all roots, commit, then
   Coherence/Equivalence pass (F24-F27), then polish.
+
+## Decisions on remaining strategy items (post-rewrite assessment)
+
+- [F11] REJECTED (reorganisation): the strong-monoidal-functor content of
+  ⊗-context is already stated exactly once (F-α→ + unit lemmas in
+  Instances/Monoidal) and consumed twice (the assocₘ machinery via F-α→-to,
+  and Coherence's Monoidal-functor-on assembly).  Making Coherence's record
+  the master statement would invert the dependency direction (Instances/
+  Monoidal cannot import Coherence).  Current organisation is correct.
+- [F12/F17] REJECTED (law reformulation): the PathP kit (assoc₀₀-family,
+  Hom-pathp-refll discharge, ∘ₘ-pathp) has absorbed the transport-refl noise
+  at every consumer that motivated the reformulation; changing the record
+  fields now would churn all instances for no measurable gain.
+- [F14] RESOLVED via F26 (in flight): Equivalence.agda becomes load-bearing
+  by defining Comparison = Unwrap F∘ Reindex.
+- [F28] REJECTED (file split): post-refactor Instances/Monoidal.agda is 986
+  lines with a clearly-sectioned toolkit/laws boundary; a physical split
+  would churn module paths for marginal gain.  The reuse boundary is
+  documented by Coherence's using-list.
