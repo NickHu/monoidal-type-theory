@@ -4,11 +4,13 @@ open import Data.List.Properties
 
 module Multicategory where
 
--- A (non-unital) multicategory: multimorphisms take a list of objects (the
--- context) to a single object.  Contexts are lists, so the only operation on
--- them is _++_; there are no length indices, no Fin, and no splice.  A slot is
--- specified by a decomposition of the list: Θ ++ x ∷ Ξ marks x as the slot,
--- with Θ before it and Ξ after.
+-- Multicategories: multimorphisms take a list of objects (the context) to a
+-- single object.  Contexts are lists, so the only operation on them is _++_;
+-- there are no length indices, no Fin, and no splice.  A slot is specified by
+-- a decomposition of the list: Θ ++ x ∷ Ξ marks x as the slot, with Θ before
+-- it and Ξ after.  The "Pre" in Premulticategory parallels 1lab's
+-- Precategory: no univalence is assumed (see is-multicategory in
+-- Multicategory.Unary).
 --
 -- Naming convention: x y z are objects (z is the codomain of the outermost
 -- morphism); Γ Δ Θ Ξ Φ Ψ Ρ Μ Κ are contexts (lists); f g h are multimorphisms.
@@ -50,10 +52,12 @@ assocₘ-boundary (a ∷ Θ') Φ Ρ Ψ Ξ = ap (a ∷_) (assocₘ-boundary Θ' �
 
 -- Expose the second slot y of f's own domain:
 --   Θ ++ x ∷ Μ ++ y ∷ Κ  ≡  (Θ ++ x ∷ Μ) ++ y ∷ Κ
+-- A plain reassociation.  1lab's ++-assoc is itself cons-by-cons structural
+-- (and sym commutes with the cons step definitionally), so this alias has
+-- the same reductions as a hand-rolled recursion would.
 interchange-slot₀ : ∀ {A : Type o} (Θ : List A) (x : A) (Μ : List A) (y : A) (Κ : List A)
   → Θ ++ x ∷ Μ ++ y ∷ Κ ≡ (Θ ++ x ∷ Μ) ++ y ∷ Κ
-interchange-slot₀ []       x Μ y Κ = refl
-interchange-slot₀ (a ∷ Θ') x Μ y Κ = ap (a ∷_) (interchange-slot₀ Θ' x Μ y Κ)
+interchange-slot₀ Θ x Μ y Κ = sym (++-assoc Θ (x ∷ Μ) (y ∷ Κ))
 
 -- Expose y once x has been replaced by Γ:
 --   Θ ++ Γ ++ Μ ++ y ∷ Κ  ≡  (Θ ++ Γ ++ Μ) ++ y ∷ Κ
@@ -62,18 +66,17 @@ interchange-slot₁ : ∀ {A : Type o} (Θ Γ Μ : List A) (y : A) (Κ : List A)
 interchange-slot₁ []       Γ Μ y Κ = sym (++-assoc Γ Μ (y ∷ Κ))
 interchange-slot₁ (a ∷ Θ') Γ Μ y Κ = ap (a ∷_) (interchange-slot₁ Θ' Γ Μ y Κ)
 
--- Expose x once y has been replaced by Δ:
+-- Expose x once y has been replaced by Δ (a plain reassociation):
 --   (Θ ++ x ∷ Μ) ++ Δ ++ Κ  ≡  Θ ++ x ∷ (Μ ++ Δ ++ Κ)
 interchange-slot₂ : ∀ {A : Type o} (Θ : List A) (x : A) (Μ Δ Κ : List A)
   → (Θ ++ x ∷ Μ) ++ Δ ++ Κ ≡ Θ ++ x ∷ (Μ ++ Δ ++ Κ)
-interchange-slot₂ []       x Μ Δ Κ = refl
-interchange-slot₂ (a ∷ Θ') x Μ Δ Κ = ap (a ∷_) (interchange-slot₂ Θ' x Μ Δ Κ)
+interchange-slot₂ Θ x Μ Δ Κ = ++-assoc Θ (x ∷ Μ) (Δ ++ Κ)
 
--- (Γ ++ Μ) ++ Δ ++ Κ ≡ Γ ++ (Μ ++ Δ ++ Κ)  (base case of interchangeₘ-boundary)
+-- (Γ ++ Μ) ++ Δ ++ Κ ≡ Γ ++ (Μ ++ Δ ++ Κ)  (base case of interchangeₘ-boundary;
+-- a plain reassociation)
 interchange-flatten : ∀ {A : Type o} (Γ Μ Δ Κ : List A)
   → (Γ ++ Μ) ++ Δ ++ Κ ≡ Γ ++ (Μ ++ Δ ++ Κ)
-interchange-flatten []       Μ Δ Κ = refl
-interchange-flatten (a ∷ Γ') Μ Δ Κ = ap (a ∷_) (interchange-flatten Γ' Μ Δ Κ)
+interchange-flatten Γ Μ Δ Κ = ++-assoc Γ Μ (Δ ++ Κ)
 
 -- The interchange boundary:
 --   (Θ ++ Γ ++ Μ) ++ Δ ++ Κ  ≡  Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
@@ -106,9 +109,10 @@ record Premulticategory (o h : Level) : Type (lsuc (o ⊔ h)) where
     idₘr : ∀ {Γ z} (f : Homₘ Γ z)
         → PathP (λ i → Homₘ (++-idr Γ i) z) (_∘ₘ_ {Θ = []} idₘ f) f
 
-    -- Associativity (the pentagon).  Plugging h into the slot inherited from g
-    -- requires exposing that slot via slot-unbury, since list _++_ is not
-    -- strictly associative.
+    -- Associativity.  Plugging h into the slot inherited from g requires
+    -- exposing that slot via slot-unbury, since list _++_ is not strictly
+    -- associative.  (In the representable instance this induces the monoidal
+    -- pentagon, but the law itself is plain associativity of plugging.)
     assocₘ : ∀ {Θ Ξ Φ Ψ Ρ} {x y z}
         → (f : Homₘ (Θ ++ x ∷ Ξ) z)
         → (g : Homₘ (Φ ++ y ∷ Ψ) x)
@@ -128,3 +132,32 @@ record Premulticategory (o h : Level) : Type (lsuc (o ⊔ h)) where
               (subst (λ Ω → Homₘ Ω z) (interchange-slot₀ Θ x Μ y Κ) f ∘ₘ h) ∘ₘ g)
 
   infixr 9 _∘ₘ_
+
+-- ++-assoc with an empty middle is the reindex of ++-idr.  (Pure list-path
+-- spine lemma, shared by Representable and Strictification.)
+++-assoc-nil : ∀ {A : Type o} (Γ Ξ : List A)
+  → ++-assoc Γ [] Ξ ≡ ap (_++ Ξ) (++-idr Γ)
+++-assoc-nil []      Ξ = refl
+++-assoc-nil (a ∷ Γ) Ξ = ap (ap (a ∷_)) (++-assoc-nil Γ Ξ)
+
+-- _∘ₘ_ commutes with transporting the prefix, suffix, and argument contexts
+-- simultaneously.  No J needed: it is _∘ₘ_ applied under the interval to the
+-- transport fillers.  All the one-sided transport-naturality facts the
+-- development needs (prefix only, suffix only, argument only) are instances,
+-- obtained by specialising the other two paths to refl and cancelling the
+-- resulting transport-refl.
+module _ {o h} (M : Premulticategory o h) where
+  open Premulticategory M
+
+  ∘ₘ-subst : {Θ Θ' Ξ Ξ' Γ Γ' : List Obₘ} {x z : Obₘ}
+             (p : Θ ≡ Θ') (q : Ξ ≡ Ξ') (r : Γ ≡ Γ')
+             (f : Homₘ (Θ ++ x ∷ Ξ) z) (g : Homₘ Γ x)
+           → _∘ₘ_ {Θ = Θ'} {Ξ = Ξ'}
+               (transport (λ i → Homₘ (p i ++ x ∷ q i) z) f)
+               (subst (λ Ω → Homₘ Ω x) r g)
+             ≡ transport (λ i → Homₘ (p i ++ r i ++ q i) z)
+                 (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} f g)
+  ∘ₘ-subst {x = x} {z = z} p q r f g = sym (from-pathp λ i →
+    _∘ₘ_ {Θ = p i} {Ξ = q i}
+      (transport-filler (λ j → Homₘ (p j ++ x ∷ q j) z) f i)
+      (transport-filler (λ j → Homₘ (r j) x) g i))

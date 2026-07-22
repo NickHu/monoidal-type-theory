@@ -49,12 +49,9 @@ module Multicategory.Strictification
   -- strictification needs is between two paths built ONLY from ++-assoc/++-idr
   -- (refl on elements); they are equal by induction on the spine, for ANY
   -- element type — so `is-set Obₘ` is not needed anywhere below.
+  -- (++-assoc-nil, the ++-idr reindex of ++-assoc's empty-middle case, is
+  -- imported from Multicategory.)
   private
-    -- ++-assoc with an empty middle is the reindex of ++-idr.
-    ++-assoc-nil : (Γ Ξ : List Obₘ) → ++-assoc Γ [] Ξ ≡ ap (_++ Ξ) (++-idr Γ)
-    ++-assoc-nil []      Ξ = refl
-    ++-assoc-nil (a ∷ Γ) Ξ = ap (ap (a ∷_)) (++-assoc-nil Γ Ξ)
-
     -- Naturality of ++-idr against the constant tail [].
     ++-idr-nat : (Γ : List Obₘ) → ap (_++ []) (++-idr Γ) ≡ ++-idr (Γ ++ [])
     ++-idr-nat []      = refl
