@@ -70,100 +70,237 @@ module Multicategory.Strictification
     assocₘ-flatten-nils []      Δ = ap sym (++-assoc-nil Δ [] ∙ ++-idr-nat Δ)
     assocₘ-flatten-nils (a ∷ Γ) Δ = ap (ap (a ∷_)) (assocₘ-flatten-nils Γ Δ)
 
-    -- The associator/unitor triangle at the spine level.
-    assoc-idr-mid : (Δ Ε : List Obₘ)
-                  → ++-assoc Δ Ε [] ∙ ap (Δ ++_) (++-idr Ε) ≡ ++-idr (Δ ++ Ε)
-    assoc-idr-mid []      Ε = ∙-idl (++-idr Ε)
-    assoc-idr-mid (a ∷ Δ) Ε = sym (ap-∙ (a ∷_) (++-assoc Δ Ε []) (ap (Δ ++_) (++-idr Ε)))
-                            ∙ ap (ap (a ∷_)) (assoc-idr-mid Δ Ε)
-
     -- ++-idr conjugated by an arbitrary list-path (triangle-style, by J).
     idr-assoc-coh : {V W : List Obₘ} (a : V ≡ W)
                   → (a ∙ sym (++-idr W)) ∙ sym (ap (_++ []) a) ≡ sym (++-idr V)
     idr-assoc-coh {V} = J (λ W a → (a ∙ sym (++-idr W)) ∙ sym (ap (_++ []) a) ≡ sym (++-idr V))
                           (∙-idr (refl ∙ sym (++-idr V)) ∙ ∙-idl (sym (++-idr V)))
 
-    -- Mac Lane's pentagon for the ++-associator, at the spine level.
+    -- Mac Lane's pentagon for the ++-associator, at the spine level (α→
+    -- direction, by spine induction; the α← direction below is derived from it
+    -- by inverting both sides).
+    ++-pentagon→ : (A B C D : List Obₘ)
+      → ap (_++ D) (++-assoc A B C) ∙ ++-assoc A (B ++ C) D
+          ∙ ap (A ++_) (++-assoc B C D)
+        ≡ ++-assoc (A ++ B) C D ∙ ++-assoc A B (C ++ D)
+    ++-pentagon→ [] B C D =
+      ∙-idl _ ∙ ∙-idl _ ∙ sym (∙-idr _)
+    ++-pentagon→ (a ∷ A) B C D =
+        ap (ap (a ∷_) p₁ ∙_) (sym (ap-∙ (a ∷_) p₂ p₃))
+      ∙ sym (ap-∙ (a ∷_) p₁ (p₂ ∙ p₃))
+      ∙ ap (ap (a ∷_)) (++-pentagon→ A B C D)
+      ∙ ap-∙ (a ∷_) q₁ q₂
+      where
+        p₁ = ap (_++ D) (++-assoc A B C)
+        p₂ = ++-assoc A (B ++ C) D
+        p₃ = ap (A ++_) (++-assoc B C D)
+        q₁ = ++-assoc (A ++ B) C D
+        q₂ = ++-assoc A B (C ++ D)
+
     ++-pentagon : (A B C D : List Obₘ)
       → ( ap (A ++_) (sym (++-assoc B C D)) ∙ sym (++-assoc A (B ++ C) D) )
           ∙ ap (_++ D) (sym (++-assoc A B C))
         ≡ sym (++-assoc A B (C ++ D)) ∙ sym (++-assoc (A ++ B) C D)
-    ++-pentagon []      B C D =
-        ap (_∙ refl) (∙-idr (sym (++-assoc B C D)))
-      ∙ ∙-idr (sym (++-assoc B C D))
-      ∙ sym (∙-idl (sym (++-assoc B C D)))
-    ++-pentagon (a ∷ A) B C D =
-        ap (_∙ ap (_++ D) (sym (++-assoc (a ∷ A) B C)))
-           (sym (ap-∙ (a ∷_) (ap (A ++_) (sym (++-assoc B C D))) (sym (++-assoc A (B ++ C) D))))
-      ∙ sym (ap-∙ (a ∷_)
-              (ap (A ++_) (sym (++-assoc B C D)) ∙ sym (++-assoc A (B ++ C) D))
-              (ap (_++ D) (sym (++-assoc A B C))))
-      ∙ ap (ap (a ∷_)) (++-pentagon A B C D)
-      ∙ ap-∙ (a ∷_) (sym (++-assoc A B (C ++ D))) (sym (++-assoc (A ++ B) C D))
+    ++-pentagon A B C D =
+        ap (_∙ sym (ap (_++ D) p₁)) (sym (sym-∙ p₂ (ap (A ++_) p₃)))
+      ∙ sym (sym-∙ (ap (_++ D) p₁) (p₂ ∙ ap (A ++_) p₃))
+      ∙ ap sym (++-pentagon→ A B C D)
+      ∙ sym-∙ q₁ q₂
+      where
+        p₁ = ++-assoc A B C
+        p₂ = ++-assoc A (B ++ C) D
+        p₃ = ++-assoc B C D
+        q₁ = ++-assoc (A ++ B) C D
+        q₂ = ++-assoc A B (C ++ D)
 
-    -- Coherence used to split a binary restriction (splitμ).
-    splitμ-inner : (Δ Ε : List Obₘ)
-      → ( ap (_++ []) (sym (ap (Δ ++_) (++-idr Ε))) ∙ ++-assoc Δ (Ε ++ []) [] )
-          ∙ ap (Δ ++_) (++-assoc Ε [] [])
-        ≡ ++-assoc Δ Ε []
-    splitμ-inner [] Ε =
-        ap (_∙ ++-assoc Ε [] []) (∙-idr (ap (_++ []) (sym (++-idr Ε))))
-      ∙ ap (ap (_++ []) (sym (++-idr Ε)) ∙_) (++-assoc-nil Ε [])
-      ∙ sym (ap-∙ (_++ []) (sym (++-idr Ε)) (++-idr Ε))
-      ∙ ap (ap (_++ [])) (∙-invl (++-idr Ε))
-    splitμ-inner (a ∷ Δ) Ε =
-        ap (_∙ ap ((a ∷ Δ) ++_) (++-assoc Ε [] []))
-           (sym (ap-∙ (a ∷_)
-                   (ap (_++ []) (sym (ap (Δ ++_) (++-idr Ε))))
-                   (++-assoc Δ (Ε ++ []) [])))
-      ∙ sym (ap-∙ (a ∷_)
-              (ap (_++ []) (sym (ap (Δ ++_) (++-idr Ε))) ∙ ++-assoc Δ (Ε ++ []) [])
-              (ap (Δ ++_) (++-assoc Ε [] [])))
-      ∙ ap (ap (a ∷_)) (splitμ-inner Δ Ε)
+    -- Spine reconciliation for splitμ: the composite of its segment paths
+    -- (Ε-pull, Δ-pull, μ-collapse, final ++-idr) against ap (Δ ++_) (++-idr Ε).
+    splitμ-coh : (Δ Ε : List Obₘ)
+      → ((ap (Δ ++_) (sym (++-assoc Ε [] [])) ∙ sym (++-assoc Δ (Ε ++ []) []))
+          ∙ ap (_++ []) (ap (Δ ++_) (++-idr Ε))) ∙ ++-idr (Δ ++ Ε)
+        ≡ ap (Δ ++_) (++-idr Ε)
+    splitμ-coh [] Ε =
+        ap (λ t → (t ∙ ap (_++ []) (++-idr Ε)) ∙ ++-idr Ε)
+           (∙-idr (sym (++-assoc Ε [] [])) ∙ ap sym (++-assoc-nil Ε []))
+      ∙ ap (_∙ ++-idr Ε) (∙-invl (ap (_++ []) (++-idr Ε)))
+      ∙ ∙-idl (++-idr Ε)
+    splitμ-coh (a ∷ Δ) Ε =
+        ap (λ t → (t ∙ ap (_++ []) (ap ((a ∷ Δ) ++_) (++-idr Ε))) ∙ ++-idr ((a ∷ Δ) ++ Ε))
+           (sym (ap-∙ (a ∷_) l₁ l₂))
+      ∙ ap (_∙ ++-idr ((a ∷ Δ) ++ Ε)) (sym (ap-∙ (a ∷_) (l₁ ∙ l₂) l₃))
+      ∙ sym (ap-∙ (a ∷_) ((l₁ ∙ l₂) ∙ l₃) (++-idr (Δ ++ Ε)))
+      ∙ ap (ap (a ∷_)) (splitμ-coh Δ Ε)
+      where
+        l₁ = ap (Δ ++_) (sym (++-assoc Ε [] []))
+        l₂ = sym (++-assoc Δ (Ε ++ []) [])
+        l₃ = ap (_++ []) (ap (Δ ++_) (++-idr Ε))
 
-    -- Coherence used to split a binary restriction from the left (splitμ-l),
-    -- after the fp-loop has been cancelled to refl.
-    splitμ-l-inner : (Γ Δ Ε : List Obₘ)
-      → ( ( ap (_++ (Ε ++ [])) (sym (ap (Γ ++_) (++-idr Δ)))
-              ∙ ++-assoc Γ (Δ ++ []) (Ε ++ []) )
-          ∙ ap (Γ ++_) (++-assoc Δ [] (Ε ++ [])) )
-          ∙ ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))
-        ≡ ap ((Γ ++ Δ) ++_) (++-idr Ε) ∙ ++-assoc Γ Δ Ε
-    splitμ-l-inner [] Δ Ε =
-        ap (_∙ ap (Δ ++_) (++-idr Ε))
-           ( ap (_∙ ++-assoc Δ [] (Ε ++ [])) (∙-idr (ap (_++ (Ε ++ [])) (sym (++-idr Δ))))
-           ∙ ap (ap (_++ (Ε ++ [])) (sym (++-idr Δ)) ∙_) (++-assoc-nil Δ (Ε ++ []))
-           ∙ sym (ap-∙ (_++ (Ε ++ [])) (sym (++-idr Δ)) (++-idr Δ))
-           ∙ ap (ap (_++ (Ε ++ []))) (∙-invl (++-idr Δ)) )
+    -- Spine reconciliation for splitμ-l (Δ-pull, Γ-pull, μ-collapse, final
+    -- ++-idr) against ++-assoc's spine.
+    splitμ-l-coh : (Γ Δ Ε : List Obₘ)
+      → ((( ap (Γ ++_) (sym (++-assoc Δ [] (Ε ++ [])))
+            ∙ sym (++-assoc Γ (Δ ++ []) (Ε ++ [])) )
+          ∙ ap (_++ (Ε ++ [])) (ap (Γ ++_) (++-idr Δ)))
+          ∙ ap ((Γ ++ Δ) ++_) (++-idr Ε)) ∙ ++-assoc Γ Δ Ε
+        ≡ ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))
+    splitμ-l-coh [] Δ Ε =
+        ∙-idr (((sym (++-assoc Δ [] (Ε ++ [])) ∙ refl)
+                 ∙ ap (_++ (Ε ++ [])) (++-idr Δ)) ∙ ap (Δ ++_) (++-idr Ε))
+      ∙ ap (_∙ ap (Δ ++_) (++-idr Ε))
+           ( ap (_∙ ap (_++ (Ε ++ [])) (++-idr Δ))
+                ( ∙-idr (sym (++-assoc Δ [] (Ε ++ [])))
+                ∙ ap sym (++-assoc-nil Δ (Ε ++ [])) )
+           ∙ ∙-invl (ap (_++ (Ε ++ [])) (++-idr Δ)) )
       ∙ ∙-idl (ap (Δ ++_) (++-idr Ε))
-      ∙ sym (∙-idr (ap (Δ ++_) (++-idr Ε)))
-    splitμ-l-inner (a ∷ Γ) Δ Ε =
-        ap (λ z → (z ∙ ap ((a ∷ Γ) ++_) (++-assoc Δ [] (Ε ++ [])))
-                     ∙ ap ((a ∷ Γ) ++_) (ap (Δ ++_) (++-idr Ε)))
-           (sym (ap-∙ (a ∷_)
-                   (ap (_++ (Ε ++ [])) (sym (ap (Γ ++_) (++-idr Δ))))
-                   (++-assoc Γ (Δ ++ []) (Ε ++ []))))
-      ∙ ap (_∙ ap ((a ∷ Γ) ++_) (ap (Δ ++_) (++-idr Ε)))
-           (sym (ap-∙ (a ∷_)
-                   (ap (_++ (Ε ++ [])) (sym (ap (Γ ++_) (++-idr Δ))) ∙ ++-assoc Γ (Δ ++ []) (Ε ++ []))
-                   (ap (Γ ++_) (++-assoc Δ [] (Ε ++ [])))))
-      ∙ sym (ap-∙ (a ∷_)
-              (( ap (_++ (Ε ++ [])) (sym (ap (Γ ++_) (++-idr Δ))) ∙ ++-assoc Γ (Δ ++ []) (Ε ++ []) )
-                ∙ ap (Γ ++_) (++-assoc Δ [] (Ε ++ [])))
-              (ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))))
-      ∙ ap (ap (a ∷_)) (splitμ-l-inner Γ Δ Ε)
-      ∙ ap-∙ (a ∷_) (ap ((Γ ++ Δ) ++_) (++-idr Ε)) (++-assoc Γ Δ Ε)
+    splitμ-l-coh (a ∷ Γ) Δ Ε =
+        ap (λ t → ((t ∙ l₃') ∙ l₄') ∙ l₅') (sym (ap-∙ (a ∷_) l₁ l₂))
+      ∙ ap (λ t → (t ∙ l₄') ∙ l₅') (sym (ap-∙ (a ∷_) (l₁ ∙ l₂) l₃))
+      ∙ ap (_∙ l₅') (sym (ap-∙ (a ∷_) ((l₁ ∙ l₂) ∙ l₃) l₄))
+      ∙ sym (ap-∙ (a ∷_) (((l₁ ∙ l₂) ∙ l₃) ∙ l₄) (++-assoc Γ Δ Ε))
+      ∙ ap (ap (a ∷_)) (splitμ-l-coh Γ Δ Ε)
+      where
+        l₁ = ap (Γ ++_) (sym (++-assoc Δ [] (Ε ++ [])))
+        l₂ = sym (++-assoc Γ (Δ ++ []) (Ε ++ []))
+        l₃ = ap (_++ (Ε ++ [])) (ap (Γ ++_) (++-idr Δ))
+        l₄ = ap ((Γ ++ Δ) ++_) (++-idr Ε)
+        l₃' = ap (_++ (Ε ++ [])) (ap ((a ∷ Γ) ++_) (++-idr Δ))
+        l₄' = ap (((a ∷ Γ) ++ Δ) ++_) (++-idr Ε)
+        l₅' = ++-assoc (a ∷ Γ) Δ Ε
+
+  -- ======================= PathP kit =======================
+  --
+  -- The transport-heavy proofs below stay in PathP land: each algebraic move
+  -- (an instance of assocₘ or interchangeₘ, or a plug of an arrow along an
+  -- earlier move) is a PathP over its list-path, the moves are composed with
+  -- ◁ / ▷ / ∙P, and the composite base path is reconciled against the
+  -- canonical list-path ONCE at the end (hom-over).  Arrows are plugged into
+  -- each segment BEFORE segments are ∙P-composed: a ∙-composite list-path is
+  -- an hcomp, not cons-headed, so ∘ₘ-pathp could not see the slot afterwards.
+
+  -- Heterogeneous congruence for _∘ₘ_: free, since _∘ₘ_ is polymorphic in all
+  -- three context indices — just apply it under the interval.
+  ∘ₘ-pathp : {Θ Θ' Ξ Ξ' Γ Γ' : List Obₘ} {x z : Obₘ}
+             (P : Θ ≡ Θ') (Q : Ξ ≡ Ξ') (G : Γ ≡ Γ')
+             {f : Homₘ (Θ ++ x ∷ Ξ) z} {f' : Homₘ (Θ' ++ x ∷ Ξ') z}
+             {g : Homₘ Γ x} {g' : Homₘ Γ' x}
+           → PathP (λ i → Homₘ (P i ++ x ∷ Q i) z) f f'
+           → PathP (λ i → Homₘ (G i) x) g g'
+           → PathP (λ i → Homₘ (P i ++ G i ++ Q i) z) (f ∘ₘ g) (f' ∘ₘ g')
+  ∘ₘ-pathp P Q G ff gg i = _∘ₘ_ {Θ = P i} {Ξ = Q i} (ff i) (gg i)
+
+  -- Reconcile the base path of a PathP of homs along an equality of list-paths.
+  hom-over : {Γ Γ' : List Obₘ} {z : Obₘ} {p q : Γ ≡ Γ'} (α : p ≡ q)
+             {f : Homₘ Γ z} {g : Homₘ Γ' z}
+           → PathP (λ i → Homₘ (p i) z) f g → PathP (λ i → Homₘ (q i) z) f g
+  hom-over {z = z} α {f} {g} = subst (λ r → PathP (λ i → Homₘ (r i) z) f g) α
+
+  -- Binary interchange: for χ : Homₘ (x ∷ y ∷ []) z the two plug orders agree
+  -- HOMOGENEOUSLY in Homₘ (Γ ++ Δ ++ []) z.  All of interchangeₘ's slot substs
+  -- and its boundary transport are absorbed here, once: the slot₁ subst is a
+  -- transport-filler over sym (++-idr Γ) (via ++-assoc-nil), and the composite
+  -- of that base path with the interchange boundary is a loop that
+  -- flatten-nil-mid cancels to refl.
+  ic₂ : {x y z : Obₘ} {Γ Δ : List Obₘ}
+        (χ : Homₘ (x ∷ y ∷ []) z) (g : Homₘ Γ x) (h : Homₘ Δ y)
+      → _∘ₘ_ {Θ = Γ} {Ξ = []} (_∘ₘ_ {Θ = []} {Ξ = y ∷ []} χ g) h
+        ≡ _∘ₘ_ {Θ = []} {Ξ = Δ ++ []} (_∘ₘ_ {Θ = x ∷ []} {Ξ = []} χ h) g
+  ic₂ {x} {y} {z} {Γ} {Δ} χ g h =
+      hom-over loop-refl
+        (_∙P_ {B = λ Ω → Homₘ Ω z}
+           {p = ap (_++ Δ ++ []) (sym (++-idr Γ))}
+           {q = interchange-flatten Γ [] Δ []}
+           leg
+           (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Γ} {Δ = Δ} χ g h))
+    ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Δ ++ []} q g)
+         ( transport-refl _
+         ∙ ap (λ q → _∘ₘ_ {Θ = x ∷ []} {Ξ = []} q h) (transport-refl χ) )
+    where
+      BΩ : List Obₘ → Type _
+      BΩ Ω = Homₘ Ω z
+      S₁ : Γ ++ y ∷ [] ≡ (Γ ++ []) ++ y ∷ []
+      S₁ = interchange-slot₁ [] Γ [] y []
+      χg : Homₘ (Γ ++ y ∷ []) z
+      χg = _∘ₘ_ {Θ = []} {Ξ = y ∷ []} χ g
+      slotP : PathP (λ i → Homₘ (sym (++-idr Γ) i ++ y ∷ []) z)
+                χg (subst BΩ S₁ χg)
+      slotP = hom-over (ap sym (++-assoc-nil Γ (y ∷ [])))
+                (transport-filler (λ i → BΩ (S₁ i)) χg)
+      leg : PathP (λ i → Homₘ (sym (++-idr Γ) i ++ Δ ++ []) z)
+              (_∘ₘ_ {Θ = Γ} {Ξ = []} χg h)
+              (_∘ₘ_ {Θ = Γ ++ []} {Ξ = []} (subst BΩ S₁ χg) h)
+      leg = ∘ₘ-pathp (sym (++-idr Γ)) refl refl slotP refl
+      loop-refl : (ap (_++ Δ ++ []) (sym (++-idr Γ)) ∙ interchange-flatten Γ [] Δ [])
+                ≡ refl
+      loop-refl =
+          ap (ap (_++ Δ ++ []) (sym (++-idr Γ)) ∙_) (flatten-nil-mid Γ Δ)
+        ∙ sym (ap-∙ (_++ Δ ++ []) (sym (++-idr Γ)) (++-idr Γ))
+        ∙ ap (ap (_++ Δ ++ [])) (∙-invl (++-idr Γ))
+
+  -- assocₘ with the slot-unbury transport absorbed.  When both prefixes Θ, Φ
+  -- are CONCRETE cons-lists, slot-unbury Θ Φ y Ψ Ξ is definitionally refl and
+  -- its subst is a bare transport-refl; these wrappers cancel it.  The
+  -- subscripts record the prefix lengths (|Θ| |Φ|); the five shapes below are
+  -- the only ones the file needs.  (When the plugged context Ρ is also
+  -- concrete, the assocₘ-boundary is definitionally refl too and the wrapper
+  -- is a homogeneous equation.)
+  assoc₀₀ : {Ξ Ψ Ρ : List Obₘ} {x y z : Obₘ}
+            (f : Homₘ (x ∷ Ξ) z) (g : Homₘ (y ∷ Ψ) x) (h : Homₘ Ρ y)
+          → PathP (λ i → Homₘ (assocₘ-boundary [] [] Ρ Ψ Ξ i) z)
+              (_∘ₘ_ {Θ = []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g) h)
+              (_∘ₘ_ {Θ = []} {Ξ = Ξ} f (_∘ₘ_ {Θ = []} {Ξ = Ψ} g h))
+  assoc₀₀ {Ξ} {Ψ} f g h =
+    ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Ψ ++ Ξ} q h)
+       (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g)))
+      ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = []} f g h
+
+  assoc₁₀ : {Ξ Ψ Ρ : List Obₘ} {w x y z : Obₘ}
+            (f : Homₘ (w ∷ x ∷ Ξ) z) (g : Homₘ (y ∷ Ψ) x) (h : Homₘ Ρ y)
+          → PathP (λ i → Homₘ (assocₘ-boundary (w ∷ []) [] Ρ Ψ Ξ i) z)
+              (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f g) h)
+              (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f (_∘ₘ_ {Θ = []} {Ξ = Ψ} g h))
+  assoc₁₀ {Ξ} {Ψ} f g h =
+    ap (λ q → _∘ₘ_ {Θ = _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
+       (sym (transport-refl (_∘ₘ_ {Θ = _ ∷ []} {Ξ = Ξ} f g)))
+      ◁ assocₘ {Θ = _ ∷ []} {Ξ = Ξ} {Φ = []} f g h
+
+  assoc₁₁ : {Ξ Ψ Ρ : List Obₘ} {w v x y z : Obₘ}
+            (f : Homₘ (w ∷ x ∷ Ξ) z) (g : Homₘ (v ∷ y ∷ Ψ) x) (h : Homₘ Ρ y)
+          → PathP (λ i → Homₘ (assocₘ-boundary (w ∷ []) (v ∷ []) Ρ Ψ Ξ i) z)
+              (_∘ₘ_ {Θ = w ∷ v ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f g) h)
+              (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f (_∘ₘ_ {Θ = v ∷ []} {Ξ = Ψ} g h))
+  assoc₁₁ {Ξ} {Ψ} f g h =
+    ap (λ q → _∘ₘ_ {Θ = _ ∷ _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
+       (sym (transport-refl (_∘ₘ_ {Θ = _ ∷ []} {Ξ = Ξ} f g)))
+      ◁ assocₘ {Θ = _ ∷ []} {Ξ = Ξ} {Φ = _ ∷ []} f g h
+
+  assoc₀₁ : {Ξ Ψ Ρ : List Obₘ} {v x y z : Obₘ}
+            (f : Homₘ (x ∷ Ξ) z) (g : Homₘ (v ∷ y ∷ Ψ) x) (h : Homₘ Ρ y)
+          → PathP (λ i → Homₘ (assocₘ-boundary [] (v ∷ []) Ρ Ψ Ξ i) z)
+              (_∘ₘ_ {Θ = v ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g) h)
+              (_∘ₘ_ {Θ = []} {Ξ = Ξ} f (_∘ₘ_ {Θ = v ∷ []} {Ξ = Ψ} g h))
+  assoc₀₁ {Ξ} {Ψ} f g h =
+    ap (λ q → _∘ₘ_ {Θ = _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
+       (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g)))
+      ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = _ ∷ []} f g h
+
+  assoc₀₂ : {Ξ Ψ Ρ : List Obₘ} {v w x y z : Obₘ}
+            (f : Homₘ (x ∷ Ξ) z) (g : Homₘ (v ∷ w ∷ y ∷ Ψ) x) (h : Homₘ Ρ y)
+          → PathP (λ i → Homₘ (assocₘ-boundary [] (v ∷ w ∷ []) Ρ Ψ Ξ i) z)
+              (_∘ₘ_ {Θ = v ∷ w ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g) h)
+              (_∘ₘ_ {Θ = []} {Ξ = Ξ} f (_∘ₘ_ {Θ = v ∷ w ∷ []} {Ξ = Ψ} g h))
+  assoc₀₂ {Ξ} {Ψ} f g h =
+    ap (λ q → _∘ₘ_ {Θ = _ ∷ _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
+       (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g)))
+      ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = _ ∷ _ ∷ []} f g h
 
   -- Universality, packaged as an equivalence between unary maps out of ⊗Γ and
-  -- multimaps out of the context Γ (the ++-idr from `_∘ₘ_` at Θ=Ξ=[] absorbed).
-  -- `restrict.injective` is the workhorse: to prove two unary maps ⊗Γ → z equal,
-  -- it suffices to compare them after restricting to the generators Γ.
+  -- multimaps out of the context Γ: Representable's `restrE` at the universal
+  -- arrow of Γ.  `restrict.injective` is the workhorse: to prove two unary maps
+  -- ⊗Γ → z equal, it suffices to compare them after restricting to the
+  -- generators Γ.
   module _ {Γ : List Obₘ} {z : Obₘ} where
     restrict-equiv : Homₘ (⊗₀ Γ ∷ []) z ≃ Homₘ Γ z
-    restrict-equiv =
-      ( (λ (φ : Homₘ (⊗₀ Γ ∷ []) z) → _∘ₘ_ {Θ = []} {Ξ = []} φ (⊗-arr Γ))
-        , ⊗-arr-univ Γ {Θ = []} {Ξ = []} )
-        ∙e path→equiv (ap (λ Ω → Homₘ Ω z) (++-idr Γ))
+    restrict-equiv = Rep.restrE M (⊗-arr Γ) (⊗-arr-univ Γ)
 
     module restrict = Equiv restrict-equiv
 
@@ -244,80 +381,29 @@ module Multicategory.Strictification
                  (idₘl {Θ = []} {Ξ = ⊗₀ Δ ∷ []} (μ Γ Δ))
             ∙ idₘl {Θ = ⊗₀ Γ ∷ []} {Ξ = []} (μ Γ Δ)
 
-  -- Plugging a subst'd morphism = subst of the plug (naturality of _∘ₘ_ in its
-  -- second argument under object-path transport).
-  ∘ₘ-substr : {B B' : List Obₘ} {w z : Obₘ}
-              (a : Homₘ (w ∷ []) z) (p : B ≡ B') (m : Homₘ B w)
-            → _∘ₘ_ {Θ = []} {Ξ = []} a (subst (λ Ω → Homₘ Ω w) p m)
-              ≡ subst (λ Ω → Homₘ ([] ++ Ω ++ []) z) p (_∘ₘ_ {Θ = []} {Ξ = []} a m)
-  ∘ₘ-substr {B} {B'} {w} {z} a p m =
-    J (λ B'' q → _∘ₘ_ {Θ = []} {Ξ = []} a (subst (λ Ω → Homₘ Ω w) q m)
-                 ≡ subst (λ Ω → Homₘ ([] ++ Ω ++ []) z) q (_∘ₘ_ {Θ = []} {Ξ = []} a m))
-      (ap (_∘ₘ_ {Θ = []} {Ξ = []} a) (transport-refl m) ∙ sym (transport-refl _))
-      p
-
-  -- Substituting the OUTER map's domain-prefix commutes with plugging.
-  ∘ₘ-substl : {Θ Θ' Ξ Γ : List Obₘ} {x z : Obₘ}
-              (p : Θ ≡ Θ') (f : Homₘ (Θ ++ x ∷ Ξ) z) (g : Homₘ Γ x)
-            → _∘ₘ_ {Θ = Θ'} {Ξ = Ξ} (subst (λ Ω → Homₘ (Ω ++ x ∷ Ξ) z) p f) g
-              ≡ subst (λ Ω → Homₘ (Ω ++ Γ ++ Ξ) z) p (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} f g)
-  ∘ₘ-substl {Θ} {Θ'} {Ξ} {Γ} {x} {z} p f g =
-    J (λ Θ'' q → _∘ₘ_ {Θ = Θ''} {Ξ = Ξ} (subst (λ Ω → Homₘ (Ω ++ x ∷ Ξ) z) q f) g
-                 ≡ subst (λ Ω → Homₘ (Ω ++ Γ ++ Ξ) z) q (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} f g))
-      ( ap (λ q → _∘ₘ_ {Θ = Θ} {Ξ = Ξ} q g) (transport-refl f)
-      ∙ sym (transport-refl _) )
-      p
-
-  -- `restrict` is natural under unary post-composition (assocₘ at the generators).
+  -- `restrict` is natural under unary post-composition: Representable's
+  -- plug-nat at the universal arrow.
   restrict-nat : {Γ : List Obₘ} {w z : Obₘ}
                  (a : Homₘ (w ∷ []) z) (φ : Homₘ (⊗₀ Γ ∷ []) w)
                → restrict {Γ} {z} (a U.∘ φ)
                  ≡ subst (λ Ω → Homₘ Ω z) (++-idr Γ)
                      (_∘ₘ_ {Θ = []} {Ξ = []} a (restrict {Γ} {w} φ))
-  restrict-nat {Γ} {w} {z} a φ = ap (subst (λ Ω → Homₘ Ω z) (++-idr Γ)) step
-    where
-      aφ : Homₘ (⊗₀ Γ ∷ []) z
-      aφ = _∘ₘ_ {Θ = []} {Ξ = []} a φ
-      φσ : Homₘ (Γ ++ []) w
-      φσ = _∘ₘ_ {Θ = []} {Ξ = []} φ (⊗-arr Γ)
-      Y : Homₘ ((Γ ++ []) ++ []) z
-      Y = _∘ₘ_ {Θ = []} {Ξ = []} a φσ
-      X : Homₘ (Γ ++ []) z
-      X = _∘ₘ_ {Θ = []} {Ξ = []} aφ (⊗-arr Γ)
-      -- the assocₘ i0-endpoint (subst over slot-unbury = refl) equals X.
-      e0 : _∘ₘ_ {Θ = []} {Ξ = []}
-             (subst (λ Ω → Homₘ Ω z) (slot-unbury [] [] (⊗₀ Γ) [] []) aφ) (⊗-arr Γ) ≡ X
-      e0 = ap (λ q → _∘ₘ_ {Θ = []} {Ξ = []} q (⊗-arr Γ)) (transport-refl aφ)
-      -- the two list-paths (Γ++[])++[] ≡ Γ++[] agree, since List Obₘ is a set.
-      path-eq : ++-assoc Γ [] [] ≡ (λ i → [] ++ (++-idr Γ i) ++ [])
-      path-eq = ++-assoc-nil Γ []
-      pp : PathP (λ i → Homₘ ([] ++ (++-idr Γ i) ++ []) z) Y X
-      pp = subst (λ p → PathP (λ i → Homₘ (p i) z) Y X) path-eq
-             (symP (assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = []} a φ (⊗-arr Γ)) ▷ e0)
-      step : X ≡ _∘ₘ_ {Θ = []} {Ξ = []} a (restrict {Γ} φ)
-      step =
-        X
-          ≡⟨ sym (from-pathp pp) ⟩
-        subst (λ Ω → Homₘ ([] ++ Ω ++ []) z) (++-idr Γ) Y
-          ≡˘⟨ ∘ₘ-substr a (++-idr Γ) φσ ⟩
-        _∘ₘ_ {Θ = []} {Ξ = []} a (restrict {Γ} φ) ∎
+  restrict-nat {Γ} = Rep.plug-nat M (⊗-arr Γ)
 
-  -- Pull `a` past the first universal arrow (front slot, suffix ⊗Δ∷[]).  The
-  -- assocₘ boundary is exactly ++-assoc Γ (⊗Δ∷[]) [], so no is-set is needed.
+  -- Pull `a` past the first universal arrow (front slot, suffix ⊗Δ∷[]): the
+  -- assocₘ boundary at these prefixes is exactly ++-assoc Γ (⊗Δ∷[]) [].
   eqΓ : {Γ Δ : List Obₘ} {w z : Obₘ}
         (a : Homₘ (w ∷ []) z) (χ : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ []) w)
       → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ ∷ []} (_∘ₘ_ {Θ = []} {Ξ = []} a χ) (⊗-arr Γ)
         ≡ subst (λ Ω → Homₘ Ω z) (++-assoc Γ (⊗₀ Δ ∷ []) [])
             (_∘ₘ_ {Θ = []} {Ξ = []} a (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ ∷ []} χ (⊗-arr Γ)))
-  eqΓ {Γ} {Δ} {w} {z} a χ =
-    sym (from-pathp
-      (symP (assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = ⊗₀ Δ ∷ []} a χ (⊗-arr Γ))
-        ▷ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ ∷ []} q (⊗-arr Γ))
-             (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} a χ))))
+  eqΓ {Γ} a χ = from-pathp⁻ (assoc₀₀ a χ (⊗-arr Γ))
 
-  -- Naturality of the two-slot restriction under unary post-composition.  Uses
-  -- eqΓ (front pull) + a second assocₘ (whose slot-unbury is exactly eqΓ's
-  -- boundary ++-assoc Γ (⊗Δ∷[]) []) + ∘ₘ-substr; is-set only at the end.
+  -- Naturality of the two-slot restriction under unary post-composition.  eqΓ
+  -- pulls `a` past ⊗-arr Γ; its subst is exactly the slot-unbury of a second
+  -- assocₘ, which then pulls `a` past ⊗-arr Δ.  The residual list-path loop is
+  -- reconciled by the spine lemma assocₘ-flatten-nils + naturality of ++-idr
+  -- (no truncation of Obₘ anywhere).
   restrict₂-nat : {Γ Δ : List Obₘ} {w z : Obₘ}
                   (a : Homₘ (w ∷ []) z) (χ : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ []) w)
                 → restrict₂.to {Γ} {Δ} (_∘ₘ_ {Θ = []} {Ξ = []} a χ)
@@ -329,7 +415,7 @@ module Multicategory.Strictification
     ∙ ap (λ p → subst (λ Ω → Homₘ Ω z) p as2)
          (ap (_∙ P) (ap sym (assocₘ-flatten-nils Γ Δ)) ∙ homotopy-natural ++-idr P)
     ∙ subst-∙ (λ Ω → Homₘ Ω z) (ap (_++ []) P) (++-idr (Γ ++ Δ)) as2
-    ∙ sym (ap (subst (λ Ω → Homₘ Ω z) (++-idr (Γ ++ Δ))) (∘ₘ-substr a P s2))
+    ∙ sym (ap (subst (λ Ω → Homₘ Ω z) (++-idr (Γ ++ Δ))) (Rep.∘ₘ-substr M a P s2))
     where
       P : Γ ++ (Δ ++ []) ≡ Γ ++ Δ
       P = ap (Γ ++_) (++-idr Δ)
@@ -346,8 +432,7 @@ module Multicategory.Strictification
               (⊗-arr Δ)
             ≡ subst (λ Ω → Homₘ Ω z) (sym bd2) as2
       front-assoc = ap (λ q → _∘ₘ_ {Θ = Γ} {Ξ = []} q (⊗-arr Δ)) (eqΓ a χ)
-          ∙ sym (from-pathp (symP (assocₘ {Θ = []} {Ξ = []} {Φ = Γ} {Ψ = []}
-                                     a s1 (⊗-arr Δ))))
+          ∙ from-pathp⁻ (assocₘ {Θ = []} {Ξ = []} {Φ = Γ} {Ψ = []} a s1 (⊗-arr Δ))
 
   -- Feeding the unit arrow ⊗-arr [] into μ [] Y's first slot yields the identity
   -- (μ [] Y restricts to ⊗-arr Y, and restrict is injective).
@@ -377,20 +462,7 @@ module Multicategory.Strictification
       i0' = _∘ₘ_ {Θ = []} {Ξ = []}
               (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Y ∷ []} (μ [] Y) (⊗-arr [])) f
       interchange-idl : i1' ≡ i0'
-      interchange-idl = subst (λ p → PathP (λ i → Homₘ (p i) (⊗₀ Y)) i1' i0') bd
-                  (e1 ◁ symP (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = []}
-                               {Δ = ⊗₀ X ∷ []} (μ [] Y) (⊗-arr []) f) ▷ e0)
-        where
-          bd : (λ i → interchangeₘ-boundary {A = Obₘ} [] [] [] (⊗₀ X ∷ []) [] (~ i)) ≡ refl
-          bd = refl
-          e1 : i1' ≡ _
-          e1 = sym (ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ X ∷ []} q (⊗-arr []))
-                       (transport-refl _
-                         ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ [] ∷ []} {Ξ = []} q f)
-                              (transport-refl (μ [] Y))))
-          e0 : _ ≡ i0'
-          e0 = ap (λ q → _∘ₘ_ {Θ = []} {Ξ = []} q f)
-                  (transport-refl (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Y ∷ []} (μ [] Y) (⊗-arr [])))
+      interchange-idl = sym (ic₂ (μ [] Y) (⊗-arr []) f)
       idl-at-generators : _∘ₘ_ {Θ = []} {Ξ = ⊗₀ X ∷ []}
               (_∘ₘ_ {Θ = ⊗₀ [] ∷ []} {Ξ = []}
                 (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Y ∷ []} (μ [] Y) U.id) f) (⊗-arr [])
@@ -465,47 +537,16 @@ module Multicategory.Strictification
                        (_∘ₘ_ {Θ = ⊗₀ Γ' ∷ []} {Ξ = []} μf g) f') g'
           Lchain : lhs-comp ≡ assoc-normalL
           Lchain =
-            ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q (g U.∘ g'))
-               ( sym (assocₘ (μ Γ'' Δ'') f f')
-               ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ'' ∷ []} q f') (transport-refl μf) )
-            ∙ ( sym (assocₘ (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ'' ∷ []} μf f') g g')
-              ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q g')
-                   (transport-refl (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []}
-                     (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ'' ∷ []} μf f') g)) )
+              ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q (g U.∘ g'))
+                 (sym (assoc₀₀ (μ Γ'' Δ'') f f'))
+            ∙ sym (assoc₁₀ (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ'' ∷ []} μf f') g g')
           swap : assoc-normalL ≡ assoc-normalR
-          swap = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q g')
-                    (sym (subst (λ p → PathP (λ i → Homₘ (p i) (⊗₀ (Γ'' ++ Δ'')))
-                                  assoc-normalR-inner assoc-normalL-inner)
-                           bd (e1 ◁ symP (interchangeₘ {Θ = []} {Μ = []} {Κ = []}
-                                           {Γ = ⊗₀ Γ ∷ []} {Δ = ⊗₀ Δ' ∷ []} μf f' g) ▷ e0)))
-            where
-              assoc-normalL-inner : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ' ∷ []) (⊗₀ (Γ'' ++ Δ''))
-              assoc-normalL-inner = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []}
-                               (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ'' ∷ []} μf f') g
-              assoc-normalR-inner : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ' ∷ []) (⊗₀ (Γ'' ++ Δ''))
-              assoc-normalR-inner = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []}
-                               (_∘ₘ_ {Θ = ⊗₀ Γ' ∷ []} {Ξ = []} μf g) f'
-              bd : (λ i → interchangeₘ-boundary {A = Obₘ} [] (⊗₀ Γ ∷ []) []
-                            (⊗₀ Δ' ∷ []) [] (~ i)) ≡ refl
-              bd = refl
-              e1 : assoc-normalR-inner ≡ _
-              e1 = sym (ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []} q f')
-                           (transport-refl _
-                             ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ' ∷ []} {Ξ = []} q g)
-                                  (transport-refl μf)))
-              e0 : _ ≡ assoc-normalL-inner
-              e0 = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q g)
-                      (transport-refl (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ'' ∷ []} μf f'))
+          swap = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q g') (ic₂ μf f' g)
           Rchain : _∘ₘ_ {Θ = []} {Ξ = []} (f ⊗ₛ g) rhs-comp ≡ assoc-normalR
           Rchain =
-              ( sym (assocₘ (f ⊗ₛ g) (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []} (μ Γ' Δ') f') g')
-              ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q g')
-                   (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} (f ⊗ₛ g)
-                     (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []} (μ Γ' Δ') f'))) )
+              sym (assoc₀₁ (f ⊗ₛ g) (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []} (μ Γ' Δ') f') g')
             ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q g')
-                 ( sym (assocₘ (f ⊗ₛ g) (μ Γ' Δ') f')
-                 ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []} q f')
-                      (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} (f ⊗ₛ g) (μ Γ' Δ'))) )
+                 (sym (assoc₀₀ (f ⊗ₛ g) (μ Γ' Δ') f'))
             ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []}
                           (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ []} q f') g')
                  (⊗ₛ-μ f g)
@@ -553,9 +594,6 @@ module Multicategory.Strictification
       (ap (λ r → _⊗ₛ_ {Γ} {Γ} {Δ} {Δ} U.id r) ≅to-refl ∙ ⊗ₛ-id Γ Δ ∙ sym ≅to-refl)
       q
 
-  ≅from-refl : {A : Obₘ} → ≅from (refl {x = A}) ≡ U.id
-  ≅from-refl = ap UMor._≅_.from (transport-refl UMor.id-iso)
-
   -- path→iso is a functor: it sends sym to inverse and ∙ to composition.
   ≅from-to : {A B : Obₘ} (p : A ≡ B) → ≅from p ≡ ≅to (sym p)
   ≅from-to p = path→to-sym (Unary M) p
@@ -591,10 +629,10 @@ module Multicategory.Strictification
   η-arr : (X : List Obₘ)
         → _∘ₘ_ {Θ = []} {Ξ = []} (≅to (ap ⊗₀ (sym (++-idr X)))) (⊗-arr X)
           ≡ ⊗-arr (X ++ [])
-  -- Remaining: subst (codomain) (idₘ ∘ₘ ⊗-arr X) ≡ ⊗-arr (X ++ []).  This is a
-  -- 2-dimensional coherence: idₘr moves the domain X++[]→X, apd ⊗-arr moves both
-  -- X→X++[] / ⊗X→⊗(X++[]); the composite (over a domain loop) reconciles to the
-  -- codomain-only transport via is-set.
+  -- ≅to-∘ₘ turns the iso into a codomain transport of idₘ ∘ₘ ⊗-arr X; idₘr
+  -- absorbs the idₘ (moving the domain X ← X++[]); the combined domain+codomain
+  -- transport of ⊗-arr X is then exactly apd of ⊗-arr along sym (++-idr X)
+  -- (transp-decomp splits it back into the two one-sided substs).
   η-arr X = ≅to-∘ₘ (ap ⊗₀ (sym (++-idr X))) (⊗-arr X)
           ∙ ap (subst (λ z → Homₘ (X ++ []) z) (ap ⊗₀ (sym (++-idr X))))
                (sym (from-pathp (symP (idₘr (⊗-arr X)))))
@@ -602,7 +640,7 @@ module Multicategory.Strictification
           ∙ from-pathp (apd (λ _ Γ → ⊗-arr Γ) (sym (++-idr X)))
 
   -- Feeding the unit arrow ⊗-arr [] into μ Y []'s SECOND slot yields the right
-  -- unitor iso ηY (mirror of μ-unit-l; via interchange + restrict₂-μ + η-arr).
+  -- unitor iso ηY (mirror of μ-unit-l; via ic₂ + restrict₂-μ + η-arr).
   μ-unit-r : (Y : List Obₘ)
            → _∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []} (μ Y []) (⊗-arr [])
              ≡ ≅to (ap ⊗₀ (sym (++-idr Y)))
@@ -610,57 +648,15 @@ module Multicategory.Strictification
     ( ap (subst (λ Ω → Homₘ Ω (⊗₀ (Y ++ []))) (++-idr Y)) swap-eq
     ∙ sym (ap (subst (λ Ω → Homₘ Ω (⊗₀ (Y ++ []))) (++-idr Y)) (η-arr Y)) )
     where
-      innerc : Homₘ (Y ++ ([] ++ [])) (⊗₀ (Y ++ []))
-      innerc = _∘ₘ_ {Θ = Y} {Ξ = []}
-                 (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} (μ Y []) (⊗-arr Y)) (⊗-arr [])
+      -- ic₂ reorders the plugs into restrict₂'s order; its trailing subst (over
+      -- ap (Y ++_) (++-idr []) = refl) is the transport-refl.
       swap-eq : _∘ₘ_ {Θ = []} {Ξ = []}
                   (_∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []} (μ Y []) (⊗-arr [])) (⊗-arr Y)
                 ≡ ⊗-arr (Y ++ [])
       swap-eq =
-          e-t
-        ∙ sym (from-pathp (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Y} {Δ = []}
-                            (μ Y []) (⊗-arr Y) (⊗-arr [])))
-        ∙ ( ap (λ h → subst B bd-path (_∘ₘ_ {Θ = Y ++ []} {Ξ = []} h (⊗-arr [])))
-               (ap (λ r → subst B r core-YY) slot₁-recon)
-          ∙ ap (subst B bd-path) (∘ₘ-substl (sym (++-idr Y)) core-YY (⊗-arr []))
-          ∙ sym (subst-∙ B (ap (λ Ω → Ω ++ [] ++ []) (sym (++-idr Y))) bd-path innerc)
-          ∙ ap (λ r → subst B r innerc) P-recon
-          ∙ restrict₂-μ Y [] )
-        where
-          B : List Obₘ → Type h
-          B = λ Ω → Homₘ Ω (⊗₀ (Y ++ []))
-          bd-path : (Y ++ []) ++ [] ++ [] ≡ Y ++ []
-          bd-path = interchangeₘ-boundary {A = Obₘ} [] Y [] [] []
-          core-YY : Homₘ (Y ++ ⊗₀ [] ∷ []) (⊗₀ (Y ++ []))
-          core-YY = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} (μ Y []) (⊗-arr Y)
-          slot₁-recon : interchange-slot₁ [] Y [] (⊗₀ []) []
-                      ≡ ap (_++ ⊗₀ [] ∷ []) (sym (++-idr Y))
-          slot₁-recon = ap sym (++-assoc-nil Y (⊗₀ [] ∷ []))
-          P-recon : (ap (λ Ω → Ω ++ [] ++ []) (sym (++-idr Y)) ∙ bd-path)
-                  ≡ ap (Y ++_) (++-idr [])
-          P-recon = ap (λ p → ap (_++ []) (sym (++-idr Y)) ∙ p) (flatten-nil-mid Y [])
-                  ∙ sym (ap-∙ (_++ []) (sym (++-idr Y)) (++-idr Y))
-                  ∙ ap (ap (_++ [])) (∙-invl (++-idr Y))
-          e-t : _∘ₘ_ {Θ = []} {Ξ = []}
-                  (_∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []} (μ Y []) (⊗-arr [])) (⊗-arr Y) ≡ _
-          e-t = ap (λ q → _∘ₘ_ {Θ = []} {Ξ = []} q (⊗-arr Y))
-                   ( ap (λ q → _∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []} q (⊗-arr []))
-                        (sym (transport-refl (μ Y [])))
-                   ∙ sym (transport-refl _) )
-
-  -- Naturality of ⊗-arr under a list-path (by J): the universal arrow of A,
-  -- post-composed with the path→iso of q : A ≡ B, is the universal arrow of B.
-  arr-nat : {A B : List Obₘ} (q : A ≡ B)
-          → _∘ₘ_ {Θ = []} {Ξ = []} (≅to (ap ⊗₀ q)) (⊗-arr A)
-            ≡ subst (λ Ω → Homₘ Ω (⊗₀ B)) (sym (ap (_++ []) q))
-                (_∘ₘ_ {Θ = []} {Ξ = []} idₘ (⊗-arr B))
-  arr-nat {A} q =
-    J (λ B q → _∘ₘ_ {Θ = []} {Ξ = []} (≅to (ap ⊗₀ q)) (⊗-arr A)
-               ≡ subst (λ Ω → Homₘ Ω (⊗₀ B)) (sym (ap (_++ []) q))
-                   (_∘ₘ_ {Θ = []} {Ξ = []} idₘ (⊗-arr B)))
-      ( ap (λ k → _∘ₘ_ {Θ = []} {Ξ = []} k (⊗-arr A)) ≅to-refl
-      ∙ sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} idₘ (⊗-arr A))) )
-      q
+          sym (ic₂ (μ Y []) (⊗-arr Y) (⊗-arr []))
+        ∙ sym (transport-refl _)
+        ∙ restrict₂-μ Y []
 
   -- Restricting the path→iso of q : A ≡ B recovers the universal arrow of B,
   -- reindexed along q (by J; α reindexes ⊗-arr).
@@ -681,54 +677,14 @@ module Multicategory.Strictification
     sym (from-pathp (symP (to-pathp {A = λ i → Homₘ (++-idr Ω i) z} (restrict.ε a))))
 
   -- Feeding ⊗-arr[] into μY[]'s second slot past an arbitrary g' collapses (via
-  -- interchange + μ-unit-r) to ηY ∘ₘ g'.  Same shape as swap-eq.
+  -- ic₂ + μ-unit-r) to ηY ∘ₘ g'.
   μg-collapse : (Y Δ : List Obₘ) (g' : Homₘ Δ (⊗₀ Y))
               → _∘ₘ_ {Θ = Δ} {Ξ = []}
                   (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} (μ Y []) g') (⊗-arr [])
                 ≡ _∘ₘ_ {Θ = []} {Ξ = []} (≅to (ap ⊗₀ (sym (++-idr Y)))) g'
   μg-collapse Y Δ g' =
-      lhs-recon
-    ∙ from-pathp (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Δ} {Δ = []}
-                   (μ Y []) g' (⊗-arr []))
-    ∙ e-r
+      ic₂ (μ Y []) g' (⊗-arr [])
     ∙ ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []} h g') (μ-unit-r Y)
-    where
-      B : List Obₘ → Type h
-      B = λ Ω → Homₘ Ω (⊗₀ (Y ++ []))
-      bd : (Δ ++ []) ++ [] ++ [] ≡ Δ ++ []
-      bd = interchangeₘ-boundary {A = Obₘ} [] Δ [] [] []
-      μg' : Homₘ (Δ ++ ⊗₀ [] ∷ []) (⊗₀ (Y ++ []))
-      μg' = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} (μ Y []) g'
-      myLHS : Homₘ (Δ ++ ([] ++ [])) (⊗₀ (Y ++ []))
-      myLHS = _∘ₘ_ {Θ = Δ} {Ξ = []} μg' (⊗-arr [])
-      slot₁-recon : interchange-slot₁ [] Δ [] (⊗₀ []) []
-                  ≡ ap (_++ ⊗₀ [] ∷ []) (sym (++-idr Δ))
-      slot₁-recon = ap sym (++-assoc-nil Δ (⊗₀ [] ∷ []))
-      P-refl : (ap (λ Ω → Ω ++ [] ++ []) (sym (++-idr Δ)) ∙ bd) ≡ refl
-      P-refl = ap (λ p → ap (_++ []) (sym (++-idr Δ)) ∙ p) (flatten-nil-mid Δ [])
-             ∙ sym (ap-∙ (_++ []) (sym (++-idr Δ)) (++-idr Δ))
-             ∙ ap (ap (_++ [])) (∙-invl (++-idr Δ))
-      lhs-recon : myLHS
-                ≡ subst B bd
-                    (_∘ₘ_ {Θ = Δ ++ []} {Ξ = []}
-                      (subst B (interchange-slot₁ [] Δ [] (⊗₀ []) []) μg') (⊗-arr []))
-      lhs-recon = sym
-        ( ap (λ h → subst B bd (_∘ₘ_ {Θ = Δ ++ []} {Ξ = []} h (⊗-arr [])))
-             (ap (λ r → subst B r μg') slot₁-recon)
-        ∙ ap (subst B bd) (∘ₘ-substl (sym (++-idr Δ)) μg' (⊗-arr []))
-        ∙ sym (subst-∙ B (ap (λ Ω → Ω ++ [] ++ []) (sym (++-idr Δ))) bd myLHS)
-        ∙ ap (λ r → subst B r myLHS) P-refl
-        ∙ transport-refl myLHS )
-      e-r : _∘ₘ_ {Θ = []} {Ξ = []}
-              (subst B (interchange-slot₂ [] (⊗₀ Y) [] [] [])
-                (_∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []}
-                  (subst B (interchange-slot₀ [] (⊗₀ Y) [] (⊗₀ []) []) (μ Y [])) (⊗-arr []))) g'
-            ≡ _∘ₘ_ {Θ = []} {Ξ = []}
-                (_∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []} (μ Y []) (⊗-arr [])) g'
-      e-r = ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []} h g')
-               (transport-refl _
-                 ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Y ∷ []} {Ξ = []} q (⊗-arr []))
-                      (transport-refl (μ Y [])))
 
   -- Right-unitor naturality: (f ⊗ id) ∘ ηX ≡ ηY ∘ f, where η is the ++[] iso.
   unitor-r-nat : {X Y : List Obₘ} (f : U.Hom (⊗₀ X) (⊗₀ Y))
@@ -744,14 +700,15 @@ module Multicategory.Strictification
       ηY = ≅to (ap ⊗₀ (sym (++-idr Y)))
       fid = _⊗ₛ_ {X} {Y} {[]} {[]} f U.id
       -- Via restrict₂-nat: fid ∘ₘ ⊗-arr(X++[]) transports restrict₂.to(fid∘ₘμX[]),
-      -- which ⊗ₛ-μ rewrites to restrict₂.to(μY[]∘ₘf); `back` collapses that to ηY∘ₘg.
+      -- which ⊗ₛ-μ rewrites to restrict₂.to(μY[]∘ₘf); `back` collapses that to
+      -- ηY ∘ₘ (f ∘ₘ ⊗-arr X).
       residual : _∘ₘ_ {Θ = []} {Ξ = []} fid (⊗-arr (X ++ []))
                ≡ _∘ₘ_ {Θ = []} {Ξ = []} ηY (_∘ₘ_ {Θ = []} {Ξ = []} f (⊗-arr X))
       residual =
-          sym (from-pathp (symP (to-pathp {A = λ i → Homₘ (++-idr (X ++ []) i) (⊗₀ (Y ++ []))}
-                                          (sym RN'))))
+          sym (transport⁻transport
+                (ap (λ Ω → Homₘ Ω (⊗₀ (Y ++ []))) (++-idr (X ++ []))) _)
         ∙ ap (subst (λ Ω → Homₘ Ω (⊗₀ (Y ++ []))) (sym (++-idr (X ++ []))))
-             (ap restrict₂.to ⊗ₛ-μ-idl)
+             (sym RN' ∙ ap restrict₂.to ⊗ₛ-μ-idl)
         ∙ back
         where
           μYf : Homₘ (⊗₀ X ∷ ⊗₀ [] ∷ []) (⊗₀ (Y ++ []))
@@ -769,56 +726,37 @@ module Multicategory.Strictification
           back : subst (λ Ω → Homₘ Ω (⊗₀ (Y ++ []))) (sym (++-idr (X ++ [])))
                    (restrict₂.to μYf)
                ≡ _∘ₘ_ {Θ = []} {Ξ = []} ηY (_∘ₘ_ {Θ = []} {Ξ = []} f (⊗-arr X))
-          back = bridge ∙ μg-collapse Y (X ++ []) gX
+          back =
+              ap (subst B (sym (++-idr (X ++ [])))) (transport-refl μYf-plugged)
+            ∙ from-pathp (hom-over (ap sym (++-idr-nat X)) chainB)
             where
               B : List Obₘ → Type h
               B = λ Ω → Homₘ Ω (⊗₀ (Y ++ []))
               gX : Homₘ (X ++ []) (⊗₀ Y)
               gX = _∘ₘ_ {Θ = []} {Ξ = []} f (⊗-arr X)
-              μgX : Homₘ ((X ++ []) ++ ⊗₀ [] ∷ []) (⊗₀ (Y ++ []))
-              μgX = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} (μ Y []) gX
-              target : Homₘ ((X ++ []) ++ ([] ++ [])) (⊗₀ (Y ++ []))
-              target = _∘ₘ_ {Θ = X ++ []} {Ξ = []} μgX (⊗-arr [])
               μYf-plugged : Homₘ (X ++ ([] ++ [])) (⊗₀ (Y ++ []))
               μYf-plugged = _∘ₘ_ {Θ = X} {Ξ = []}
                        (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} μYf (⊗-arr X)) (⊗-arr [])
-              P0 : X ++ ([] ++ []) ≡ (X ++ []) ++ []
-              P0 = ap (X ++_) (++-idr []) ∙ sym (++-idr (X ++ []))
-              bd-a : X ++ ⊗₀ [] ∷ [] ≡ (X ++ []) ++ ⊗₀ [] ∷ []
-              bd-a = assocₘ-boundary {A = Obₘ} [] [] X [] (⊗₀ [] ∷ [])
-              bd-a-recon : sym bd-a ≡ ap (_++ ⊗₀ [] ∷ []) (++-idr X)
-              bd-a-recon = ++-assoc-nil X (⊗₀ [] ∷ [])
-              comp-refl : (ap (λ Ω → Ω ++ [] ++ []) (++-idr X) ∙ P0) ≡ refl
-              comp-refl = ap (λ p → p ∙ P0) (++-idr-nat X)
-                        ∙ ap (++-idr (X ++ []) ∙_) (∙-idl (sym (++-idr (X ++ []))))
-                        ∙ ∙-invr (++-idr (X ++ []))
-              AS : _∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} μYf (⊗-arr X)
-                 ≡ subst B (sym bd-a) μgX
-              AS = ap (λ h → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} h (⊗-arr X))
-                      (sym (transport-refl μYf))
-                 ∙ sym (from-pathp (symP (assocₘ {Θ = []} {Ξ = ⊗₀ [] ∷ []} {Φ = []} {Ψ = []}
-                                            (μ Y []) f (⊗-arr X))))
-              μYf-plugged-eq : μYf-plugged ≡ subst B (ap (λ Ω → Ω ++ [] ++ []) (++-idr X)) target
-              μYf-plugged-eq =
-                  ap (λ h → _∘ₘ_ {Θ = X} {Ξ = []} h (⊗-arr [])) AS
-                ∙ ap (λ h → _∘ₘ_ {Θ = X} {Ξ = []} h (⊗-arr []))
-                     (ap (λ r → subst B r μgX) bd-a-recon)
-                ∙ ∘ₘ-substl (++-idr X) μgX (⊗-arr [])
-              bridge : subst B (sym (++-idr (X ++ []))) (restrict₂.to μYf) ≡ target
-              bridge =
-                  sym (subst-∙ B (ap (X ++_) (++-idr [])) (sym (++-idr (X ++ []))) μYf-plugged)
-                ∙ ap (subst B P0) μYf-plugged-eq
-                ∙ sym (subst-∙ B (ap (λ Ω → Ω ++ [] ++ []) (++-idr X)) P0 target)
-                ∙ ap (λ r → subst B r target) comp-refl
-                ∙ transport-refl target
+              -- pull f's plug into μ Y [] (base path reconciled by ++-assoc-nil) …
+              b1 : PathP (λ i → Homₘ (sym (++-idr X) i ++ ⊗₀ [] ∷ []) (⊗₀ (Y ++ [])))
+                     (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} μYf (⊗-arr X))
+                     (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ [] ∷ []} (μ Y []) gX)
+              b1 = hom-over (ap sym (++-assoc-nil X (⊗₀ [] ∷ [])))
+                     (assoc₀₀ (μ Y []) f (⊗-arr X))
+              -- … plug ⊗-arr [] along it, and collapse with μg-collapse.
+              chainB : PathP (λ i → Homₘ (sym (++-idr X) i ++ [] ++ []) (⊗₀ (Y ++ [])))
+                     μYf-plugged
+                     (_∘ₘ_ {Θ = []} {Ξ = []} ηY gX)
+              chainB = ∘ₘ-pathp (sym (++-idr X)) refl refl b1 refl
+                     ▷ μg-collapse Y (X ++ []) gX
       inner : _∘ₘ_ {Θ = []} {Ξ = []} fid (restrict {X} ηX)
             ≡ _∘ₘ_ {Θ = []} {Ξ = []} ηY (restrict {X} f)
       inner =
           ap (λ q → _∘ₘ_ {Θ = []} {Ξ = []} fid q)
              (ap (subst (λ Ω → Homₘ Ω (⊗₀ (X ++ []))) (++-idr X)) (η-arr X))
-        ∙ ∘ₘ-substr fid (++-idr X) (⊗-arr (X ++ []))
+        ∙ Rep.∘ₘ-substr M fid (++-idr X) (⊗-arr (X ++ []))
         ∙ ap (subst (λ Ω → Homₘ ([] ++ Ω ++ []) (⊗₀ (Y ++ []))) (++-idr X)) residual
-        ∙ sym (∘ₘ-substr ηY (++-idr X) (_∘ₘ_ {Θ = []} {Ξ = []} f (⊗-arr X)))
+        ∙ sym (Rep.∘ₘ-substr M ηY (++-idr X) (_∘ₘ_ {Θ = []} {Ξ = []} f (⊗-arr X)))
 
   -- ============ Ternary μ-hexagon machinery (for assoc-nat) ============
 
@@ -839,58 +777,20 @@ module Multicategory.Strictification
       subst-cancel : subst B (++-idr (Δ ++ Ε)) (subst B (sym (++-idr (Δ ++ Ε))) (restrict₂.to {Δ} {Ε} b))
                    ≡ restrict₂.to {Δ} {Ε} b
       subst-cancel =
-          sym (subst-∙ B (sym (++-idr (Δ ++ Ε))) (++-idr (Δ ++ Ε)) (restrict₂.to {Δ} {Ε} b))
-        ∙ ap (λ p → subst B p (restrict₂.to {Δ} {Ε} b))
-             (∙-invl (++-idr (Δ ++ Ε)))
-        ∙ transport-refl (restrict₂.to {Δ} {Ε} b)
+        transport⁻transport (sym (ap B (++-idr (Δ ++ Ε)))) (restrict₂.to {Δ} {Ε} b)
 
   -- Collapsing μ Δ Ε fed ⊗-arr Ε (slot 2) then ⊗-arr Δ (slot 1) — the reversed
-  -- plug order — yields ⊗-arr (Δ ++ Ε), reindexed.  Interchange + restrict₂-μ.
+  -- plug order — yields ⊗-arr (Δ ++ Ε), as a PathP over ap (Δ ++_) (++-idr Ε):
+  -- ic₂ reorders the plugs into restrict₂'s order, and restrict₂-μ collapses.
   μ-block : (Δ Ε : List Obₘ)
-          → _∘ₘ_ {Θ = []} {Ξ = Ε ++ []}
-              (_∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} (μ Δ Ε) (⊗-arr Ε)) (⊗-arr Δ)
-            ≡ subst (λ Ω → Homₘ Ω (⊗₀ (Δ ++ Ε))) (sym (ap (Δ ++_) (++-idr Ε))) (⊗-arr (Δ ++ Ε))
+          → PathP (λ i → Homₘ (ap (Δ ++_) (++-idr Ε) i) (⊗₀ (Δ ++ Ε)))
+              (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []}
+                (_∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} (μ Δ Ε) (⊗-arr Ε)) (⊗-arr Δ))
+              (⊗-arr (Δ ++ Ε))
   μ-block Δ Ε =
-      e-t
-    ∙ sym (from-pathp (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Δ} {Δ = Ε}
-                        (μ Δ Ε) (⊗-arr Δ) (⊗-arr Ε)))
-    ∙ ( ap (λ h → subst B bd-path (_∘ₘ_ {Θ = Δ ++ []} {Ξ = []} h (⊗-arr Ε)))
-           (ap (λ r → subst B r core-DE) slot₁-recon)
-      ∙ ap (subst B bd-path) (∘ₘ-substl (sym (++-idr Δ)) core-DE (⊗-arr Ε))
-      ∙ sym (subst-∙ B (ap (λ Ω → Ω ++ Ε ++ []) (sym (++-idr Δ))) bd-path innerc)
-      ∙ ap (λ r → subst B r innerc) P-recon
-      ∙ transport-refl innerc
-      ∙ innerc≡target )
-    where
-      B : List Obₘ → Type h
-      B = λ Ω → Homₘ Ω (⊗₀ (Δ ++ Ε))
-      P : Δ ++ (Ε ++ []) ≡ Δ ++ Ε
-      P = ap (Δ ++_) (++-idr Ε)
-      bd-path : (Δ ++ []) ++ Ε ++ [] ≡ Δ ++ (Ε ++ [])
-      bd-path = interchangeₘ-boundary {A = Obₘ} [] Δ [] Ε []
-      core-DE : Homₘ (Δ ++ ⊗₀ Ε ∷ []) (⊗₀ (Δ ++ Ε))
-      core-DE = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} (μ Δ Ε) (⊗-arr Δ)
-      innerc : Homₘ (Δ ++ (Ε ++ [])) (⊗₀ (Δ ++ Ε))
-      innerc = _∘ₘ_ {Θ = Δ} {Ξ = []} core-DE (⊗-arr Ε)
-      slot₁-recon : interchange-slot₁ [] Δ [] (⊗₀ Ε) [] ≡ ap (_++ ⊗₀ Ε ∷ []) (sym (++-idr Δ))
-      slot₁-recon = ap sym (++-assoc-nil Δ (⊗₀ Ε ∷ []))
-      P-recon : (ap (λ Ω → Ω ++ Ε ++ []) (sym (++-idr Δ)) ∙ bd-path) ≡ refl
-      P-recon = ap (λ p → ap (_++ (Ε ++ [])) (sym (++-idr Δ)) ∙ p) (flatten-nil-mid Δ Ε)
-              ∙ sym (ap-∙ (_++ (Ε ++ [])) (sym (++-idr Δ)) (++-idr Δ))
-              ∙ ap (ap (_++ (Ε ++ []))) (∙-invl (++-idr Δ))
-      subst-cancel-P : subst B (sym P) (subst B P innerc) ≡ innerc
-      subst-cancel-P = sym (subst-∙ B P (sym P) innerc)
-                     ∙ ap (λ r → subst B r innerc)
-                          (∙-invr P)
-                     ∙ transport-refl innerc
-      innerc≡target : innerc ≡ subst B (sym P) (⊗-arr (Δ ++ Ε))
-      innerc≡target = sym subst-cancel-P ∙ ap (subst B (sym P)) (restrict₂-μ Δ Ε)
-      e-t : _∘ₘ_ {Θ = []} {Ξ = Ε ++ []}
-              (_∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} (μ Δ Ε) (⊗-arr Ε)) (⊗-arr Δ) ≡ _
-      e-t = ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} q (⊗-arr Δ))
-               ( ap (λ q → _∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} q (⊗-arr Ε))
-                    (sym (transport-refl (μ Δ Ε)))
-               ∙ sym (transport-refl _) )
+    sym (ic₂ (μ Δ Ε) (⊗-arr Δ) (⊗-arr Ε))
+      ◁ to-pathp {A = λ i → Homₘ (ap (Δ ++_) (++-idr Ε) i) (⊗₀ (Δ ++ Ε))}
+          (restrict₂-μ Δ Ε)
 
   -- restrict₃ plugs universal arrows on the DOMAIN, so a codomain post-comp
   -- commutes out as a codomain-subst.
@@ -906,276 +806,183 @@ module Multicategory.Strictification
       ∙ sym (transport-refl _) )
       q
 
-  -- Generalized ∘ₘ-substr: push a domain-subst of the plugged argument out of
-  -- a plug at arbitrary Θ, Ξ.
-  ∘ₘ-substrG : {Θ Ξ B B' : List Obₘ} {w z : Obₘ}
-               (a : Homₘ (Θ ++ w ∷ Ξ) z) (p : B ≡ B') (m : Homₘ B w)
-             → _∘ₘ_ {Θ = Θ} {Ξ = Ξ} a (subst (λ Ω → Homₘ Ω w) p m)
-               ≡ subst (λ Ω → Homₘ (Θ ++ Ω ++ Ξ) z) p (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} a m)
-  ∘ₘ-substrG {Θ} {Ξ} {B} {B'} {w} {z} a p m =
-    J (λ B'' q → _∘ₘ_ {Θ = Θ} {Ξ = Ξ} a (subst (λ Ω → Homₘ Ω w) q m)
-                 ≡ subst (λ Ω → Homₘ (Θ ++ Ω ++ Ξ) z) q (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} a m))
-      (ap (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} a) (transport-refl m) ∙ sym (transport-refl _))
-      p
-
-  -- Push a suffix-subst of the outer map's domain out of a plug.
-  ∘ₘ-subst-suf : {Θ Ξ Ξ' Γ : List Obₘ} {x z : Obₘ}
-                 (p : Ξ ≡ Ξ') (f : Homₘ (Θ ++ x ∷ Ξ) z) (g : Homₘ Γ x)
-               → _∘ₘ_ {Θ = Θ} {Ξ = Ξ'} (subst (λ Ω → Homₘ (Θ ++ x ∷ Ω) z) p f) g
-                 ≡ subst (λ Ω → Homₘ (Θ ++ Γ ++ Ω) z) p (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} f g)
-  ∘ₘ-subst-suf {Θ} {Ξ} {Ξ'} {Γ} {x} {z} p f g =
-    J (λ Ξ'' q → _∘ₘ_ {Θ = Θ} {Ξ = Ξ''} (subst (λ Ω → Homₘ (Θ ++ x ∷ Ω) z) q f) g
-                 ≡ subst (λ Ω → Homₘ (Θ ++ Γ ++ Ω) z) q (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} f g))
-      ( ap (λ q → _∘ₘ_ {Θ = Θ} {Ξ = Ξ} q g) (transport-refl f)
-      ∙ sym (transport-refl _) )
-      p
-
   -- Split a binary restriction into a ternary one by plugging μ Δ Ε into the
-  -- second (merged) slot.
+  -- second (merged) slot.  Each algebraic move is one named PathP:
+  --   s1  pull ⊗-arr Ε into μ              (assoc₁₁)
+  --   s2  plug ⊗-arr Δ along s1            (∘ₘ-pathp, free)
+  --   s3  pull ⊗-arr Δ into μ ∘ ⊗-arr Ε    (assoc₁₀)
+  --   s4  collapse the μ-block             (μ-block)
+  --   s5  plug s4 into χ                   (∘ₘ-pathp, free)
+  --   t*  plug ⊗-arr Γ along s2, s3, s5    (∘ₘ-pathp, free)
+  --   ic₂ reorder the Γ/(Δ++Ε) plugs       (homogeneous)
+  -- composed with ∙P and reconciled once against the canonical list-path
+  -- (spine-coh, whose content is the spine lemma splitμ-coh).
   splitμ : {Γ Δ Ε : List Obₘ} {z : Obₘ} (χ : Homₘ (⊗₀ Γ ∷ ⊗₀ (Δ ++ Ε) ∷ []) z)
          → restrict₂.to {Γ} {Δ ++ Ε} χ
            ≡ restrict₃.to {Γ} {Δ} {Ε} (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ (μ Δ Ε))
-  splitμ {Γ} {Δ} {Ε} {z} χ = sym main
+  splitμ {Γ} {Δ} {Ε} {z} χ = sym (from-pathp (hom-over spine-coh chain))
     where
-      P-DE : Δ ++ (Ε ++ []) ≡ Δ ++ Ε
-      P-DE = ap (Δ ++_) (++-idr Ε)
-      W : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ⊗₀ Ε ∷ []) z
-      W = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ (μ Δ Ε)
-      -- Pull ⊗-arr Ε from outside χ into μ (first assocₘ).
-      pullΕ : _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)
-            ≡ subst (λ Ω → Homₘ Ω z)
-                (sym (assocₘ-boundary (⊗₀ Γ ∷ []) (⊗₀ Δ ∷ []) Ε [] []))
-                (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ
-                  (_∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} (μ Δ Ε) (⊗-arr Ε)))
-      pullΕ = sym (from-pathp
-        (symP (assocₘ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} {Φ = ⊗₀ Δ ∷ []} {Ψ = []} {Ρ = Ε}
-                 χ (μ Δ Ε) (⊗-arr Ε))
-          ▷ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} q (⊗-arr Ε))
-               (transport-refl W)))
-      BΩ : List Obₘ → Type h
-      BΩ = λ Ω → Homₘ Ω z
-      arrDE : Homₘ (Δ ++ Ε) (⊗₀ (Δ ++ Ε))
+      BΩ : List Obₘ → Type _
+      BΩ Ω = Homₘ Ω z
+      μᵍ    = μ Δ Ε
       arrDE = ⊗-arr (Δ ++ Ε)
+      W : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ⊗₀ Ε ∷ []) z
+      W = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μᵍ
       μEE : Homₘ (⊗₀ Δ ∷ (Ε ++ [])) (⊗₀ (Δ ++ Ε))
-      μEE = _∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} (μ Δ Ε) (⊗-arr Ε)
-      χμEE : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ((Ε ++ []) ++ [])) z
-      χμEE = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μEE
+      μEE = _∘ₘ_ {Θ = ⊗₀ Δ ∷ []} {Ξ = []} μᵍ (⊗-arr Ε)
       μbb : Homₘ (Δ ++ (Ε ++ [])) (⊗₀ (Δ ++ Ε))
       μbb = _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} μEE (⊗-arr Δ)
-      χμbb : Homₘ (⊗₀ Γ ∷ ((Δ ++ (Ε ++ [])) ++ [])) z
-      χμbb = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μbb
-      χarrDE : Homₘ (⊗₀ Γ ∷ ((Δ ++ Ε) ++ [])) z
-      χarrDE = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ arrDE
-      χarrG : Homₘ (Γ ++ ⊗₀ (Δ ++ Ε) ∷ []) z
-      χarrG = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ (Δ ++ Ε) ∷ []} χ (⊗-arr Γ)
+      -- canonical list paths
+      P-DE = ap (Δ ++_) (++-idr Ε)
+      q̄    = sym (++-assoc Ε [] [])
+      r̄    = sym (++-assoc Δ (Ε ++ []) [])
+      i2 = ap (Δ ++_) q̄
+      i5 = ap (_++ []) P-DE
+      p2 = ap (Γ ++_) i2
+      p3 = ap (Γ ++_) r̄
+      p5 = ap (Γ ++_) i5
+      P₂ap = ap (Γ ++_) (++-idr (Δ ++ Ε))
+      P₃   = ap (Γ ++_) P-DE
+      -- s1: pull ⊗-arr Ε into μ.
+      s1 : PathP (λ i → Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ q̄ i) z)
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε))
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μEE)
+      s1 = assoc₁₁ χ μᵍ (⊗-arr Ε)
+      -- s2: plug ⊗-arr Δ along s1.
+      s2 : PathP (λ i → Homₘ (⊗₀ Γ ∷ Δ ++ q̄ i) z)
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
+               (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ))
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = (Ε ++ []) ++ []}
+               (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μEE) (⊗-arr Δ))
+      s2 = ∘ₘ-pathp refl q̄ refl s1 refl
+      -- s3: pull ⊗-arr Δ into μEE.
+      s3 : PathP (λ i → Homₘ (⊗₀ Γ ∷ r̄ i) z)
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = (Ε ++ []) ++ []}
+               (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μEE) (⊗-arr Δ))
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μbb)
+      s3 = assoc₁₀ χ μEE (⊗-arr Δ)
+      -- s4: the μ-block collapse.  s5: plug it into χ.
+      s5 : PathP (λ i → Homₘ (⊗₀ Γ ∷ P-DE i ++ []) z)
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ μbb)
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ arrDE)
+      s5 = ∘ₘ-pathp refl refl P-DE refl (μ-block Δ Ε)
+      -- t*: plug ⊗-arr Γ along s2, s3, s5.
+      t2 : PathP (λ i → Homₘ (p2 i) z) _ _
+      t2 = ∘ₘ-pathp refl i2 refl s2 (λ _ → ⊗-arr Γ)
+      t3 : PathP (λ i → Homₘ (p3 i) z) _ _
+      t3 = ∘ₘ-pathp refl r̄ refl s3 (λ _ → ⊗-arr Γ)
+      t5 : PathP (λ i → Homₘ (p5 i) z) _ _
+      t5 = ∘ₘ-pathp refl i5 refl s5 (λ _ → ⊗-arr Γ)
       canon : Homₘ (Γ ++ ((Δ ++ Ε) ++ [])) z
-      canon = _∘ₘ_ {Θ = Γ} {Ξ = []} χarrG arrDE
-      bd2 : (⊗₀ Γ ∷ []) ++ Δ ++ ((Ε ++ []) ++ []) ≡ (⊗₀ Γ ∷ []) ++ ((([] ++ Δ ++ (Ε ++ [])) ++ []))
-      bd2 = assocₘ-boundary (⊗₀ Γ ∷ []) [] Δ (Ε ++ []) []
-      icbd : ([] ++ Γ ++ []) ++ (Δ ++ Ε) ++ [] ≡ [] ++ Γ ++ ([] ++ (Δ ++ Ε) ++ [])
-      icbd = interchangeₘ-boundary [] Γ [] (Δ ++ Ε) []
-      -- Second pull: ⊗-arr Δ into μ.
-      pullΔ : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = (Ε ++ []) ++ []} χμEE (⊗-arr Δ)
-            ≡ subst BΩ (sym bd2) χμbb
-      pullΔ = sym (from-pathp
-        (symP (assocₘ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} {Φ = []} {Ψ = Ε ++ []} {Ρ = Δ}
-                 χ μEE (⊗-arr Δ))
-          ▷ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = (Ε ++ []) ++ []} q (⊗-arr Δ))
-               (transport-refl χμEE)))
-      -- plugΔ(plugΕ W) rewritten as a single codomain-clean subst of χarrDE.
-      stepED : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
-                 (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ)
-             ≡ subst (λ Ω → Homₘ (⊗₀ Γ ∷ Ω) z) (++-assoc Δ Ε []) χarrDE
-      stepED =
-          ap (λ h → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []} h (⊗-arr Δ)) pullΕ
-        ∙ ∘ₘ-subst-suf {Θ = ⊗₀ Γ ∷ []} {x = ⊗₀ Δ} (++-assoc Ε [] []) χμEE (⊗-arr Δ)
-        ∙ ap (subst (λ Ω → Homₘ (⊗₀ Γ ∷ Δ ++ Ω) z) (++-assoc Ε [] [])) pullΔ
-        ∙ ap (λ h → subst (λ Ω → Homₘ (⊗₀ Γ ∷ Δ ++ Ω) z) (++-assoc Ε [] [])
-                      (subst BΩ (sym bd2) h))
-             ( ap (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ) (μ-block Δ Ε)
-             ∙ ∘ₘ-substrG {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ (sym P-DE) arrDE )
-        ∙ ap (subst (λ Ω → Homₘ (⊗₀ Γ ∷ Δ ++ Ω) z) (++-assoc Ε [] []))
-             (sym (subst-∙ BΩ (ap (λ Ω → ⊗₀ Γ ∷ (Ω ++ [])) (sym P-DE)) (sym bd2) χarrDE))
-        ∙ sym (subst-∙ BΩ (ap (λ Ω → ⊗₀ Γ ∷ (Ω ++ [])) (sym P-DE) ∙ sym bd2)
-             (ap (λ Ω → ⊗₀ Γ ∷ Δ ++ Ω) (++-assoc Ε [] [])) χarrDE)
-        ∙ ap (λ p → subst BΩ p χarrDE)
-             ( ap (_∙ ap (λ Ω → ⊗₀ Γ ∷ Δ ++ Ω) (++-assoc Ε [] []))
-                  (sym (ap-∙ (⊗₀ Γ ∷_)
-                          (ap (_++ []) (sym P-DE))
-                          (++-assoc Δ (Ε ++ []) [])))
-             ∙ sym (ap-∙ (⊗₀ Γ ∷_)
-                     (ap (_++ []) (sym P-DE) ∙ ++-assoc Δ (Ε ++ []) [])
-                     (ap (Δ ++_) (++-assoc Ε [] [])))
-             ∙ ap (ap (⊗₀ Γ ∷_)) (splitμ-inner Δ Ε) )
-      -- Interchange: swap the plug order of ⊗-arr Γ (slot 1) and ⊗-arr(Δ++Ε).
-      swapΓ : _∘ₘ_ {Θ = []} {Ξ = (Δ ++ Ε) ++ []} χarrDE (⊗-arr Γ)
-            ≡ subst BΩ (ap (λ Ω → Ω ++ (Δ ++ Ε) ++ []) (sym (++-idr Γ)) ∙ icbd) canon
-      swapΓ =
-          ap (λ h → _∘ₘ_ {Θ = []} {Ξ = (Δ ++ Ε) ++ []} h (⊗-arr Γ))
-             ( ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q arrDE) (sym (transport-refl χ))
-             ∙ sym (transport-refl _) )
-        ∙ sym (from-pathp (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Γ} {Δ = Δ ++ Ε}
-                            χ (⊗-arr Γ) arrDE))
-        ∙ ap (λ h → subst BΩ icbd (_∘ₘ_ {Θ = Γ ++ []} {Ξ = []} h arrDE))
-             (ap (λ r → subst BΩ r χarrG)
-               (ap sym (++-assoc-nil Γ (⊗₀ (Δ ++ Ε) ∷ []))))
-        ∙ ap (subst BΩ icbd) (∘ₘ-substl (sym (++-idr Γ)) χarrG arrDE)
-        ∙ sym (subst-∙ BΩ (ap (λ Ω → Ω ++ (Δ ++ Ε) ++ []) (sym (++-idr Γ))) icbd canon)
-      main : restrict₃.to {Γ} {Δ} {Ε} W ≡ restrict₂.to {Γ} {Δ ++ Ε} χ
-      main =
-          ap (subst BΩ (ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))))
-             ( ap (λ h → _∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])} h (⊗-arr Γ)) stepED
-             ∙ ∘ₘ-subst-suf {Θ = []} {x = ⊗₀ Γ} (++-assoc Δ Ε []) χarrDE (⊗-arr Γ)
-             ∙ ap (subst (λ Ω → Homₘ (Γ ++ Ω) z) (++-assoc Δ Ε [])) swapΓ )
-        ∙ ap (subst BΩ (ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))))
-             (sym (subst-∙ BΩ
-               (ap (λ Ω → Ω ++ (Δ ++ Ε) ++ []) (sym (++-idr Γ)) ∙ icbd)
-               (ap (Γ ++_) (++-assoc Δ Ε [])) canon))
-        ∙ sym (subst-∙ BΩ
-             ((ap (λ Ω → Ω ++ (Δ ++ Ε) ++ []) (sym (++-idr Γ)) ∙ icbd)
-               ∙ ap (Γ ++_) (++-assoc Δ Ε []))
-             (ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))) canon)
-        ∙ ap (λ p → subst BΩ p canon)
-             ( ap (λ z → ((z ∙ ap (Γ ++_) (++-assoc Δ Ε []))
-                             ∙ ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))))
-                  ( ap (ap (λ Ω → Ω ++ (Δ ++ Ε) ++ []) (sym (++-idr Γ)) ∙_)
-                       (flatten-nil-mid Γ (Δ ++ Ε))
-                  ∙ sym (ap-∙ (_++ ((Δ ++ Ε) ++ [])) (sym (++-idr Γ)) (++-idr Γ))
-                  ∙ ap (ap (_++ ((Δ ++ Ε) ++ []))) (∙-invl (++-idr Γ)) )
-             ∙ ap (_∙ ap (Γ ++_) (ap (Δ ++_) (++-idr Ε)))
-                  (∙-idl (ap (Γ ++_) (++-assoc Δ Ε [])))
-             ∙ sym (ap-∙ (Γ ++_) (++-assoc Δ Ε []) (ap (Δ ++_) (++-idr Ε)))
-             ∙ ap (ap (Γ ++_)) (assoc-idr-mid Δ Ε) )
+      canon = _∘ₘ_ {Θ = Γ} {Ξ = []}
+                (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ (Δ ++ Ε) ∷ []} χ (⊗-arr Γ)) arrDE
+      -- assemble; reorder the Γ/(Δ++Ε) plugs; land on restrict₂.to χ.
+      chain : PathP (λ i → Homₘ ((((p2 ∙ p3) ∙ p5) ∙ P₂ap) i) z)
+                (_∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])}
+                  (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
+                    (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ))
+                  (⊗-arr Γ))
+                (restrict₂.to {Γ} {Δ ++ Ε} χ)
+      chain =
+        _∙P_ {B = BΩ} {p = (p2 ∙ p3) ∙ p5} {q = P₂ap}
+          ( (_∙P_ {B = BΩ} {p = p2 ∙ p3} {q = p5}
+              (_∙P_ {B = BΩ} {p = p2} {q = p3} t2 t3)
+              t5)
+            ▷ sym (ic₂ χ (⊗-arr Γ) arrDE) )
+          (transport-filler (λ i → BΩ (P₂ap i)) canon)
+      -- the single spine reconciliation
+      spine-coh : ((p2 ∙ p3) ∙ p5) ∙ P₂ap ≡ P₃
+      spine-coh =
+          ap (λ t → (t ∙ p5) ∙ P₂ap) (sym (ap-∙ (Γ ++_) i2 r̄))
+        ∙ ap (_∙ P₂ap) (sym (ap-∙ (Γ ++_) (i2 ∙ r̄) i5))
+        ∙ sym (ap-∙ (Γ ++_) ((i2 ∙ r̄) ∙ i5) (++-idr (Δ ++ Ε)))
+        ∙ ap (ap (Γ ++_)) (splitμ-coh Δ Ε)
 
   -- Split a binary restriction into a ternary one by plugging μ Γ Δ into the
-  -- FIRST (merged) slot.  Mirror of splitμ: χ's own second slot ⊗Ε is plugged
-  -- (Step A interchange) alongside the μ-collapse (μ-block Γ Δ), with a final
-  -- interchange reordering the Γ-plug back.
+  -- FIRST (merged) slot.  Mirror of splitμ:
+  --   u1  swap χ's ⊗Ε-plug before μ Γ Δ         (ic₂, homogeneous)
+  --   u2  pull ⊗-arr Δ into μ                   (assoc₀₁, u1 folded in)
+  --   w2  plug ⊗-arr Γ along u2                 (∘ₘ-pathp, free)
+  --   w3  pull ⊗-arr Γ into μ ∘ ⊗-arr Δ         (assoc₀₀)
+  --   w5  plug the μ-block collapse into χE, then reorder the (Γ++Δ)/Ε plugs
+  --       back (∘ₘ-pathp + μ-block, then ic₂)
+  -- composed with ∙P and reconciled once against ++-assoc's spine
+  -- (spine-coh, whose content is the spine lemma splitμ-l-coh).
   splitμ-l : {Γ Δ Ε : List Obₘ} {z : Obₘ} (χ : Homₘ (⊗₀ (Γ ++ Δ) ∷ ⊗₀ Ε ∷ []) z)
            → restrict₃.to {Γ} {Δ} {Ε} (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} χ (μ Γ Δ))
              ≡ subst (λ Ω → Homₘ Ω z) (++-assoc Γ Δ Ε) (restrict₂.to {Γ ++ Δ} {Ε} χ)
-  splitμ-l {Γ} {Δ} {Ε} {z} χ =
-      ap (subst BΩ P₃) (front-full ∙ flat)
-    ∙ sym (subst-∙ BΩ bigpath P₃ canon)
-    ∙ ap (λ p → subst BΩ p canon)
-         ( ap (λ z → (((z ∙ a3) ∙ a2) ∙ a1) ∙ P₃)
-              ( ap (ap (λ Ω → Ω ++ Ε ++ []) (sym (++-idr (Γ ++ Δ))) ∙_)
-                   (flatten-nil-mid (Γ ++ Δ) Ε)
-              ∙ sym (ap-∙ (_++ (Ε ++ [])) (sym (++-idr (Γ ++ Δ))) (++-idr (Γ ++ Δ)))
-              ∙ ap (ap (_++ (Ε ++ []))) (∙-invl (++-idr (Γ ++ Δ))) )
-         ∙ ap (λ z → ((z ∙ a2) ∙ a1) ∙ P₃) (∙-idl a3)
-         ∙ splitμ-l-inner Γ Δ Ε )
-    ∙ subst-∙ BΩ P₂' (++-assoc Γ Δ Ε) canon
+  splitμ-l {Γ} {Δ} {Ε} {z} χ = from-pathp (hom-over spine-coh chain)
     where
-      BΩ : List Obₘ → Type h
-      BΩ = λ Ω → Homₘ Ω z
-      μᵍ : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ []) (⊗₀ (Γ ++ Δ))
-      μᵍ = μ Γ Δ
+      BΩ : List Obₘ → Type _
+      BΩ Ω = Homₘ Ω z
+      μᵍ    = μ Γ Δ
+      arrGD = ⊗-arr (Γ ++ Δ)
       W : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ⊗₀ Ε ∷ []) z
       W = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} χ μᵍ
       χE : Homₘ (⊗₀ (Γ ++ Δ) ∷ (Ε ++ [])) z
       χE = _∘ₘ_ {Θ = ⊗₀ (Γ ++ Δ) ∷ []} {Ξ = []} χ (⊗-arr Ε)
-      χEμᵍ : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ (Ε ++ [])) z
-      χEμᵍ = _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μᵍ
       μD : Homₘ (⊗₀ Γ ∷ (Δ ++ [])) (⊗₀ (Γ ++ Δ))
       μD = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} μᵍ (⊗-arr Δ)
-      χEμD : Homₘ (⊗₀ Γ ∷ ((Δ ++ []) ++ (Ε ++ []))) z
-      χEμD = _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μD
-      arrGD : Homₘ (Γ ++ Δ) (⊗₀ (Γ ++ Δ))
-      arrGD = ⊗-arr (Γ ++ Δ)
-      χEarrGD : Homₘ ((Γ ++ Δ) ++ (Ε ++ [])) z
-      χEarrGD = _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE arrGD
-      χarrGD-slot : Homₘ ((Γ ++ Δ) ++ ⊗₀ Ε ∷ []) z
-      χarrGD-slot = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} χ arrGD
-      canon : Homₘ ((Γ ++ Δ) ++ (Ε ++ [])) z
-      canon = _∘ₘ_ {Θ = Γ ++ Δ} {Ξ = []} χarrGD-slot (⊗-arr Ε)
-      P₃ : Γ ++ (Δ ++ (Ε ++ [])) ≡ Γ ++ (Δ ++ Ε)
-      P₃ = ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))
-      P₂' : (Γ ++ Δ) ++ (Ε ++ []) ≡ (Γ ++ Δ) ++ Ε
+      μbb : Homₘ (Γ ++ (Δ ++ [])) (⊗₀ (Γ ++ Δ))
+      μbb = _∘ₘ_ {Θ = []} {Ξ = Δ ++ []} μD (⊗-arr Γ)
+      -- canonical list paths
+      P-GD = ap (Γ ++_) (++-idr Δ)
+      r̄    = sym (++-assoc Δ [] (Ε ++ []))
+      p2 = ap (Γ ++_) r̄
+      p3 = sym (++-assoc Γ (Δ ++ []) (Ε ++ []))
+      p5 = ap (_++ (Ε ++ [])) P-GD
       P₂' = ap ((Γ ++ Δ) ++_) (++-idr Ε)
-      bdD = assocₘ-boundary {A = Obₘ} [] (⊗₀ Γ ∷ []) Δ [] (Ε ++ [])
-      bdG = assocₘ-boundary {A = Obₘ} [] [] Γ (Δ ++ []) (Ε ++ [])
-      icbdL = interchangeₘ-boundary {A = Obₘ} [] (Γ ++ Δ) [] Ε []
-      q-Δ : Γ ++ Δ ≡ Γ ++ (Δ ++ [])
-      q-Δ = sym (ap (Γ ++_) (++-idr Δ))
-      p' : (Δ ++ []) ++ (Ε ++ []) ≡ Δ ++ (Ε ++ [])
-      p' = ++-assoc Δ [] (Ε ++ [])
-      fp : (Γ ++ Δ) ++ (Ε ++ []) ≡ (Γ ++ Δ) ++ (Ε ++ [])
-      fp = ap (λ Ω → Ω ++ Ε ++ []) (sym (++-idr (Γ ++ Δ))) ∙ icbdL
-      a1 = ap (Γ ++_) p'
-      a2 = sym bdG
-      a3 = ap (λ Ω → Ω ++ Ε ++ []) q-Δ
-      a4 = fp
-      bigpath = ((a4 ∙ a3) ∙ a2) ∙ a1
-      -- Step A: interchange — move ⊗-arr Ε (χ's slot 2) before μ.
-      stepA : _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)
-            ≡ _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μᵍ
-      stepA = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} q (⊗-arr Ε)) (sym (transport-refl W))
-            ∙ interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Δ = Ε} χ μᵍ (⊗-arr Ε)
-            ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} q μᵍ)
-                 ( transport-refl _
-                 ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ (Γ ++ Δ) ∷ []} {Ξ = []} q (⊗-arr Ε)) (transport-refl χ) )
-      -- Pull ⊗-arr Δ into μ's second slot (assocₘ).
-      pullΔ : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []} χEμᵍ (⊗-arr Δ)
-            ≡ subst BΩ (sym bdD) χEμD
-      pullΔ = sym (from-pathp
-        (symP (assocₘ {Θ = []} {Ξ = Ε ++ []} {Φ = ⊗₀ Γ ∷ []} {Ψ = []} {Ρ = Δ} χE μᵍ (⊗-arr Δ))
-          ▷ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []} q (⊗-arr Δ)) (transport-refl χEμᵍ)))
-      -- Pull ⊗-arr Γ into μ's first slot (assocₘ).
-      pullΓ : _∘ₘ_ {Θ = []} {Ξ = (Δ ++ []) ++ (Ε ++ [])} χEμD (⊗-arr Γ)
-            ≡ subst BΩ (sym bdG)
-                (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE (_∘ₘ_ {Θ = []} {Ξ = Δ ++ []} μD (⊗-arr Γ)))
-      pullΓ = sym (from-pathp
-        (symP (assocₘ {Θ = []} {Ξ = Ε ++ []} {Φ = []} {Ψ = Δ ++ []} {Ρ = Γ} χE μD (⊗-arr Γ))
-          ▷ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = (Δ ++ []) ++ (Ε ++ [])} q (⊗-arr Γ)) (transport-refl χEμD)))
-      -- Final interchange: reorder ⊗-arr(Γ++Δ) (slot 1) before ⊗-arr Ε (slot 2).
-      finalIC : χEarrGD ≡ subst BΩ fp canon
-      finalIC =
-          ap (λ h → _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} h arrGD)
-             ( ap (λ q → _∘ₘ_ {Θ = ⊗₀ (Γ ++ Δ) ∷ []} {Ξ = []} q (⊗-arr Ε)) (sym (transport-refl χ))
-             ∙ sym (transport-refl _) )
-        ∙ sym (from-pathp (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Γ ++ Δ} {Δ = Ε}
-                            χ arrGD (⊗-arr Ε)))
-        ∙ ap (λ h → subst BΩ icbdL (_∘ₘ_ {Θ = (Γ ++ Δ) ++ []} {Ξ = []} h (⊗-arr Ε)))
-             (ap (λ r → subst BΩ r χarrGD-slot)
-               (ap sym (++-assoc-nil (Γ ++ Δ) (⊗₀ Ε ∷ []))))
-        ∙ ap (subst BΩ icbdL) (∘ₘ-substl (sym (++-idr (Γ ++ Δ))) χarrGD-slot (⊗-arr Ε))
-        ∙ sym (subst-∙ BΩ (ap (λ Ω → Ω ++ Ε ++ []) (sym (++-idr (Γ ++ Δ)))) icbdL canon)
-      -- Collapse (μ Γ Δ ∘ arr Δ) ∘ arr Γ via μ-block, then finalIC.
-      collapse : _∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE (_∘ₘ_ {Θ = []} {Ξ = Δ ++ []} μD (⊗-arr Γ))
-               ≡ subst (λ Ω → Homₘ (Ω ++ Ε ++ []) z) q-Δ (subst BΩ fp canon)
-      collapse = ap (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE) (μ-block Γ Δ)
-               ∙ ∘ₘ-substrG {Θ = []} {Ξ = Ε ++ []} χE q-Δ arrGD
-               ∙ ap (subst (λ Ω → Homₘ (Ω ++ Ε ++ []) z) q-Δ) finalIC
-      -- Assemble the inner ternary term.
-      front : _∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])}
-                (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
-                  (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ)) (⊗-arr Γ)
-            ≡ subst (λ Ω → Homₘ (Γ ++ Ω) z) p'
-                (subst BΩ (sym bdG)
-                  (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE (_∘ₘ_ {Θ = []} {Ξ = Δ ++ []} μD (⊗-arr Γ))))
-      front =
-          ap (λ h → _∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])} h (⊗-arr Γ))
-             ( ap (λ h → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []} h (⊗-arr Δ)) stepA
-             ∙ pullΔ )
-        ∙ ∘ₘ-subst-suf {Θ = []} {Ξ = (Δ ++ []) ++ (Ε ++ [])} {Ξ' = Δ ++ (Ε ++ [])} {Γ = Γ} {x = ⊗₀ Γ}
-             p' χEμD (⊗-arr Γ)
-        ∙ ap (subst (λ Ω → Homₘ (Γ ++ Ω) z) p') pullΓ
-      front-full : _∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])}
-                     (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
-                       (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ)) (⊗-arr Γ)
-                 ≡ subst (λ Ω → Homₘ (Γ ++ Ω) z) p'
-                     (subst BΩ (sym bdG)
-                       (subst (λ Ω → Homₘ (Ω ++ Ε ++ []) z) q-Δ (subst BΩ fp canon)))
-      front-full = front
-                 ∙ ap (λ t → subst (λ Ω → Homₘ (Γ ++ Ω) z) p' (subst BΩ (sym bdG) t)) collapse
-      flat : subst (λ Ω → Homₘ (Γ ++ Ω) z) p'
-               (subst BΩ (sym bdG) (subst (λ Ω → Homₘ (Ω ++ Ε ++ []) z) q-Δ (subst BΩ fp canon)))
-           ≡ subst BΩ bigpath canon
-      flat = ap (subst BΩ a1)
-                ( ap (subst BΩ a2) (sym (subst-∙ BΩ a4 a3 canon))
-                ∙ sym (subst-∙ BΩ (a4 ∙ a3) a2 canon) )
-           ∙ sym (subst-∙ BΩ ((a4 ∙ a3) ∙ a2) a1 canon)
+      P₃  = ap (Γ ++_) (ap (Δ ++_) (++-idr Ε))
+      -- u2: pull ⊗-arr Δ into μ, with the ⊗Ε-swap (ic₂) folded into i0.
+      u2 : PathP (λ i → Homₘ (⊗₀ Γ ∷ r̄ i) z)
+             (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
+               (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ))
+             (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μD)
+      u2 = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []} q (⊗-arr Δ))
+              (ic₂ χ μᵍ (⊗-arr Ε))
+             ◁ assoc₀₁ χE μᵍ (⊗-arr Δ)
+      -- w2: plug ⊗-arr Γ along u2.
+      w2 : PathP (λ i → Homₘ (Γ ++ r̄ i) z)
+             (_∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])}
+               (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
+                 (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ))
+               (⊗-arr Γ))
+             (_∘ₘ_ {Θ = []} {Ξ = (Δ ++ []) ++ (Ε ++ [])}
+               (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μD) (⊗-arr Γ))
+      w2 = ∘ₘ-pathp refl r̄ refl u2 refl
+      -- w3: pull ⊗-arr Γ into μD.
+      w3 : PathP (λ i → Homₘ (p3 i) z)
+             (_∘ₘ_ {Θ = []} {Ξ = (Δ ++ []) ++ (Ε ++ [])}
+               (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μD) (⊗-arr Γ))
+             (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μbb)
+      w3 = assoc₀₀ χE μD (⊗-arr Γ)
+      canon : Homₘ ((Γ ++ Δ) ++ (Ε ++ [])) z
+      canon = _∘ₘ_ {Θ = Γ ++ Δ} {Ξ = []}
+                (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} χ arrGD) (⊗-arr Ε)
+      -- w5: plug the μ-block collapse into χE, then reorder the plugs back.
+      w5 : PathP (λ i → Homₘ (P-GD i ++ (Ε ++ [])) z)
+             (_∘ₘ_ {Θ = []} {Ξ = Ε ++ []} χE μbb)
+             canon
+      w5 = ∘ₘ-pathp refl refl P-GD (λ _ → χE) (μ-block Γ Δ)
+             ▷ sym (ic₂ χ arrGD (⊗-arr Ε))
+      -- assemble; land on restrict₂.to χ, then follow its ++-assoc transport.
+      chain : PathP (λ i → Homₘ (((((p2 ∙ p3) ∙ p5) ∙ P₂') ∙ ++-assoc Γ Δ Ε) i) z)
+                (_∘ₘ_ {Θ = []} {Ξ = Δ ++ (Ε ++ [])}
+                  (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = Ε ++ []}
+                    (_∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} W (⊗-arr Ε)) (⊗-arr Δ))
+                  (⊗-arr Γ))
+                (subst BΩ (++-assoc Γ Δ Ε) (restrict₂.to {Γ ++ Δ} {Ε} χ))
+      chain =
+        _∙P_ {B = BΩ} {p = ((p2 ∙ p3) ∙ p5) ∙ P₂'} {q = ++-assoc Γ Δ Ε}
+          ( _∙P_ {B = BΩ} {p = (p2 ∙ p3) ∙ p5} {q = P₂'}
+              (_∙P_ {B = BΩ} {p = p2 ∙ p3} {q = p5}
+                (_∙P_ {B = BΩ} {p = p2} {q = p3} w2 w3)
+                w5)
+              (transport-filler (λ i → BΩ (P₂' i)) canon) )
+          (transport-filler (λ i → BΩ (++-assoc Γ Δ Ε i)) (restrict₂.to {Γ ++ Δ} {Ε} χ))
+      -- the single spine reconciliation
+      spine-coh : (((p2 ∙ p3) ∙ p5) ∙ P₂') ∙ ++-assoc Γ Δ Ε ≡ P₃
+      spine-coh = splitμ-l-coh Γ Δ Ε
 
   -- Domain-subst and codomain-subst of a Homₘ commute (independent indices).
   subst-dom-cod : {X X' : List Obₘ} {A A' : Obₘ} (p : X ≡ X') (q : A ≡ A') (m : Homₘ X A)
@@ -1256,9 +1063,7 @@ module Multicategory.Strictification
       WA3 = _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A inner-A
       WA3-eq : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} χ-A (μ Δ Ε) ≡ WA3
       WA3-eq =
-          ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q (μ Δ Ε)) (sym (transport-refl χ-A))
-        ∙ assocₘ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} {Φ = []} {Ψ = []}
-            a-A (_⊗ₛ_ {Δ} {Δ'} {Ε} {Ε'} f₂ f₃) (μ Δ Ε)
+          assoc₁₀ a-A (_⊗ₛ_ {Δ} {Δ'} {Ε} {Ε'} f₂ f₃) (μ Δ Ε)
         ∙ ap (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A) (expandμ {Δ} {Ε} inner-A)
       fusionA : restrict₃.to {Γ} {Δ} {Ε} WA3 ≡ aFA
       fusionA = ap (restrict₃.to {Γ} {Δ} {Ε}) (sym WA3-eq) ∙ sym (splitμ χ-A)
@@ -1279,20 +1084,11 @@ module Multicategory.Strictification
       b1 = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} μGD' inner-B
       WB3 : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ⊗₀ Ε ∷ []) (⊗₀ ((Γ' ++ Δ') ++ Ε'))
       WB3 = _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} b1 f₃
-      aBμ : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ⊗₀ Ε' ∷ []) (⊗₀ ((Γ' ++ Δ') ++ Ε'))
-      aBμ = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} a-B (μ Γ Δ)
       WB3-eq : _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} χ-B (μ Γ Δ) ≡ WB3
       WB3-eq =
-          ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε ∷ []} q (μ Γ Δ))
-             (sym (transport-refl _
-                  ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ (Γ ++ Δ) ∷ []} {Ξ = []} q f₃) (transport-refl a-B)))
-        ∙ sym (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Δ = ⊗₀ Ε ∷ []}
-                a-B (μ Γ Δ) f₃)
+          sym (ic₂ a-B (μ Γ Δ) f₃)
         ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} q f₃)
-             ( transport-refl aBμ
-             ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} q (μ Γ Δ)) (sym (transport-refl a-B))
-             ∙ assocₘ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} {Φ = []} {Ψ = []} {Ρ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []}
-                 μGD' f12 (μ Γ Δ)
+             ( assoc₀₀ μGD' f12 (μ Γ Δ)
              ∙ ap (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} μGD') (expandμ {Γ} {Δ} inner-B) )
       fusionB : restrict₃.to {Γ} {Δ} {Ε} WB3
               ≡ subst (λ Ω → Homₘ Ω (⊗₀ ((Γ' ++ Δ') ++ Ε'))) (++-assoc Γ Δ Ε) aFB
@@ -1316,30 +1112,15 @@ module Multicategory.Strictification
         where
           step1 : _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} MA' f₁
                 ≡ _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A (μ Δ' Ε')
-          step1 =
-              ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} q f₁)
-                 (sym (transport-refl _
-                      ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ' ∷ []} {Ξ = []} q (μ Δ' Ε'))
-                           (transport-refl (μ Γ' (Δ' ++ Ε')))))
-            ∙ sym (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = ⊗₀ Γ ∷ []} {Δ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []}
-                    (μ Γ' (Δ' ++ Ε')) f₁ (μ Δ' Ε'))
-            ∙ ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} q (μ Δ' Ε')) (transport-refl a-A)
+          step1 = sym (ic₂ (μ Γ' (Δ' ++ Ε')) f₁ (μ Δ' Ε'))
           step2 : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []}
                     (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A (μ Δ' Ε')) f₂
                 ≡ _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A μΔ'f₂
-          step2 =
-              ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []} q f₂)
-                 (sym (transport-refl (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A (μ Δ' Ε'))))
-            ∙ assocₘ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} {Φ = []} {Ψ = ⊗₀ Ε' ∷ []} {Ρ = ⊗₀ Δ ∷ []}
-                a-A (μ Δ' Ε') f₂
+          step2 = assoc₁₀ a-A (μ Δ' Ε') f₂
           step3 : _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []}
                     (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A μΔ'f₂) f₃
                 ≡ WA3
-          step3 =
-              ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} q f₃)
-                 (sym (transport-refl (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} a-A μΔ'f₂)))
-            ∙ assocₘ {Θ = ⊗₀ Γ ∷ []} {Ξ = []} {Φ = ⊗₀ Δ ∷ []} {Ψ = []} {Ρ = ⊗₀ Ε ∷ []}
-                a-A μΔ'f₂ f₃
+          step3 = assoc₁₁ a-A μΔ'f₂ f₃
 
       MB' : Homₘ (⊗₀ Γ' ∷ ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []) (⊗₀ ((Γ' ++ Δ') ++ Ε'))
       MB' = _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} μGD' (μ Γ' Δ')
@@ -1356,20 +1137,14 @@ module Multicategory.Strictification
         where
           tstep1 : _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} MB' f₁
                  ≡ _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} μGD' μΓ'f₁
-          tstep1 =
-              ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} q f₁) (sym (transport-refl MB'))
-            ∙ assocₘ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} {Φ = []} {Ψ = ⊗₀ Δ' ∷ []} {Ρ = ⊗₀ Γ ∷ []}
-                μGD' (μ Γ' Δ') f₁
+          tstep1 = assoc₀₀ μGD' (μ Γ' Δ') f₁
           tstep2 : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []}
                      (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} μGD' μΓ'f₁) f₂
                  ≡ b1
-          tstep2 =
-              ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []} q f₂)
-                 (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} μGD' μΓ'f₁)))
-            ∙ assocₘ {Θ = []} {Ξ = ⊗₀ Ε' ∷ []} {Φ = ⊗₀ Γ ∷ []} {Ψ = []} {Ρ = ⊗₀ Δ ∷ []}
-                μGD' μΓ'f₁ f₂
+          tstep2 = assoc₀₁ μGD' μΓ'f₁ f₂
 
-      -- α' (codomain iso) commutes past the three domain f-plugs (3 assocₘ).
+      -- α' (codomain iso) commutes past the three domain f-plugs
+      -- (assoc₀₀ / assoc₀₁ / assoc₀₂).
       T3MB' : Homₘ (⊗₀ Γ ∷ ⊗₀ Δ ∷ ⊗₀ Ε ∷ []) (⊗₀ ((Γ' ++ Δ') ++ Ε'))
       T3MB' = _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []}
                 (_∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []}
@@ -1391,22 +1166,13 @@ module Multicategory.Strictification
         where
           cstep1 : _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} (_∘ₘ_ {Θ = []} {Ξ = []} α' MB') f₁
                  ≡ _∘ₘ_ {Θ = []} {Ξ = []} α' MBf₁
-          cstep1 = ap (λ q → _∘ₘ_ {Θ = []} {Ξ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} q f₁)
-                      (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} α' MB')))
-                 ∙ assocₘ {Θ = []} {Ξ = []} {Φ = []} {Ψ = ⊗₀ Δ' ∷ ⊗₀ Ε' ∷ []} {Ρ = ⊗₀ Γ ∷ []}
-                     α' MB' f₁
+          cstep1 = assoc₀₀ α' MB' f₁
           cstep2 : _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []} (_∘ₘ_ {Θ = []} {Ξ = []} α' MBf₁) f₂
                  ≡ _∘ₘ_ {Θ = []} {Ξ = []} α' MBf₁f₂
-          cstep2 = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ []} {Ξ = ⊗₀ Ε' ∷ []} q f₂)
-                      (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} α' MBf₁)))
-                 ∙ assocₘ {Θ = []} {Ξ = []} {Φ = ⊗₀ Γ ∷ []} {Ψ = ⊗₀ Ε' ∷ []} {Ρ = ⊗₀ Δ ∷ []}
-                     α' MBf₁ f₂
+          cstep2 = assoc₀₁ α' MBf₁ f₂
           cstep3 : _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} (_∘ₘ_ {Θ = []} {Ξ = []} α' MBf₁f₂) f₃
                  ≡ _∘ₘ_ {Θ = []} {Ξ = []} α' T3MB'
-          cstep3 = ap (λ q → _∘ₘ_ {Θ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ξ = []} q f₃)
-                      (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} α' MBf₁f₂)))
-                 ∙ assocₘ {Θ = []} {Ξ = []} {Φ = ⊗₀ Γ ∷ ⊗₀ Δ ∷ []} {Ψ = []} {Ρ = ⊗₀ Ε ∷ []}
-                     α' MBf₁f₂ f₃
+          cstep3 = assoc₀₂ α' MBf₁f₂ f₃
 
       ternary-hex : WA3 ≡ _∘ₘ_ {Θ = []} {Ξ = []} α' WB3
       ternary-hex =
@@ -1465,22 +1231,14 @@ module Multicategory.Strictification
                       (sym (from-pathp (symP (idₘr aFB))))
       core-inner =
           ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []} FA h) (restrict-α (++-assoc Γ Δ Ε))
-        ∙ ∘ₘ-substr FA (sym (++-assoc Γ Δ Ε)) (⊗-arr (Γ ++ (Δ ++ Ε)))
+        ∙ Rep.∘ₘ-substr M FA (sym (++-assoc Γ Δ Ε)) (⊗-arr (Γ ++ (Δ ++ Ε)))
         ∙ ap (subst (λ Ω → Homₘ ([] ++ Ω ++ []) (⊗₀ (Γ' ++ Δ' ++ Ε'))) (sym (++-assoc Γ Δ Ε)))
              (expand-arr aFA)
         ∙ μ-hex-f
         ∙ sym (ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []} α' h) (restrict.ε aFB))
 
-  -- The Monoidal `_◀_`/`_▶_` are our tensor-of-morphisms whiskered by identity.
-  ◀-bridge : {Γ Γ' Δ : List Obₘ} (X : U.Hom (⊗₀ Γ) (⊗₀ Γ'))
-           → (X B.◀ Δ) ≡ _⊗ₛ_ {Γ} {Γ'} {Δ} {Δ} X U.id
-  ◀-bridge X = refl
-
-  ▶-bridge : {Γ Δ Δ' : List Obₘ} (Y : U.Hom (⊗₀ Δ) (⊗₀ Δ'))
-           → (Γ B.▶ Y) ≡ _⊗ₛ_ {Γ} {Γ} {Δ} {Δ'} U.id Y
-  ▶-bridge Y = refl
-
-  -- The bifunctor's pair action (f ◆ g = (f ◀ _) ∘ (_ ▶ g)) is our ⊗ₛ.
+  -- The bifunctor's pair action (f ◆ g = (f ◀ _) ∘ (_ ▶ g)) is our ⊗ₛ
+  -- (the whiskerings themselves are ⊗ₛ with an identity, definitionally).
   ◆≡⊗ₛ : {Γ Γ' Δ Δ' : List Obₘ}
          (f : U.Hom (⊗₀ Γ) (⊗₀ Γ')) (g : U.Hom (⊗₀ Δ) (⊗₀ Δ'))
        → B._◆_ f g ≡ _⊗ₛ_ {Γ} {Γ'} {Δ} {Δ'} f g
@@ -1595,26 +1353,6 @@ module Multicategory.Strictification
     str-bridge {Γ} =
       J (λ Δ p → path-to {C = Str} p ≡ ≅to (ap ⊗₀ p))
         (ap SM._≅_.to (transport-refl SM.id-iso) ∙ sym ≅to-refl)
-
-    -- Mac Lane's pentagon for the ++-associator, in the α→ direction
-    -- (the mirror of ++-pentagon above).
-    ++-pentagon→ : (A B C D : List Obₘ)
-      → ap (_++ D) (++-assoc A B C) ∙ ++-assoc A (B ++ C) D
-          ∙ ap (A ++_) (++-assoc B C D)
-        ≡ ++-assoc (A ++ B) C D ∙ ++-assoc A B (C ++ D)
-    ++-pentagon→ [] B C D =
-      ∙-idl _ ∙ ∙-idl _ ∙ sym (∙-idr _)
-    ++-pentagon→ (a ∷ A) B C D =
-        ap (ap (a ∷_) p₁ ∙_) (sym (ap-∙ (a ∷_) p₂ p₃))
-      ∙ sym (ap-∙ (a ∷_) p₁ (p₂ ∙ p₃))
-      ∙ ap (ap (a ∷_)) (++-pentagon→ A B C D)
-      ∙ ap-∙ (a ∷_) q₁ q₂
-      where
-        p₁ = ap (_++ D) (++-assoc A B C)
-        p₂ = ++-assoc A (B ++ C) D
-        p₃ = ap (A ++_) (++-assoc B C D)
-        q₁ = ++-assoc (A ++ B) C D
-        q₂ = ++-assoc A B (C ++ D)
 
   Str-is-strict : is-strict-monoidal Str-monoidal
   Str-is-strict .is-strict-monoidal.α-path Γ Δ Ε = ++-assoc Γ Δ Ε
