@@ -417,3 +417,37 @@ Possible future work (deliberately not done):
   clean them if ever needed elsewhere.
 - Upstreaming candidates for 1lab: path→iso-sym, is-strict-monoidal,
   triangle-inv usage patterns; the multicategory development itself.
+
+## Follow-up (session 2, 2026-07-23): from-path-monoid constructor
+
+Implemented the previously-noted future-work item: the generic
+"coherent path-monoid ⇒ monoidal structure" constructor.
+
+- `Monoidal/Strict.agda` (+185 lines): `from-path-monoid` takes the five
+  STRUCTURE fields of a monoidal category (tensor, unit, three structural
+  natural isos — naturality is the only genuinely categorical input) plus a
+  `Coherent-path-monoid` (paths + descent + path-level triangle/pentagon,
+  fields named as in `is-strict-monoidal`), and produces the assembled
+  `Monoidal-category` together with `monoidal-is-strict`.  Mac Lane's
+  triangle and pentagon are derived generically: `path→to-∙` (functoriality
+  of path→iso), `ap-F₀-to-iso` at the bifunctor's `Right`/`Left`
+  (whisker-commutation), `inv-is-path` (inverse legs descend), then
+  `ap path-to` of the path-level axiom.  Structure fields pass through
+  untouched, so the resulting components are definitionally the supplied
+  ones.
+- `Multicategory/Strictification.agda` (1369 → 1296): `Str-monoidal` and
+  `Str-is-strict` are now `StrPM.monoidal/monoidal-is-strict` of
+  `Str-path-monoid`.  DELETED: the hand-proved `.triangle` (~13 lines) and
+  `.pentagon` (~32 lines) bodies, the `◀-≅`/`▶-≅` J-lemmas, `≅to-∘`, and the
+  α←-direction `++-pentagon` with its sym-∙ derivation (that inversion now
+  happens once, generically, inside the constructor).  The last hand-fought
+  `ap-∙`/path-algebra blocks in the file are gone.
+- Validation protocol as before: prototyped in scratch (constructor generic
+  + Str instantiation with DEFINITIONAL-compatibility probes — all
+  components refl-equal to the old ones, `α→ ≡ ≅to (ap ⊗₀ ++-assoc)` etc.),
+  then integrated; Coherence.agda compiled UNCHANGED, confirming zero
+  downstream definitional drift.  All roots green; scratch removed.
+- Mathematical content now named: strict monoidal structure = coherent
+  path-monoid on the object space acting naturally (predicate
+  `is-strict-monoidal` = descent, constructor `from-path-monoid` = descent
+  data suffices).  Also a further 1lab-upstreaming candidate.

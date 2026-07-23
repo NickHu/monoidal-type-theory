@@ -5,7 +5,7 @@ open import Cat.Functor.Closed using (Curry)
 open import Cat.Functor.Bifunctor using (Bifunctor)
 open import Cat.Functor.Naturality
 open import Cat.Monoidal.Base
-open import Cat.Univalent using (path→iso; path→to-∙; path→to-sym)
+open import Cat.Univalent using (path→iso; path→to-sym)
 import Cat.Morphism
 open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 
@@ -77,8 +77,8 @@ module Multicategory.Strictification
                           (∙-idr (refl ∙ sym (++-idr V)) ∙ ∙-idl (sym (++-idr V)))
 
     -- Mac Lane's pentagon for the ++-associator, at the spine level (α→
-    -- direction, by spine induction; the α← direction below is derived from it
-    -- by inverting both sides).
+    -- direction; the α← direction needed by Monoidal-category's pentagon
+    -- field is produced generically by from-path-monoid).
     ++-pentagon→ : (A B C D : List Obₘ)
       → ap (_++ D) (++-assoc A B C) ∙ ++-assoc A (B ++ C) D
           ∙ ap (A ++_) (++-assoc B C D)
@@ -94,22 +94,6 @@ module Multicategory.Strictification
         p₁ = ap (_++ D) (++-assoc A B C)
         p₂ = ++-assoc A (B ++ C) D
         p₃ = ap (A ++_) (++-assoc B C D)
-        q₁ = ++-assoc (A ++ B) C D
-        q₂ = ++-assoc A B (C ++ D)
-
-    ++-pentagon : (A B C D : List Obₘ)
-      → ( ap (A ++_) (sym (++-assoc B C D)) ∙ sym (++-assoc A (B ++ C) D) )
-          ∙ ap (_++ D) (sym (++-assoc A B C))
-        ≡ sym (++-assoc A B (C ++ D)) ∙ sym (++-assoc (A ++ B) C D)
-    ++-pentagon A B C D =
-        ap (_∙ sym (ap (_++ D) p₁)) (sym (sym-∙ p₂ (ap (A ++_) p₃)))
-      ∙ sym (sym-∙ (ap (_++ D) p₁) (p₂ ∙ ap (A ++_) p₃))
-      ∙ ap sym (++-pentagon→ A B C D)
-      ∙ sym-∙ q₁ q₂
-      where
-        p₁ = ++-assoc A B C
-        p₂ = ++-assoc A (B ++ C) D
-        p₃ = ++-assoc B C D
         q₁ = ++-assoc (A ++ B) C D
         q₂ = ++-assoc A B (C ++ D)
 
@@ -578,29 +562,9 @@ module Multicategory.Strictification
   ≅to-refl : {A : Obₘ} → ≅to (refl {x = A}) ≡ U.id
   ≅to-refl = ap UMor._≅_.to (transport-refl UMor.id-iso)
 
-  -- Whiskering a path→iso by the identity is again a path→iso (of the whiskered
-  -- list-path).  Proven by path induction, bottoming out at ⊗ₛ-id.
-  ◀-≅ : {Γ Γ' Δ : List Obₘ} (p : Γ ≡ Γ')
-      → _⊗ₛ_ {Γ} {Γ'} {Δ} {Δ} (≅to (ap ⊗₀ p)) U.id ≡ ≅to (ap ⊗₀ (ap (_++ Δ) p))
-  ◀-≅ {Γ} {Γ'} {Δ} p =
-    J (λ Γ' p → _⊗ₛ_ {Γ} {Γ'} {Δ} {Δ} (≅to (ap ⊗₀ p)) U.id ≡ ≅to (ap ⊗₀ (ap (_++ Δ) p)))
-      (ap (λ q → _⊗ₛ_ {Γ} {Γ} {Δ} {Δ} q U.id) ≅to-refl ∙ ⊗ₛ-id Γ Δ ∙ sym ≅to-refl)
-      p
-
-  ▶-≅ : {Γ Δ Δ' : List Obₘ} (q : Δ ≡ Δ')
-      → _⊗ₛ_ {Γ} {Γ} {Δ} {Δ'} U.id (≅to (ap ⊗₀ q)) ≡ ≅to (ap ⊗₀ (ap (Γ ++_) q))
-  ▶-≅ {Γ} {Δ} {Δ'} q =
-    J (λ Δ' q → _⊗ₛ_ {Γ} {Γ} {Δ} {Δ'} U.id (≅to (ap ⊗₀ q)) ≡ ≅to (ap ⊗₀ (ap (Γ ++_) q)))
-      (ap (λ r → _⊗ₛ_ {Γ} {Γ} {Δ} {Δ} U.id r) ≅to-refl ∙ ⊗ₛ-id Γ Δ ∙ sym ≅to-refl)
-      q
-
-  -- path→iso is a functor: it sends sym to inverse and ∙ to composition.
+  -- path→iso sends sym to inverse.
   ≅from-to : {A B : Obₘ} (p : A ≡ B) → ≅from p ≡ ≅to (sym p)
   ≅from-to p = path→to-sym (Unary M) p
-
-  ≅to-∘ : {A B C : Obₘ} (p : B ≡ C) (q : A ≡ B)
-        → ≅to p U.∘ ≅to q ≡ ≅to (q ∙ p)
-  ≅to-∘ p q = sym (path→to-∙ (Unary M) q p)
 
   -- Composing a path→iso onto a multimap transports its codomain.
   ≅to-∘ₘ : {Γ : List Obₘ} {A B : Obₘ} (q : A ≡ B) (m : Homₘ Γ A)
@@ -1246,100 +1210,18 @@ module Multicategory.Strictification
       sym (⊗ₛ-∘ f U.id U.id g)
     ∙ ap₂ (λ a b → _⊗ₛ_ {Γ} {Γ'} {Δ} {Δ'} a b) (U.idr f) (U.idl g)
 
-  -- The strict monoidal structure.  Objects are lists, tensor is concatenation,
-  -- Unit is [].  Left unit is definitional ([] ++ X = X); right unit and the
-  -- associator are the `path→iso`s of the corresponding list-path.
-  Str-monoidal : Monoidal-category Str
-  Str-monoidal .Monoidal-category.-⊗-  = ⊗ᵇ
-  Str-monoidal .Monoidal-category.Unit = []
-  Str-monoidal .Monoidal-category.unitor-l = to-natural-iso record
-    { eta     = λ X → U.id
-    ; inv     = λ X → U.id
-    ; eta∘inv = λ X → U.idl U.id
-    ; inv∘eta = λ X → U.idl U.id
-    ; natural = λ X Y f → U.idr _ ∙ ⊗ₛ-idl f ∙ sym (U.idl f)
-    }
-  Str-monoidal .Monoidal-category.unitor-r = to-natural-iso record
-    { eta     = λ X → ≅to (ap ⊗₀ (sym (++-idr X)))
-    ; inv     = λ X → ≅from (ap ⊗₀ (sym (++-idr X)))
-    ; eta∘inv = λ X → ≅invl (ap ⊗₀ (sym (++-idr X)))
-    ; inv∘eta = λ X → ≅invr (ap ⊗₀ (sym (++-idr X)))
-    ; natural = λ X Y f → unitor-r-nat f
-    }
-  Str-monoidal .Monoidal-category.associator = to-natural-iso record
-    { eta     = λ (Γ , Δ , Ε) → ≅to (ap ⊗₀ (++-assoc Γ Δ Ε))
-    ; inv     = λ (Γ , Δ , Ε) → ≅from (ap ⊗₀ (++-assoc Γ Δ Ε))
-    ; eta∘inv = λ (Γ , Δ , Ε) → ≅invl (ap ⊗₀ (++-assoc Γ Δ Ε))
-    ; inv∘eta = λ (Γ , Δ , Ε) → ≅invr (ap ⊗₀ (++-assoc Γ Δ Ε))
-    ; natural = λ x y f →
-        ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []} h
-                    (≅to (ap ⊗₀ (++-assoc (x .fst) (x .snd .fst) (x .snd .snd)))))
-           ( ◆≡⊗ₛ (f .fst) (B._◆_ (f .snd .fst) (f .snd .snd))
-           ∙ ap (λ h → _⊗ₛ_ {x .fst} {y .fst}
-                          {x .snd .fst ++ x .snd .snd} {y .snd .fst ++ y .snd .snd}
-                          (f .fst) h)
-                (◆≡⊗ₛ (f .snd .fst) (f .snd .snd)) )
-      ∙ assoc-nat {Γ = x .fst} {Δ = x .snd .fst} {Ε = x .snd .snd}
-                  {Γ' = y .fst} {Δ' = y .snd .fst} {Ε' = y .snd .snd}
-                  (f .fst) (f .snd .fst) (f .snd .snd)
-      ∙ ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []}
-                    (≅to (ap ⊗₀ (++-assoc (y .fst) (y .snd .fst) (y .snd .snd)))) h)
-           (sym ( ◆≡⊗ₛ (B._◆_ (f .fst) (f .snd .fst)) (f .snd .snd)
-                ∙ ap (λ h → _⊗ₛ_ {x .fst ++ x .snd .fst} {y .fst ++ y .snd .fst}
-                               {x .snd .snd} {y .snd .snd} h (f .snd .snd))
-                     (◆≡⊗ₛ (f .fst) (f .snd .fst)) ))
-    }
-  Str-monoidal .Monoidal-category.triangle {A} {B} =
-      ap (λ a → a U.∘ ≅from (ap ⊗₀ (++-assoc A [] B)))
-         ( ap (λ r → _⊗ₛ_ {A ++ []} {A} {B} {B} r U.id)
-              (≅from-to (ap ⊗₀ (sym (++-idr A))))
-         ∙ ◀-≅ {A ++ []} {A} {B} (++-idr A) )
-    ∙ ap (λ b → ≅to (ap ⊗₀ (ap (_++ B) (++-idr A))) U.∘ b)
-         (≅from-to (ap ⊗₀ (++-assoc A [] B)))
-    ∙ ≅to-∘ (ap ⊗₀ (ap (_++ B) (++-idr A))) (ap ⊗₀ (sym (++-assoc A [] B)))
-    ∙ ap ≅to ( sym (ap-∙ ⊗₀ (sym (++-assoc A [] B)) (ap (_++ B) (++-idr A)))
-             ∙ ap (ap ⊗₀)
-                  ( ap (λ r → sym r ∙ ap (_++ B) (++-idr A)) (++-assoc-nil A B)
-                  ∙ ∙-invl (ap (_++ B) (++-idr A)) ) )
-    ∙ sym (⊗ₛ-id A B ∙ sym ≅to-refl)
-  Str-monoidal .Monoidal-category.pentagon {A} {B} {C} {D} =
-      ap (λ a → a U.∘ (aBCD U.∘ aA-BCD))
-         ( ap (λ r → _⊗ₛ_ {A ++ (B ++ C)} {(A ++ B) ++ C} {D} {D} r U.id)
-              (≅from-to (ap ⊗₀ (++-assoc A B C)))
-         ∙ ◀-≅ {A ++ (B ++ C)} {(A ++ B) ++ C} {D} (sym (++-assoc A B C)) )
-    ∙ ap (λ b → ≅to P1 U.∘ (b U.∘ aA-BCD)) (≅from-to (ap ⊗₀ (++-assoc A (B ++ C) D)))
-    ∙ ap (λ c → ≅to P1 U.∘ (≅to P2 U.∘ c))
-         ( ap (λ r → _⊗ₛ_ {A} {A} {B ++ (C ++ D)} {(B ++ C) ++ D} U.id r)
-              (≅from-to (ap ⊗₀ (++-assoc B C D)))
-         ∙ ▶-≅ {A} {B ++ (C ++ D)} {(B ++ C) ++ D} (sym (++-assoc B C D)) )
-    ∙ ap (λ x → ≅to P1 U.∘ x) (≅to-∘ P2 P3)
-    ∙ ≅to-∘ P1 (P3 ∙ P2)
-    ∙ ap ≅to
-        ( ap (_∙ P1) (sym (ap-∙ ⊗₀ (ap (A ++_) (sym (++-assoc B C D)))
-                                   (sym (++-assoc A (B ++ C) D))))
-        ∙ sym (ap-∙ ⊗₀ (ap (A ++_) (sym (++-assoc B C D)) ∙ sym (++-assoc A (B ++ C) D))
-                       (ap (_++ D) (sym (++-assoc A B C))))
-        ∙ ap (ap ⊗₀) (++-pentagon A B C D)
-        ∙ ap-∙ ⊗₀ (sym (++-assoc A B (C ++ D))) (sym (++-assoc (A ++ B) C D)) )
-    ∙ sym ( ap (λ a → a U.∘ ≅from (ap ⊗₀ (++-assoc A B (C ++ D))))
-               (≅from-to (ap ⊗₀ (++-assoc (A ++ B) C D)))
-          ∙ ap (λ b → ≅to Q1 U.∘ b) (≅from-to (ap ⊗₀ (++-assoc A B (C ++ D))))
-          ∙ ≅to-∘ Q1 Q2 )
-    where
-      aBCD  = ≅from (ap ⊗₀ (++-assoc A (B ++ C) D))
-      aA-BCD = _⊗ₛ_ {A} {A} {B ++ (C ++ D)} {(B ++ C) ++ D} U.id
-                    (≅from (ap ⊗₀ (++-assoc B C D)))
-      P1 = ap ⊗₀ (ap (_++ D) (sym (++-assoc A B C)))
-      P2 = ap ⊗₀ (sym (++-assoc A (B ++ C) D))
-      P3 = ap ⊗₀ (ap (A ++_) (sym (++-assoc B C D)))
-      Q1 = ap ⊗₀ (sym (++-assoc (A ++ B) C D))
-      Q2 = ap ⊗₀ (sym (++-assoc A B (C ++ D)))
-
   -- ==========================================================================
-  -- The strictification is strict: the tensor on objects is ++, whose monoid
-  -- paths are ++-assoc/refl/++-idr, and Str-monoidal's associator/unitors are
-  -- BY CONSTRUCTION the ≅to's of (ap ⊗₀ of) those paths.  No truncation
-  -- assumption on Obₘ anywhere.
+  -- The strict monoidal structure, and its strictness, via the coherent-
+  -- path-monoid constructor (Monoidal.Strict.from-path-monoid).  Objects are
+  -- lists, tensor is concatenation, Unit is []; the left unitor is the
+  -- identity ([] ++ X = X definitionally) and the right unitor/associator are
+  -- the path→isos of ++-idr/++-assoc.  We supply the three structural
+  -- natural isomorphisms — their naturality squares (⊗ₛ-idl, unitor-r-nat,
+  -- assoc-nat) are the substantive content — together with the coherent
+  -- path-monoid on List Obₘ (++-assoc / refl / ++-idr, plus the spine-level
+  -- triangle and pentagon).  Mac Lane's triangle and pentagon for Str, and
+  -- the strictness witness, come out generically: they are the functorial
+  -- images of the spine-level coherences.  No truncation of Obₘ anywhere.
   -- ==========================================================================
 
   private
@@ -1354,16 +1236,61 @@ module Multicategory.Strictification
       J (λ Δ p → path-to {C = Str} p ≡ ≅to (ap ⊗₀ p))
         (ap SM._≅_.to (transport-refl SM.id-iso) ∙ sym ≅to-refl)
 
-  Str-is-strict : is-strict-monoidal Str-monoidal
-  Str-is-strict .is-strict-monoidal.α-path Γ Δ Ε = ++-assoc Γ Δ Ε
-  Str-is-strict .is-strict-monoidal.λ-path Γ     = refl
-  Str-is-strict .is-strict-monoidal.ρ-path Γ     = ++-idr Γ
-  Str-is-strict .is-strict-monoidal.α→-is-path Γ Δ Ε =
+  module StrPM = from-path-monoid ⊗ᵇ []
+    (to-natural-iso record
+      { eta     = λ X → U.id
+      ; inv     = λ X → U.id
+      ; eta∘inv = λ X → U.idl U.id
+      ; inv∘eta = λ X → U.idl U.id
+      ; natural = λ X Y f → U.idr _ ∙ ⊗ₛ-idl f ∙ sym (U.idl f)
+      })
+    (to-natural-iso record
+      { eta     = λ X → ≅to (ap ⊗₀ (sym (++-idr X)))
+      ; inv     = λ X → ≅from (ap ⊗₀ (sym (++-idr X)))
+      ; eta∘inv = λ X → ≅invl (ap ⊗₀ (sym (++-idr X)))
+      ; inv∘eta = λ X → ≅invr (ap ⊗₀ (sym (++-idr X)))
+      ; natural = λ X Y f → unitor-r-nat f
+      })
+    (to-natural-iso record
+      { eta     = λ (Γ , Δ , Ε) → ≅to (ap ⊗₀ (++-assoc Γ Δ Ε))
+      ; inv     = λ (Γ , Δ , Ε) → ≅from (ap ⊗₀ (++-assoc Γ Δ Ε))
+      ; eta∘inv = λ (Γ , Δ , Ε) → ≅invl (ap ⊗₀ (++-assoc Γ Δ Ε))
+      ; inv∘eta = λ (Γ , Δ , Ε) → ≅invr (ap ⊗₀ (++-assoc Γ Δ Ε))
+      ; natural = λ x y f →
+          ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []} h
+                      (≅to (ap ⊗₀ (++-assoc (x .fst) (x .snd .fst) (x .snd .snd)))))
+             ( ◆≡⊗ₛ (f .fst) (B._◆_ (f .snd .fst) (f .snd .snd))
+             ∙ ap (λ h → _⊗ₛ_ {x .fst} {y .fst}
+                            {x .snd .fst ++ x .snd .snd} {y .snd .fst ++ y .snd .snd}
+                            (f .fst) h)
+                  (◆≡⊗ₛ (f .snd .fst) (f .snd .snd)) )
+        ∙ assoc-nat {Γ = x .fst} {Δ = x .snd .fst} {Ε = x .snd .snd}
+                    {Γ' = y .fst} {Δ' = y .snd .fst} {Ε' = y .snd .snd}
+                    (f .fst) (f .snd .fst) (f .snd .snd)
+        ∙ ap (λ h → _∘ₘ_ {Θ = []} {Ξ = []}
+                      (≅to (ap ⊗₀ (++-assoc (y .fst) (y .snd .fst) (y .snd .snd)))) h)
+             (sym ( ◆≡⊗ₛ (B._◆_ (f .fst) (f .snd .fst)) (f .snd .snd)
+                  ∙ ap (λ h → _⊗ₛ_ {x .fst ++ x .snd .fst} {y .fst ++ y .snd .fst}
+                                 {x .snd .snd} {y .snd .snd} h (f .snd .snd))
+                       (◆≡⊗ₛ (f .fst) (f .snd .fst)) ))
+      })
+
+  Str-path-monoid : StrPM.Coherent-path-monoid
+  Str-path-monoid .StrPM.Coherent-path-monoid.α-path Γ Δ Ε = ++-assoc Γ Δ Ε
+  Str-path-monoid .StrPM.Coherent-path-monoid.λ-path Γ     = refl
+  Str-path-monoid .StrPM.Coherent-path-monoid.ρ-path Γ     = ++-idr Γ
+  Str-path-monoid .StrPM.Coherent-path-monoid.α→-is-path Γ Δ Ε =
     sym (str-bridge (++-assoc Γ Δ Ε))
-  Str-is-strict .is-strict-monoidal.λ←-is-path Γ =
+  Str-path-monoid .StrPM.Coherent-path-monoid.λ←-is-path Γ =
     sym (str-bridge refl ∙ ≅to-refl)
-  Str-is-strict .is-strict-monoidal.ρ←-is-path Γ =
+  Str-path-monoid .StrPM.Coherent-path-monoid.ρ←-is-path Γ =
     ≅from-to (ap ⊗₀ (sym (++-idr Γ))) ∙ sym (str-bridge (++-idr Γ))
-  Str-is-strict .is-strict-monoidal.path-triangle Γ Δ =
+  Str-path-monoid .StrPM.Coherent-path-monoid.path-triangle Γ Δ =
     ∙-idr (++-assoc Γ [] Δ) ∙ ++-assoc-nil Γ Δ
-  Str-is-strict .is-strict-monoidal.path-pentagon = ++-pentagon→
+  Str-path-monoid .StrPM.Coherent-path-monoid.path-pentagon = ++-pentagon→
+
+  Str-monoidal : Monoidal-category Str
+  Str-monoidal = StrPM.monoidal Str-path-monoid
+
+  Str-is-strict : is-strict-monoidal Str-monoidal
+  Str-is-strict = StrPM.monoidal-is-strict Str-path-monoid
