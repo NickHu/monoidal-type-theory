@@ -49,7 +49,12 @@ Multicategory/Instances/Monoidal/Coherence.agda  Comparison = Unwrap F∘ Reinde
 Monoidal/Strict.agda               is-strict-monoidal: tensor descends from a
                                    coherent path-monoid on the object type
                                    (path-level pentagon/triangle; free when Ob
-                                   is a set)
+                                   is a set); and its converse constructor
+                                   from-path-monoid: structure fields + a
+                                   coherent path-monoid ⇒ Monoidal-category
+                                   with triangle/pentagon derived generically
+                                   (+ strictness witness).  Str-monoidal is
+                                   built this way.
 ```
 
 Design invariants worth knowing before editing:
