@@ -45,6 +45,55 @@ module _ {o h} (M : Premulticategory o h) where
     ⊗-arr-universal Γ = rep Γ .snd .snd
 
   -- ==========================================================================
+  -- Stability of universality: it transports along paths of arrows, holds for
+  -- the identity, and is closed under plugging (composition of universal
+  -- arrows).  These are the multicategorical analogues of "isos transport,
+  -- id is an iso, isos compose".
+  -- ==========================================================================
+
+  -- Universality transports along a path of arrows over a path of contexts:
+  -- cheap, since is-universal is a (propositional) family we can transport in.
+  is-universal-over : ∀ {Γ Γ' : List Obₘ} {t : Obₘ} {p : Γ ≡ Γ'}
+                      {u : Homₘ Γ t} {u' : Homₘ Γ' t}
+                    → PathP (λ i → Homₘ (p i) t) u u'
+                    → is-universal u → is-universal u'
+  is-universal-over U = transport (λ i → is-universal (U i))
+
+  -- The identity is universal: plugging idₘ is idₘl-homotopic to the identity
+  -- map (the contexts Θ ++ (x ∷ []) ++ Ξ and Θ ++ x ∷ Ξ agree definitionally).
+  idₘ-universal : ∀ {x : Obₘ} → is-universal (idₘ {x})
+  idₘ-universal {x} {Θ} {Ξ} {z} =
+    subst is-equiv (sym (funext λ (f : Homₘ (Θ ++ x ∷ Ξ) z) → idₘl f)) id-equiv
+
+  -- Universal arrows compose: plugging v ∘ₘ u is, by assocₘ, homotopic to the
+  -- four-step composite (plug v) ∙ (reassociate) ∙ (plug u) ∙ (reassociate),
+  -- each step of which is an equivalence (pv, path→equiv, pu, path→equiv).
+  universal-∘ₘ : ∀ {Γ : List Obₘ} {t : Obₘ} {Θ Ξ : List Obₘ} {w : Obₘ}
+                 (v : Homₘ (Θ ++ t ∷ Ξ) w) (pv : is-universal v)
+                 (u : Homₘ Γ t) (pu : is-universal u)
+               → is-universal (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} v u)
+  universal-∘ₘ {Γ} {t} {Θ} {Ξ} {w} v pv u pu {Θ'} {Ξ'} {z} =
+    subst is-equiv homotopy (E .snd)
+    where
+      E : Homₘ (Θ' ++ w ∷ Ξ') z ≃ Homₘ (Θ' ++ (Θ ++ Γ ++ Ξ) ++ Ξ') z
+      E = ( (λ (f : Homₘ (Θ' ++ w ∷ Ξ') z) → _∘ₘ_ {Θ = Θ'} {Ξ = Ξ'} f v)
+          , pv {Θ = Θ'} {Ξ = Ξ'} {z} )
+        ∙e path→equiv (ap (λ Ω → Homₘ Ω z) (slot-unbury Θ' Θ t Ξ Ξ'))
+        ∙e ( (λ (k : Homₘ ((Θ' ++ Θ) ++ t ∷ (Ξ ++ Ξ')) z)
+                → _∘ₘ_ {Θ = Θ' ++ Θ} {Ξ = Ξ ++ Ξ'} k u)
+           , pu {Θ = Θ' ++ Θ} {Ξ = Ξ ++ Ξ'} {z} )
+        ∙e path→equiv (ap (λ Ω → Homₘ Ω z) (assocₘ-boundary Θ' Θ Γ Ξ Ξ'))
+      -- from-pathp reads assocₘ off as: transporting the reassociated
+      -- (f ∘ₘ v) ∘ₘ u along the boundary gives f ∘ₘ (v ∘ₘ u) — exactly
+      -- E .fst f ≡ f ∘ₘ (v ∘ₘ u), since path→equiv's underlying map is
+      -- definitionally the transport.
+      homotopy : Path (Homₘ (Θ' ++ w ∷ Ξ') z → Homₘ (Θ' ++ (Θ ++ Γ ++ Ξ) ++ Ξ') z)
+                   (E .fst)
+                   (λ f → _∘ₘ_ {Θ = Θ'} {Ξ = Ξ'} f (_∘ₘ_ {Θ = Θ} {Ξ = Ξ} v u))
+      homotopy = funext λ f → from-pathp
+        (assocₘ {Θ = Θ'} {Ξ = Ξ'} {Φ = Θ} {Ψ = Ξ} {Ρ = Γ} f v u)
+
+  -- ==========================================================================
   -- Homₘ Γ - is a functor on the unary category, and a universal arrow makes
   -- its tensor a corepresenting object for it.  Uniqueness of representations
   -- is then 1lab's uniqueness of corepresenting objects.
