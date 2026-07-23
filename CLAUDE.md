@@ -46,6 +46,14 @@ Multicategory/Strictification/Equivalence.agda   Reindex : Str ≃ Unary M
 Multicategory/Instances/Monoidal/Coherence.agda  Comparison = Unwrap F∘ Reindex
                                    : Str → C is a strong monoidal equivalence;
                                    ends with monoidal-strictification
+Multicategory/Free.agda            Shulman's simple type theory for monoidal
+                                   categories (catlog Fig. 2.2) over a
+                                   Multigraph: intrinsic Tm/Sp syntax, the
+                                   structural Split slot witness, capture-free
+                                   substitution sub (= Fig. 2.3), β/η
+                                   congruence _≈_, quotient hom-sets.  Laws +
+                                   representability are roadmap; see
+                                   docs/shulman-stt.md
 Monoidal/Strict.agda               is-strict-monoidal: tensor descends from a
                                    coherent path-monoid on the object type
                                    (path-level pentagon/triangle; free when Ob
@@ -115,6 +123,11 @@ signatures), which is why no file imports it.
 - An `ap₂` whose lambda projects `.from`/`.to` from an iso-typed binder often
   leaves unsolved metas — use two sequential `ap`s (each pinning the other
   position) or annotate the binder types.
+- An unannotated `∀`-binder whose type is constrained only through `_++_`/`≡`
+  (e.g. `∀ Θ Γ → (Θ ++ Γ) ++ Δ ≡ …`) gets a fresh type meta that freezes
+  unsolved; later *uses* of the lemma then fail with reflexive-looking
+  constraints `X = X : List Ty (blocked on _N)` reported far from the
+  culprit.  Annotate: `∀ (Θ Γ : Ctx) → …`.
 
 ## Naming conventions
 
