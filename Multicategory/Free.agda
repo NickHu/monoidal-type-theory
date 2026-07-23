@@ -65,7 +65,7 @@ module Syntax {o h} (G : Multigraph o h) where
 
   private variable
     x z A B C : Ty
-    Γ Δ Θ Ξ Ψ Ρ : Ctx
+    Γ Δ Θ Ξ Ψ Ρ Γ₁ Δ₁ Ξ₁ Γm Δm Θ₂ Θ₃ : Ctx
     As : List G.Ob
 
   -- ==========================================================================
@@ -135,20 +135,33 @@ module Syntax {o h} (G : Multigraph o h) where
   split-++ʳ []       s = s
   split-++ʳ (a ∷ Γ₁) s = there (split-++ʳ Γ₁ s)
 
-  -- Deciding which side of a concatenation a slot falls in.  The outcome
-  -- carries a split of that side plus the (structurally built) relation
-  -- between the outer and inner boundary contexts.  No decidability of Ty
-  -- is used: the decision recurses on Γ₁ and the split itself.
-  data Split-++ (x : Ty) (Γ₁ Γ₂ Θ Ξ : Ctx) : Type o where
-    on-left  : ∀ {Ξ₁} → Split x Θ Γ₁ Ξ₁ → Ξ₁ ++ Γ₂ ≡ Ξ → Split-++ x Γ₁ Γ₂ Θ Ξ
-    on-right : ∀ {Θ₂} → Split x Θ₂ Γ₂ Ξ → Γ₁ ++ Θ₂ ≡ Θ → Split-++ x Γ₁ Γ₂ Θ Ξ
+  -- Deciding which side of a concatenation a slot falls in: a *view with
+  -- soundness* on s.  Each branch carries the split of that side, the
+  -- (structurally built) relation between the boundary contexts, AND a PathP
+  -- reconstituting s from the weakened side-split over that relation — which
+  -- is exactly what every proof about sub's branches needs.  No decidability
+  -- of Ty is used: the decision recurses on Γ₁ and the split itself, and the
+  -- soundness field is refl-or-cons at every step.
+  data Split-++ (Γ₁ Γ₂ : Ctx) {x : Ty} {Θ Ξ : Ctx}
+                (s : Split x Θ (Γ₁ ++ Γ₂) Ξ) : Type o where
+    on-left  : ∀ {Ξ₁} (s₁ : Split x Θ Γ₁ Ξ₁) (p : Ξ₁ ++ Γ₂ ≡ Ξ)
+             → PathP (λ i → Split x Θ (Γ₁ ++ Γ₂) (p i)) (split-++ˡ s₁ Γ₂) s
+             → Split-++ Γ₁ Γ₂ s
+    on-right : ∀ {Θ₂} (s₂ : Split x Θ₂ Γ₂ Ξ) (q : Γ₁ ++ Θ₂ ≡ Θ)
+             → PathP (λ i → Split x (q i) (Γ₁ ++ Γ₂) Ξ) (split-++ʳ Γ₁ s₂) s
+             → Split-++ Γ₁ Γ₂ s
 
-  split-++ : ∀ (Γ₁ : Ctx) {Γ₂} → Split x Θ (Γ₁ ++ Γ₂) Ξ → Split-++ x Γ₁ Γ₂ Θ Ξ
-  split-++ []       s         = on-right s refl
-  split-++ (a ∷ Γ₁) here      = on-left here refl
-  split-++ (a ∷ Γ₁) (there s) with split-++ Γ₁ s
-  ... | on-left  s₁ p = on-left (there s₁) p
-  ... | on-right s₂ q = on-right s₂ (ap (a ∷_) q)
+  -- The cons step of the decision, as a named function so that proofs about
+  -- split-++ are plain ap's (no with-abstraction anywhere).
+  split-++-step : ∀ {Γ₁ Γ₂} {a : Ty} {s : Split x Θ (Γ₁ ++ Γ₂) Ξ}
+                → Split-++ Γ₁ Γ₂ s → Split-++ (a ∷ Γ₁) Γ₂ (there s)
+  split-++-step (on-left  s₁ p co) = on-left (there s₁) p (λ i → there (co i))
+  split-++-step (on-right s₂ q co) = on-right s₂ (ap (_ ∷_) q) (λ i → there (co i))
+
+  split-++ : ∀ (Γ₁ : Ctx) {Γ₂} (s : Split x Θ (Γ₁ ++ Γ₂) Ξ) → Split-++ Γ₁ Γ₂ s
+  split-++ []       s         = on-right s refl refl
+  split-++ (a ∷ Γ₁) here      = on-left here refl refl
+  split-++ (a ∷ Γ₁) (there s) = split-++-step (split-++ Γ₁ s)
 
   -- ==========================================================================
   -- Substitution (Figure 2.3): the admissible cut of Lemma 2.4.9, by
@@ -201,75 +214,104 @@ module Syntax {o h} (G : Multigraph o h) where
   sub-var {Γ = Γ} here      g = cast (sym (++-idr Γ)) g
   sub-var (there s) g = absurd (split-[] s)
 
+  -- sub dispatches on the term constructor and hands the split's view to a
+  -- named branch handler (never `with`): proofs about sub then proceed by
+  -- matching the view and using split-++'s computation lemmas, with each
+  -- handler clause reducing definitionally.
   sub    : Split x Θ Ρ Ξ → Tm Ρ z → Tm Γ x → Tm (Θ ++ Γ ++ Ξ) z
   sub-sp : Split x Θ Ρ Ξ → Sp Ρ As → Tm Γ x → Sp (Θ ++ Γ ++ Ξ) As
 
-  sub s var g = sub-var s g
-
-  -- f(…)[M/x]: push into the unique spine component containing the slot.
-  sub s (gen f sp) g = gen f (sub-sp s sp g)
-
-  -- ⦅P,Q⦆[M/x]: by split-++, the slot is in P xor in Q.
-  sub {Θ = Θ} {Ξ = Ξ} {Γ = Γ} s (⦅_,_⦆ {Γ = Γ₁} {Δ = Δ₁} P Q) g
-    with split-++ Γ₁ s
-  ... | on-left {Ξ₁} s₁ p =
-        cast (flattenˡ Θ Γ Ξ₁ Δ₁ ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
-          ⦅ sub s₁ P g , Q ⦆
-  ... | on-right {Θ₂} s₂ q =
-        cast (flattenʳ Γ₁ Θ₂ Γ Ξ ∙ ap (λ Θ' → Θ' ++ Γ ++ Ξ) q)
-          ⦅ P , sub s₂ Q g ⦆
+  -- ⦅P,Q⦆[M/x]: the slot is in P xor in Q.
+  sub-pair : {s : Split x Θ (Γ₁ ++ Δ₁) Ξ} → Split-++ Γ₁ Δ₁ s
+           → Tm Γ₁ A → Tm Δ₁ B → Tm Γ x → Tm (Θ ++ Γ ++ Ξ) (A ⊗ B)
 
   -- match⊗(P, xy.Q)[M/x]: three regions — Q's left part, P itself, or Q's
-  -- right part.  Substituting under the binder weakens the split across the
-  -- two bound slots x,y (split-++ˡ / split-++ʳ); note (A ∷ B ∷ []) ++ Δm
-  -- and friends all reduce definitionally.
-  sub {Θ = Θ} {Ξ = Ξ} {Γ = Γ} s (match⊗ {Ψ = Ψ} {A} {B} {Γ = Γm} {Δ = Δm} P Q) g
-    with split-++ Γm s
-  ... | on-left {Ξ₁} s₁ p =
-        cast (flattenˡ Θ Γ Ξ₁ (Ψ ++ Δm) ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
-          (match⊗ {Γ = Θ ++ Γ ++ Ξ₁} {Δ = Δm} P
-            (cast (sym (flattenˡ Θ Γ Ξ₁ (A ∷ B ∷ Δm)))
-              (sub (split-++ˡ s₁ (A ∷ B ∷ Δm)) Q g)))
-  ... | on-right {Θ₂} s' q with split-++ Ψ s'
-  ...   | on-left {Ξ₁} s₁ p =
-          cast (flattenᵐ Γm Θ₂ Γ Ξ₁ Δm ∙ λ i → q i ++ Γ ++ p i)
-            (match⊗ {Γ = Γm} {Δ = Δm} (sub s₁ P g) Q)
-  ...   | on-right {Θ₃} s₂ q₂ =
-          cast (bury Γm Ψ Θ₃ (Γ ++ Ξ) ∙ ap (_++ Γ ++ Ξ) (ap (Γm ++_) q₂ ∙ q))
-            (match⊗ {Γ = Γm} {Δ = Θ₃ ++ Γ ++ Ξ} P
-              (cast (sym (flattenʳ Γm (A ∷ B ∷ Θ₃) Γ Ξ))
-                (sub (split-++ʳ Γm (split-++ʳ (A ∷ B ∷ []) s₂)) Q g)))
-
-  -- ⋆[M/x] cannot happen: no split points into the empty context.
-  sub s ⋆ g = absurd (split-[] s)
+  -- right part; the first view splits off Γm, the second splits Ψ ++ Δm.
+  -- Substituting under the binder weakens the split across the two bound
+  -- slots x,y (split-++ˡ / split-++ʳ); (A ∷ B ∷ []) ++ Δm and friends all
+  -- reduce definitionally.
+  sub-match⊗ˡ : {s : Split x Θ (Γm ++ Ψ ++ Δm) Ξ} → Split-++ Γm (Ψ ++ Δm) s
+              → Tm Ψ (A ⊗ B) → Tm (Γm ++ A ∷ B ∷ Δm) C → Tm Γ x
+              → Tm (Θ ++ Γ ++ Ξ) C
+  sub-match⊗ʳ : {s' : Split x Θ₂ (Ψ ++ Δm) Ξ} → Split-++ Ψ Δm s'
+              → Γm ++ Θ₂ ≡ Θ
+              → Tm Ψ (A ⊗ B) → Tm (Γm ++ A ∷ B ∷ Δm) C → Tm Γ x
+              → Tm (Θ ++ Γ ++ Ξ) C
 
   -- match𝟙(P, Q)[M/x]: as for match⊗, but with no bound slots.
-  sub {Θ = Θ} {Ξ = Ξ} {Γ = Γ} s (match𝟙 {Ψ = Ψ} {Γ = Γm} {Δ = Δm} P Q) g
-    with split-++ Γm s
-  ... | on-left {Ξ₁} s₁ p =
-        cast (flattenˡ Θ Γ Ξ₁ (Ψ ++ Δm) ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
-          (match𝟙 {Γ = Θ ++ Γ ++ Ξ₁} {Δ = Δm} P
-            (cast (sym (flattenˡ Θ Γ Ξ₁ Δm))
-              (sub (split-++ˡ s₁ Δm) Q g)))
-  ... | on-right {Θ₂} s' q with split-++ Ψ s'
-  ...   | on-left {Ξ₁} s₁ p =
-          cast (flattenᵐ Γm Θ₂ Γ Ξ₁ Δm ∙ λ i → q i ++ Γ ++ p i)
-            (match𝟙 {Γ = Γm} {Δ = Δm} (sub s₁ P g) Q)
-  ...   | on-right {Θ₃} s₂ q₂ =
-          cast (bury Γm Ψ Θ₃ (Γ ++ Ξ) ∙ ap (_++ Γ ++ Ξ) (ap (Γm ++_) q₂ ∙ q))
-            (match𝟙 {Γ = Γm} {Δ = Θ₃ ++ Γ ++ Ξ} P
-              (cast (sym (flattenʳ Γm Θ₃ Γ Ξ))
-                (sub (split-++ʳ Γm s₂) Q g)))
+  sub-match𝟙ˡ : {s : Split x Θ (Γm ++ Ψ ++ Δm) Ξ} → Split-++ Γm (Ψ ++ Δm) s
+              → Tm Ψ 𝟙 → Tm (Γm ++ Δm) C → Tm Γ x → Tm (Θ ++ Γ ++ Ξ) C
+  sub-match𝟙ʳ : {s' : Split x Θ₂ (Ψ ++ Δm) Ξ} → Split-++ Ψ Δm s'
+              → Γm ++ Θ₂ ≡ Θ
+              → Tm Ψ 𝟙 → Tm (Γm ++ Δm) C → Tm Γ x → Tm (Θ ++ Γ ++ Ξ) C
 
-  sub-sp s [] g = absurd (split-[] s)
-  sub-sp {Θ = Θ} {Ξ = Ξ} {Γ = Γ} s (_∷_ {Γ = Γ₁} {Δ = Δ₁} t ts) g
-    with split-++ Γ₁ s
-  ... | on-left {Ξ₁} s₁ p =
-        sp-cast (flattenˡ Θ Γ Ξ₁ Δ₁ ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
-          (sub s₁ t g ∷ ts)
-  ... | on-right {Θ₂} s₂ q =
-        sp-cast (flattenʳ Γ₁ Θ₂ Γ Ξ ∙ ap (λ Θ' → Θ' ++ Γ ++ Ξ) q)
-          (t ∷ sub-sp s₂ ts g)
+  -- (t ∷ ts)[M/x]: the slot is in the head xor in the tail.
+  sub-cons : ∀ {A} {s : Split x Θ (Γ₁ ++ Δ₁) Ξ} → Split-++ Γ₁ Δ₁ s
+           → Tm Γ₁ (base A) → Sp Δ₁ As → Tm Γ x → Sp (Θ ++ Γ ++ Ξ) (A ∷ As)
+
+  sub s var             g = sub-var s g
+  sub s (gen f sp)      g = gen f (sub-sp s sp g)
+  sub s (⦅_,_⦆ {Γ = Γ₁} P Q) g = sub-pair (split-++ Γ₁ s) P Q g
+  sub s (match⊗ {Γ = Γm} P Q) g = sub-match⊗ˡ (split-++ Γm s) P Q g
+  sub s ⋆               g = absurd (split-[] s)
+  sub s (match𝟙 {Γ = Γm} P Q) g = sub-match𝟙ˡ (split-++ Γm s) P Q g
+
+  sub-sp s []                g = absurd (split-[] s)
+  sub-sp s (_∷_ {Γ = Γ₁} t ts) g = sub-cons (split-++ Γ₁ s) t ts g
+
+  sub-pair {Θ = Θ} {Δ₁ = Δ₁} {Ξ = Ξ} {Γ = Γ} (on-left {Ξ₁ = Ξ₁} s₁ p _) P Q g =
+    cast (flattenˡ Θ Γ Ξ₁ Δ₁ ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
+      ⦅ sub s₁ P g , Q ⦆
+  sub-pair {Γ₁ = Γ₁} {Ξ = Ξ} {Γ = Γ} (on-right {Θ₂ = Θ₂} s₂ q _) P Q g =
+    cast (flattenʳ Γ₁ Θ₂ Γ Ξ ∙ ap (λ Θ' → Θ' ++ Γ ++ Ξ) q)
+      ⦅ P , sub s₂ Q g ⦆
+
+  sub-match⊗ˡ {Θ = Θ} {Ψ = Ψ} {Δm = Δm} {Ξ = Ξ} {A = A} {B = B} {Γ = Γ}
+    (on-left {Ξ₁ = Ξ₁} s₁ p _) P Q g =
+    cast (flattenˡ Θ Γ Ξ₁ (Ψ ++ Δm) ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
+      (match⊗ {Γ = Θ ++ Γ ++ Ξ₁} {Δ = Δm} P
+        (cast (sym (flattenˡ Θ Γ Ξ₁ (A ∷ B ∷ Δm)))
+          (sub (split-++ˡ s₁ (A ∷ B ∷ Δm)) Q g)))
+  sub-match⊗ˡ {Ψ = Ψ} (on-right s' q _) P Q g =
+    sub-match⊗ʳ (split-++ Ψ s') q P Q g
+
+  sub-match⊗ʳ {Θ₂ = Θ₂} {Δm = Δm} {Γm = Γm} {Γ = Γ}
+    (on-left {Ξ₁ = Ξ₁} s₁ p _) q P Q g =
+    cast (flattenᵐ Γm Θ₂ Γ Ξ₁ Δm ∙ λ i → q i ++ Γ ++ p i)
+      (match⊗ {Γ = Γm} {Δ = Δm} (sub s₁ P g) Q)
+  sub-match⊗ʳ {Ψ = Ψ} {Ξ = Ξ} {Γm = Γm} {A = A} {B = B} {Γ = Γ}
+    (on-right {Θ₂ = Θ₃} s₂ q₂ _) q P Q g =
+    cast (bury Γm Ψ Θ₃ (Γ ++ Ξ) ∙ ap (_++ Γ ++ Ξ) (ap (Γm ++_) q₂ ∙ q))
+      (match⊗ {Γ = Γm} {Δ = Θ₃ ++ Γ ++ Ξ} P
+        (cast (sym (flattenʳ Γm (A ∷ B ∷ Θ₃) Γ Ξ))
+          (sub (split-++ʳ Γm (split-++ʳ (A ∷ B ∷ []) s₂)) Q g)))
+
+  sub-match𝟙ˡ {Θ = Θ} {Ψ = Ψ} {Δm = Δm} {Ξ = Ξ} {Γ = Γ}
+    (on-left {Ξ₁ = Ξ₁} s₁ p _) P Q g =
+    cast (flattenˡ Θ Γ Ξ₁ (Ψ ++ Δm) ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
+      (match𝟙 {Γ = Θ ++ Γ ++ Ξ₁} {Δ = Δm} P
+        (cast (sym (flattenˡ Θ Γ Ξ₁ Δm))
+          (sub (split-++ˡ s₁ Δm) Q g)))
+  sub-match𝟙ˡ {Ψ = Ψ} (on-right s' q _) P Q g =
+    sub-match𝟙ʳ (split-++ Ψ s') q P Q g
+
+  sub-match𝟙ʳ {Θ₂ = Θ₂} {Δm = Δm} {Γm = Γm} {Γ = Γ}
+    (on-left {Ξ₁ = Ξ₁} s₁ p _) q P Q g =
+    cast (flattenᵐ Γm Θ₂ Γ Ξ₁ Δm ∙ λ i → q i ++ Γ ++ p i)
+      (match𝟙 {Γ = Γm} {Δ = Δm} (sub s₁ P g) Q)
+  sub-match𝟙ʳ {Ψ = Ψ} {Ξ = Ξ} {Γm = Γm} {Γ = Γ}
+    (on-right {Θ₂ = Θ₃} s₂ q₂ _) q P Q g =
+    cast (bury Γm Ψ Θ₃ (Γ ++ Ξ) ∙ ap (_++ Γ ++ Ξ) (ap (Γm ++_) q₂ ∙ q))
+      (match𝟙 {Γ = Γm} {Δ = Θ₃ ++ Γ ++ Ξ} P
+        (cast (sym (flattenʳ Γm Θ₃ Γ Ξ))
+          (sub (split-++ʳ Γm s₂) Q g)))
+
+  sub-cons {Θ = Θ} {Δ₁ = Δ₁} {Ξ = Ξ} {Γ = Γ} (on-left {Ξ₁ = Ξ₁} s₁ p _) t ts g =
+    sp-cast (flattenˡ Θ Γ Ξ₁ Δ₁ ∙ ap (λ Ξ' → Θ ++ Γ ++ Ξ') p)
+      (sub s₁ t g ∷ ts)
+  sub-cons {Γ₁ = Γ₁} {Ξ = Ξ} {Γ = Γ} (on-right {Θ₂ = Θ₂} s₂ q _) t ts g =
+    sp-cast (flattenʳ Γ₁ Θ₂ Γ Ξ ∙ ap (λ Θ' → Θ' ++ Γ ++ Ξ) q)
+      (t ∷ sub-sp s₂ ts g)
 
   -- ==========================================================================
   -- The β/η-congruence (§2.4.2, p. 109).  Only the raw generating relation:
@@ -290,6 +332,13 @@ module Syntax {o h} (G : Multigraph o h) where
   data _≈ₛ_ : Sp Γ As → Sp Γ As → Type (o ⊔ h)
 
   data _≈_ where
+    -- equivalence closure (the set quotient would supply this anyway, but
+    -- having it inside _≈_ lets Tm-level proofs chain β/η steps, and gives
+    -- the reflexivity Quot-op₂ requires when descending sub)
+    ≈-refl  : {t : Tm Γ z} → t ≈ t
+    ≈-sym   : {t t' : Tm Γ z} → t ≈ t' → t' ≈ t
+    ≈-trans : {t t' t'' : Tm Γ z} → t ≈ t' → t' ≈ t'' → t ≈ t''
+
     -- congruence
     gen-cong : ∀ {B} {f : G.Hom As B} {ss ss' : Sp Γ As}
              → ss ≈ₛ ss' → gen f ss ≈ gen f ss'
