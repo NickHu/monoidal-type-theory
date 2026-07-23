@@ -128,6 +128,15 @@ signatures), which is why no file imports it.
   unsolved; later *uses* of the lemma then fail with reflexive-looking
   constraints `X = X : List Ty (blocked on _N)` reported far from the
   culprit.  Annotate: `∀ (Θ Γ : Ctx) → …`.
+- Named implicit arguments in clause LHS patterns (and constructor implicits
+  in patterns) must respect the order of first appearance in the signature /
+  constructor type — out-of-order named bindings give `[WrongHidingInLHS]`.
+- Around context-indexed syntax (Multicategory/Free*): pass cast/transport
+  paths EXPLICITLY (a path meta under `transp` blocks the unifier); pin
+  congruence endpoints (`≈-refl {t = P}`) and `match𝟙`'s `{Γ = …} {Δ = …}`
+  (its `Γ ++ Δ` index has no cons anchor); `∙-idr refl`-style arguments under
+  `ap` need pinning too — and such constraints can go ambiguous
+  *retroactively* as a file grows.
 
 ## Naming conventions
 
