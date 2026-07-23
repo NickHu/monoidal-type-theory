@@ -26,16 +26,8 @@ module Multicategory.Strictification.Equivalence
   {o h} (M : Premulticategory o h) (rep : Rep.is-representable M) where
 
   open Premulticategory M
-  open Strict M rep using (Str ; ⊗₀ ; ⊗-arr ; ⊗-arr-univ)
+  open Strict M rep using (Str ; Reindex ; ⊗₀ ; ⊗-arr ; ⊗-arr-univ)
   private module UR = Cr (Unary M)
-
-  -- The comparison functor: reindex `Unary M` along `⊗₀`.  On hom-sets it is the
-  -- identity (Str.Hom Γ Δ = Unary.Hom (⊗₀ Γ) (⊗₀ Δ) definitionally).
-  Reindex : Functor Str (Unary M)
-  Reindex .Functor.F₀      = ⊗₀
-  Reindex .Functor.F₁ f    = f
-  Reindex .Functor.F-id    = refl
-  Reindex .Functor.F-∘ f g = refl
 
   -- Fully faithful: the action on hom-sets is the identity map.
   Reindex-ff : is-fully-faithful Reindex

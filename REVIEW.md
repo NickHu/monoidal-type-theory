@@ -451,3 +451,34 @@ Implemented the previously-noted future-work item: the generic
   path-monoid on the object space acting naturally (predicate
   `is-strict-monoidal` = descent, constructor `from-path-monoid` = descent
   data suffices).  Also a further 1lab-upstreaming candidate.
+
+## Follow-up (session 2 cont.): J-elimination pass
+
+Replaced eight of the nine remaining direct uses of J with named,
+content-revealing arguments; exactly ONE J survives, deliberately:
+
+- `str-bridge` (Strictification) and `bridge` (Coherence): both are now
+  `ap-F₀-to-iso` — "functors send path→isos to path→isos" — at the
+  hom-identity functors `Reindex` and `Unwrap` respectively.  `Reindex`
+  moved from Equivalence.agda to Strictification.agda (its natural home,
+  next to Str); Equivalence and Coherence import it from there.
+- `path→iso-sym` (Instances/Monoidal): `≅-path (sym (path→to-sym C p))` —
+  isos agree when their .to legs do, and the leg fact is 1lab's.
+- `≅to-∘ₘ`, `restrict₃-α` (Strictification): the interval-application idiom —
+  a new `≅to-pathp` filler (one line via 1lab's `Hom-pathp-reflr`) composed
+  under the interval; `restrict₃-α` finishes with `idₘr` at a concrete
+  context (where the boundary is definitionally refl).
+- `restrict-α` (Strictification): restrict the *deforming* iso — a
+  `Hom-pathp-refll` filler from ≅to (ap ⊗₀ q) to the identity — under the
+  interval; at the far end restricting the identity is the universal arrow
+  (`restrict-id`), and `from-pathp⁻` reads off exactly the stated subst form.
+- `idr-assoc-coh` (Strictification): revealed as homotopy-naturality of
+  ++-idr (the homotopy `_++ [] ∼ id`), inverted and reassociated with
+  1Lab.Path.Reasoning's ∙-swapl.
+- `transp-decomp` + `subst-dom-cod` (Strictification): both are instances of
+  ONE new generic lemma `transport₂-split` (a transport of a two-index
+  family splits one index at a time, in either order — instantiated at Homₘ
+  and its flip).  This is the single surviving J in the codebase, kept
+  because "reduce to the definitional case" IS the content of that lemma.
+
+All roots typecheck; net −44 lines.  Remaining J census: 1 (transport₂-split).

@@ -3,9 +3,11 @@ open import Cat.Base
 open import Cat.Instances.Product
 open import Cat.Functor.Closed using (Curry)
 open import Cat.Functor.Bifunctor using (Bifunctor)
+import Cat.Functor.Base as FB
 open import Cat.Functor.Naturality
 open import Cat.Monoidal.Base
-open import Cat.Univalent using (path→iso; path→to-sym)
+open import Cat.Univalent using (path→iso; path→to-sym; Hom-pathp-refll; Hom-pathp-reflr)
+open import 1Lab.Path.Reasoning using (∙-swapl)
 import Cat.Morphism
 open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 
@@ -46,6 +48,14 @@ module Multicategory.Strictification
   Str .Precategory.idl         = U.idl
   Str .Precategory.assoc       = U.assoc
 
+  -- The reindexing made into a functor: identity on hom-sets, ⊗ on objects.
+  -- (Multicategory.Strictification.Equivalence shows it is an equivalence.)
+  Reindex : Functor Str (Unary M)
+  Reindex .Functor.F₀      = ⊗₀
+  Reindex .Functor.F₁ f    = f
+  Reindex .Functor.F-id    = refl
+  Reindex .Functor.F-∘ f g = refl
+
   -- Structural list-path coherences.  Every list-path reconciliation the
   -- strictification needs is between two paths built ONLY from ++-assoc/++-idr
   -- (refl on elements); they are equal by induction on the spine, for ANY
@@ -70,11 +80,16 @@ module Multicategory.Strictification
     assocₘ-flatten-nils []      Δ = ap sym (++-assoc-nil Δ [] ∙ ++-idr-nat Δ)
     assocₘ-flatten-nils (a ∷ Γ) Δ = ap (ap (a ∷_)) (assocₘ-flatten-nils Γ Δ)
 
-    -- ++-idr conjugated by an arbitrary list-path (triangle-style, by J).
+    -- ++-idr conjugated by an arbitrary list-path: homotopy-naturality of
+    -- ++-idr (as a homotopy _++ [] ∼ id), inverted and reassociated.
     idr-assoc-coh : {V W : List Obₘ} (a : V ≡ W)
                   → (a ∙ sym (++-idr W)) ∙ sym (ap (_++ []) a) ≡ sym (++-idr V)
-    idr-assoc-coh {V} = J (λ W a → (a ∙ sym (++-idr W)) ∙ sym (ap (_++ []) a) ≡ sym (++-idr V))
-                          (∙-idr (refl ∙ sym (++-idr V)) ∙ ∙-idl (sym (++-idr V)))
+    idr-assoc-coh {V} {W} a =
+        sym (∙-assoc a (sym (++-idr W)) (sym (ap (_++ []) a)))
+      ∙ sym (∙-swapl {p = sym a} {q = sym (++-idr V)}
+               ( sym (sym-∙ (++-idr V) a)
+               ∙ ap sym (homotopy-natural ++-idr a)
+               ∙ sym-∙ (ap (_++ []) a) (++-idr W) ))
 
     -- Mac Lane's pentagon for the ++-associator, at the spine level (α→
     -- direction; the α← direction needed by Monoidal-category's pentagon
@@ -566,27 +581,45 @@ module Multicategory.Strictification
   ≅from-to : {A B : Obₘ} (p : A ≡ B) → ≅from p ≡ ≅to (sym p)
   ≅from-to p = path→to-sym (Unary M) p
 
-  -- Composing a path→iso onto a multimap transports its codomain.
+  -- The tautological PathP underlying a path→iso: over q, the identity
+  -- deforms into ≅to q.  Composing a morphism (or any polymorphic operation)
+  -- onto this filler under the interval is how the codomain-transport facts
+  -- below are read off, with no path induction.
+  ≅to-pathp : {A B : Obₘ} (q : A ≡ B)
+            → PathP (λ i → U.Hom A (q i)) U.id (≅to q)
+  ≅to-pathp q = Hom-pathp-reflr (Unary M) (U.idr _)
+
+  -- Composing a path→iso onto a multimap transports its codomain: plug m
+  -- into ≅to's filler under the interval.
   ≅to-∘ₘ : {Γ : List Obₘ} {A B : Obₘ} (q : A ≡ B) (m : Homₘ Γ A)
          → _∘ₘ_ {Θ = []} {Ξ = []} (≅to q) m
            ≡ subst (λ z → Homₘ (Γ ++ []) z) q (_∘ₘ_ {Θ = []} {Ξ = []} idₘ m)
-  ≅to-∘ₘ {Γ} q m =
-    J (λ B q → _∘ₘ_ {Θ = []} {Ξ = []} (≅to q) m
-               ≡ subst (λ z → Homₘ (Γ ++ []) z) q (_∘ₘ_ {Θ = []} {Ξ = []} idₘ m))
-      ( ap (λ k → _∘ₘ_ {Θ = []} {Ξ = []} k m) ≅to-refl
-      ∙ sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = []} idₘ m)) )
-      q
+  ≅to-∘ₘ q m =
+    sym (from-pathp (λ i → _∘ₘ_ {Θ = []} {Ξ = []} (≅to-pathp q i) m))
 
-  -- Transport over a 2-variable Homₘ family decomposes into domain then codomain.
+  -- Transport bookkeeping: a transport of a two-index family along paths in
+  -- both indices may be performed one index at a time, in either order.
+  -- (The one genuinely path-inductive fact this file needs; stated for an
+  -- arbitrary family, instantiated at Homₘ and its flip below.)
+  private
+    transport₂-split
+      : ∀ {ℓa ℓb ℓf} {A : Type ℓa} {B : Type ℓb} (F : A → B → Type ℓf)
+        {x x' : A} {y y' : B} (p : x ≡ x') (q : y ≡ y') (m : F x y)
+      → transport (λ i → F (p i) (q i)) m
+        ≡ subst (F x') q (subst (λ a → F a y) p m)
+    transport₂-split F {x} {y = y} p q m =
+      J (λ x' p → transport (λ i → F (p i) (q i)) m
+                  ≡ subst (F x') q (subst (λ a → F a y) p m))
+        (ap (subst (F x) q) (sym (transport-refl m)))
+        p
+
+  -- Transport over the 2-variable Homₘ family decomposes into domain then
+  -- codomain, and the two one-sided substs commute.
   transp-decomp : {X X' : List Obₘ} {A A' : Obₘ}
                   (a : X ≡ X') (b : A ≡ A') (m : Homₘ X A)
                 → transport (λ i → Homₘ (a i) (b i)) m
                   ≡ subst (λ z → Homₘ X' z) b (subst (λ Ω → Homₘ Ω A) a m)
-  transp-decomp {X} {X'} {A} b0 b m =
-    J (λ X' a → transport (λ i → Homₘ (a i) (b i)) m
-                ≡ subst (λ z → Homₘ X' z) b (subst (λ Ω → Homₘ Ω A) a m))
-      (ap (subst (λ z → Homₘ X z) b) (sym (transport-refl m)))
-      b0
+  transp-decomp = transport₂-split Homₘ
 
   -- Expanding X to X++[] via the unitor iso, then the universal arrow of X,
   -- is the universal arrow of X++[].
@@ -623,15 +656,17 @@ module Multicategory.Strictification
         ∙ restrict₂-μ Y []
 
   -- Restricting the path→iso of q : A ≡ B recovers the universal arrow of B,
-  -- reindexed along q (by J; α reindexes ⊗-arr).
+  -- reindexed along q: over q the iso deforms to the identity (a
+  -- Hom-pathp-refll filler), restrict it under the interval, and at the far
+  -- end restricting the identity is the universal arrow.
   restrict-α : {A B : List Obₘ} (q : A ≡ B)
              → restrict {A} (≅to (ap ⊗₀ q))
                ≡ subst (λ Ω → Homₘ Ω (⊗₀ B)) (sym q) (⊗-arr B)
-  restrict-α {A} q =
-    J (λ B q → restrict {A} (≅to (ap ⊗₀ q))
-               ≡ subst (λ Ω → Homₘ Ω (⊗₀ B)) (sym q) (⊗-arr B))
-      (ap (restrict {A}) ≅to-refl ∙ restrict-id A ∙ sym (transport-refl (⊗-arr A)))
-      q
+  restrict-α {A} {B} q =
+    from-pathp⁻ ((λ i → restrict {Γ = q i} (domfill i)) ▷ restrict-id B)
+    where
+      domfill : PathP (λ i → U.Hom (⊗₀ (q i)) (⊗₀ B)) (≅to (ap ⊗₀ q)) U.id
+      domfill = Hom-pathp-refll (Unary M) (≅invl (ap ⊗₀ q))
 
   -- expand a, post-composed with the universal arrow, recovers a (reindexed).
   expand-arr : {Ω : List Obₘ} {z : Obₘ} (a : Homₘ Ω z)
@@ -763,12 +798,10 @@ module Multicategory.Strictification
               → restrict₃.to {Γ} {Δ} {Ε} {C'} (_∘ₘ_ {Θ = []} {Ξ = []} (≅to q) W)
                 ≡ subst (λ z → Homₘ (Γ ++ (Δ ++ Ε)) z) q (restrict₃.to {Γ} {Δ} {Ε} {C} W)
   restrict₃-α {Γ} {Δ} {Ε} {C} q W =
-    J (λ C' q → restrict₃.to {Γ} {Δ} {Ε} {C'} (_∘ₘ_ {Θ = []} {Ξ = []} (≅to q) W)
-                ≡ subst (λ z → Homₘ (Γ ++ (Δ ++ Ε)) z) q (restrict₃.to {Γ} {Δ} {Ε} W))
-      ( ap (restrict₃.to {Γ} {Δ} {Ε})
-           (ap (λ k → _∘ₘ_ {Θ = []} {Ξ = []} k W) ≅to-refl ∙ idₘr W)
-      ∙ sym (transport-refl _) )
-      q
+      sym (from-pathp (λ i → restrict₃.to {Γ} {Δ} {Ε}
+            (_∘ₘ_ {Θ = []} {Ξ = []} (≅to-pathp q i) W)))
+    ∙ ap (subst (λ z → Homₘ (Γ ++ (Δ ++ Ε)) z) q)
+         (ap (restrict₃.to {Γ} {Δ} {Ε}) (idₘr W))
 
   -- Split a binary restriction into a ternary one by plugging μ Δ Ε into the
   -- second (merged) slot.  Each algebraic move is one named PathP:
@@ -952,11 +985,9 @@ module Multicategory.Strictification
   subst-dom-cod : {X X' : List Obₘ} {A A' : Obₘ} (p : X ≡ X') (q : A ≡ A') (m : Homₘ X A)
     → subst (λ Ω → Homₘ Ω A') p (subst (λ z → Homₘ X z) q m)
       ≡ subst (λ z → Homₘ X' z) q (subst (λ Ω → Homₘ Ω A) p m)
-  subst-dom-cod {X} {X'} {A} {A'} p q m =
-    J (λ X' p → subst (λ Ω → Homₘ Ω A') p (subst (λ z → Homₘ X z) q m)
-                ≡ subst (λ z → Homₘ X' z) q (subst (λ Ω → Homₘ Ω A) p m))
-      (transport-refl _ ∙ ap (subst (λ z → Homₘ X z) q) (sym (transport-refl m)))
-      p
+  subst-dom-cod p q m =
+      sym (transport₂-split (λ z Ω → Homₘ Ω z) q p m)
+    ∙ transport₂-split Homₘ p q m
 
   -- The pure μ-hexagon (no morphisms): the two association orders of the triple
   -- comparison map agree up to the associator.  Both restrict to ⊗-arr; the
@@ -1225,16 +1256,14 @@ module Multicategory.Strictification
   -- ==========================================================================
 
   private
-    module SM = Cat.Morphism Str
-
-    -- Str's own path→iso along a List-level path p is Unary's path→iso along
-    -- ap ⊗₀ p (Str.Hom Γ Δ = Unary.Hom (⊗₀ Γ) (⊗₀ Δ)); bridged by J, both
-    -- ends landing on the identity at refl.
+    -- Str's path→iso along a List-level path p is Unary's path→iso along
+    -- ap ⊗₀ p: the general fact that functors send path→isos to path→isos
+    -- (ap-F₀-to-iso), applied to Reindex, whose action on morphisms is the
+    -- identity.
     str-bridge : {Γ Δ : List Obₘ} (p : Γ ≡ Δ)
                → path-to {C = Str} p ≡ ≅to (ap ⊗₀ p)
-    str-bridge {Γ} =
-      J (λ Δ p → path-to {C = Str} p ≡ ≅to (ap ⊗₀ p))
-        (ap SM._≅_.to (transport-refl SM.id-iso) ∙ sym ≅to-refl)
+    str-bridge p = sym (ap UMor._≅_.to (RX.ap-F₀-to-iso p))
+      where module RX = FB.F-iso Reindex
 
   module StrPM = from-path-monoid ⊗ᵇ []
     (to-natural-iso record

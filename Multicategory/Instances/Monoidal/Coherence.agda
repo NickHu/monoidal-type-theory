@@ -11,6 +11,7 @@ open import Cat.Functor.Properties
 open import Cat.Functor.Equivalence
 open import Cat.Functor.Bifunctor using (biiso→isoⁿ)
 open import Cat.Functor.Compose using (precompose₂ ; postcompose₂)
+import Cat.Functor.Base as FB
 import Cat.Monoidal.Functor as MonF
 open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 
@@ -62,9 +63,9 @@ module Multicategory.Instances.Monoidal.Coherence
 
   open Premulticategory Mᵣ using (_∘ₘ_ ; idₘ)
   open Strict Mᵣ rep using
-    (Str ; ⊗₀ ; ⊗-arr ; μ ; _⊗ₛ_ ; ⊗ₛ-μ ; restrict₂-equiv ; restrict₂-μ ; Str-monoidal
-    ; Str-is-strict ; ≅to ; ≅to-refl ; ≅from-to)
-  open StrEq Mᵣ rep using (Reindex ; Reindex-is-equivalence)
+    (Str ; Reindex ; ⊗₀ ; ⊗-arr ; μ ; _⊗ₛ_ ; ⊗ₛ-μ ; restrict₂-equiv ; restrict₂-μ
+    ; Str-monoidal ; Str-is-strict ; ≅to ; ≅from-to)
+  open StrEq Mᵣ rep using (Reindex-is-equivalence)
 
   private module MR = MonR M₀
 
@@ -383,9 +384,12 @@ module Multicategory.Instances.Monoidal.Coherence
   Cmp-hom : {X Y : Ob} → Hom (X ⊗ Unit) Y → Hom X Y
   Cmp-hom {X} m = m ∘ ρ→ X
 
+  -- Functors send path→isos to path→isos (ap-F₀-to-iso), applied to Unwrap,
+  -- whose object action is the identity (so ap F₀ r is definitionally r) and
+  -- whose morphism action is Cmp-hom.
   bridge : {X Y : Ob} (r : X ≡ Y) → Cmp-hom (≅to r) ≡ path→iso {C = C} r .to
-  bridge {X} = J (λ Y r → Cmp-hom (≅to r) ≡ path→iso {C = C} r .to)
-    (ap Cmp-hom ≅to-refl ∙ ρ≅ {X} .invr ∙ sym (ap (λ i → i .to) path→iso-refl))
+  bridge r = sym (ap (λ i → i .to) (UW.ap-F₀-to-iso r))
+    where module UW = FB.F-iso Unwrap
 
   -- The image of Str's strict associator is C's ⊗-context associativity iso.
   F₁-α→ : (A B C' : List Ob)

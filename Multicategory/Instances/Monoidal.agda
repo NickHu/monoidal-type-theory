@@ -5,7 +5,7 @@ open import Cat.Base
 open Cat.Base._=>_ using (is-natural)
 import Cat.Reasoning as Cr
 open import Cat.Monoidal.Base
-open import Cat.Univalent using (path→iso; Hom-transport; Hom-pathp-refll)
+open import Cat.Univalent using (path→iso; path→to-sym; Hom-transport; Hom-pathp-refll)
 open import Cat.Functor.Naturality
 import Cat.Functor.Base as FB
 import Cat.Bi.Reasoning
@@ -144,9 +144,10 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
   chain-∷ a {p = p} (chain i e) =
     chain (▶.F-map-iso i) (path→iso-ap-⊗ a (ap ⊗-context p) ∙ ap ▶.F-map-iso e)
 
+  -- Isos agree when their .to legs do; the .to of path→iso (sym p) is the
+  -- .from of path→iso p (1lab's path→to-sym).
   path→iso-sym : {A B : Ob} (p : A ≡ B) → path→iso (sym p) ≡ path→iso p Iso⁻¹
-  path→iso-sym = J (λ _ p → path→iso (sym p) ≡ path→iso p Iso⁻¹)
-    (path→iso-refl ∙ ≅-path refl ∙ sym (ap _Iso⁻¹ path→iso-refl))
+  path→iso-sym p = ≅-path (sym (path→to-sym C p))
 
   chain-sym : {Γ Δ : List Ob} {p : Γ ≡ Δ} → ⊗-chain p → ⊗-chain (sym p)
   chain-sym {p = p} (chain i e) =
