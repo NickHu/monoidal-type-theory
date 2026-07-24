@@ -76,3 +76,15 @@ split-over : {p q : Θ ≡ Θ'} {r s : Ξ ≡ Ξ'} {u v : Ρ ≡ Ρ'}
            → PathP (λ i → Split x (q i) (v i) (s i)) s₀ s₁
 split-over {x = x} α β γ {s₀} {s₁} co =
   transport (λ j → PathP (λ i → Split x (α j i) (γ j i) (β j i)) s₀ s₁) co
+
+-- Paths (and PathPs over context paths) land in the congruence.
+≈-of-path : {t t' : Tm Γ z} → t ≡ t' → t ≈ t'
+≈-of-path {t = t} p = subst (λ t' → t ≈ t') p ≈-refl
+
+pathp→≈ : {p : Ρ ≡ Γ} {t : Tm Ρ z} {t' : Tm Γ z}
+        → PathP (λ i → Tm (p i) z) t t' → cast p t ≈ t'
+pathp→≈ {p = p} P = ≈-of-path (from-pathp P)
+
+≈←pathp : {p : Ρ ≡ Γ} {t : Tm Ρ z} {t' : Tm Γ z}
+        → PathP (λ i → Tm (p i) z) t t' → t' ≈ cast p t
+≈←pathp P = ≈-sym (pathp→≈ P)
