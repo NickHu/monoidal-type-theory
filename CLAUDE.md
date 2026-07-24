@@ -48,12 +48,19 @@ Multicategory/Instances/Monoidal/Coherence.agda  Comparison = Unwrap F∘ Reinde
                                    ends with monoidal-strictification
 Multicategory/Free.agda            Shulman's simple type theory for monoidal
                                    categories (catlog Fig. 2.2) over a
-                                   Multigraph: intrinsic Tm/Sp syntax, the
-                                   structural Split slot witness, capture-free
-                                   substitution sub (= Fig. 2.3), β/η
-                                   congruence _≈_, quotient hom-sets.  Laws +
-                                   representability are roadmap; see
-                                   docs/shulman-stt.md
+                                   Multigraph: intrinsic Tm/Sp syntax, Split
+                                   slot witnesses, capture-free sub, β/η
+                                   congruence.  Free/* prove the four
+                                   substitution laws (Identity, Assoc,
+                                   Interchange, Congruence*), assemble
+                                   FMonCat G : Premulticategory (quotient
+                                   hom-sets), prove it representable
+                                   (Representable), and instantiate
+                                   Strictification: Free/Strict.agda is the
+                                   free STRICT monoidal category on a
+                                   multigraph.  Eval/Freeness: evaluation
+                                   into any representable multicategory
+                                   (Thm 2.4.10).  See docs/shulman-stt.md
 Monoidal/Strict.agda               is-strict-monoidal: tensor descends from a
                                    coherent path-monoid on the object type
                                    (path-level pentagon/triangle; free when Ob

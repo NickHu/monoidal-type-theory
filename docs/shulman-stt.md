@@ -120,3 +120,44 @@ reassociation paths (`flattenˡ/ʳ/ᵐ`, `bury`), per the repo discipline.
 Items 1–2 are mechanical but transport-heavy (comparable to the
 `Instances/Monoidal` law proofs); item 3 is short once 1–2 exist; item 4 is
 a paper's-worth of induction but routine.
+
+## Status (end of second pass)
+
+Everything through the free strict monoidal category is **done and
+machine-checked** (no postulates anywhere):
+
+- `Free/Kit`, `Free/SplitLemmas` — transport kit ("sub under the interval",
+  never J) and the split coherence pack; `Split-++` is now a *view with
+  soundness* (each branch carries a PathP reconstituting the analysed split),
+  and `sub` dispatches to named branch handlers, so proofs never fight
+  `with`-abstraction.
+- `Free/Identity`, `Free/Assoc`, `Free/Interchange` — Lemma 2.4.9 in full:
+  identity, associativity and interchange of substitution, as PathPs over
+  the same boundary paths as the `Premulticategory` record fields.
+- `Free/CongruenceLeft`, `Free/RedexStability`, `Free/CongruenceRight` —
+  `sub` respects `_≈_` on both sides; the β/η cases are standalone redex
+  stability lemmas (no induction hypothesis), each a composition of
+  assoc/interchange instances.
+- `Free/Multicategory` — `FMonCat G : Premulticategory`: hom-sets `Tm Γ z / ≈`,
+  composition `Quot-op₂` of `sub` at the canonical split; the four laws
+  descend along the composite-split coherences (`unbury-split`,
+  `slot₀/₁-split`) with `inc` applied under the interval.
+- `Free/Representable` — `FMonCat-rep : is-representable (FMonCat G)`:
+  `⦅var,var⦆`/`⋆` universal via the β/η round-trips, n-ary arrows by
+  induction with the new abstract `universal-∘ₘ` (Representable.agda).
+- `Free/Strict` — `FreeStrict(-monoidal, -is-strict)`: the **free strict
+  monoidal category on a multigraph**, by instantiating the existing
+  Hermida strictification at `FMonCat G`.
+- `Free/Eval` — evaluation into any representable premulticategory
+  (`Multigraph-hom↓`, `⟦_⟧ᵗ`, `eval`); `Multicategory/Functor.agda` defines
+  multifunctors.  The remaining piece of Theorem 2.4.10 is `Free/Freeness`
+  (in progress): `eval-sub` (evaluation maps substitution to `_∘ₘ_`),
+  `eval-≈` (β/η go to the universality equivalences), descent to
+  `Multifunctor (FMonCat G) M`, and uniqueness.
+
+Proof-engineering notes that made this tractable: the soundness-carrying
+view; handler-based `sub`; all reassociation paths structural cons-by-cons
+with named "δ-lemma" squares relating them; laws stated over composite
+splits so the record's `subst`-transports bridge via three small split
+coherences; `inc`/`sub`/`≈` applied under the interval instead of J,
+everywhere.
