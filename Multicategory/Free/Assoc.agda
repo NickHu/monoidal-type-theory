@@ -50,21 +50,6 @@ private
       j (i = i0) → ts
       j (i = i1) → q j
 
-  split-∙P : {Θ' Θ'' Ξ' Ξ'' Ρ' Ρ'' : Ctx}
-             {P : Θ ≡ Θ'} {P' : Θ' ≡ Θ''} {Q : Ξ ≡ Ξ'} {Q' : Ξ' ≡ Ξ''}
-             {R : Ρ ≡ Ρ'} {R' : Ρ' ≡ Ρ''}
-             {s₀ : Split x Θ Ρ Ξ} {s₁ : Split x Θ' Ρ' Ξ'} {s₂ : Split x Θ'' Ρ'' Ξ''}
-           → PathP (λ i → Split x (P i) (R i) (Q i)) s₀ s₁
-           → PathP (λ i → Split x (P' i) (R' i) (Q' i)) s₁ s₂
-           → PathP (λ i → Split x ((P ∙ P') i) ((R ∙ R') i) ((Q ∙ Q') i)) s₀ s₂
-  split-∙P {x = x} {P = P} {P' = P'} {Q = Q} {Q' = Q'} {R = R} {R' = R'}
-           {s₀ = s₀} {s₁ = s₁} {s₂ = s₂} p q i =
-    comp (λ j → Split x (∙-filler P P' j i) (∙-filler R R' j i) (∙-filler Q Q' j i))
-         (∂ i) λ where
-      j (j = i0) → p i
-      j (i = i0) → s₀
-      j (i = i1) → q j
-
 -- ==========================================================================
 -- One-dimensional path algebra.  All chains below are nested as
 -- a ∙ ((b ∙ c) ∙ d) (one leading segment, a bracketed core, one trailing
@@ -73,18 +58,8 @@ private
 -- ==========================================================================
 
 private
-  ∙-ap₂ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {v w x' : X}
-          (p : v ≡ w) (q : w ≡ x')
-        → ap f p ∙ ap f q ≡ ap f (p ∙ q)
-  ∙-ap₂ f p q = sym (ap-∙ f p q)
-
-  -- Push a composite equation under an ap (cons step for two-segment chains).
-  ap-∙-step : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {a b c : X}
-              {p : a ≡ b} {q : b ≡ c} {r : a ≡ c}
-            → p ∙ q ≡ r → ap f p ∙ ap f q ≡ ap f r
-  ap-∙-step f {p = p} {q = q} eq = ∙-ap₂ f p q ∙ ap (ap f) eq
-
   -- The four-segment shape: cons step of every big square below.
+  -- (ap-∙-step, the two-segment cons step, comes from Kit.)
   ∙-ap-sh : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {v w x' y' z' : X}
             (a : v ≡ w) (b : w ≡ x') (c : x' ≡ y') (d : y' ≡ z')
           → ap f a ∙ ((ap f b ∙ ap f c) ∙ ap f d)
@@ -103,16 +78,6 @@ private
           ≡ ap (a ∷_) t
   sq-step a p q r s eq =
     ∙-ap-sh (a ∷_) p q r s ∙ ap (ap (a ∷_)) eq
-
-  -- Collapse the ∙ refl left over by a view computation's p/q component.
-  cast-∙idr : ∀ {z' : Ty} {Ρ' Γ' : Ctx} (p : Ρ' ≡ Γ') (t : Tm Ρ' z')
-            → cast (p ∙ refl) t ≡ cast p t
-  cast-∙idr p t = ap (λ ρ → cast ρ t) (∙-idr p)
-
-  sp-cast-∙idr : ∀ {As' : List (Multigraph.Ob G)} {Ρ' Γ' : Ctx}
-                 (p : Ρ' ≡ Γ') (ts : Sp Ρ' As')
-               → sp-cast (p ∙ refl) ts ≡ sp-cast p ts
-  sp-cast-∙idr p ts = ap (λ ρ → sp-cast ρ ts) (∙-idr p)
 
 -- ==========================================================================
 -- Split co-squares: the outer split (the y-slot, riding inside g's context

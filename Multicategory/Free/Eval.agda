@@ -10,13 +10,13 @@ import Multicategory.Representable as Rep
 -- Evaluation of the simple type theory of Multicategory.Free into an
 -- arbitrary representable premulticategory M: the map underlying the
 -- freeness theorem (Shulman, Theorem 2.4.10).  Definitions only; the laws
--- (eval maps sub to _∘ₘ_, eval respects _≈_, descent to Homₘ, uniqueness)
--- are future work.
+-- (eval maps sub to _∘ₘ_, eval respects _≈_, descent to Homₘ) are proved in
+-- Free/Freeness, and uniqueness in Free/Uniqueness.
 --
 -- Transport discipline (as everywhere in this development): every context
 -- reconciliation is a NAMED structural path, cons-by-cons or a definitional
 -- alias of a structural 1lab lemma — never an inline ∙-chain — so that the
--- upcoming law proofs can reason through them.
+-- law proofs can reason through them.
 
 module Multicategory.Free.Eval
   {o h o' h'} (G : Multigraph o h)

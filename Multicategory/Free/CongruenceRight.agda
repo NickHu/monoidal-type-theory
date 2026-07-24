@@ -1,6 +1,5 @@
 open import 1Lab.Prelude hiding (id ; _∘_)
 open import Data.List
-open import Data.List.Properties
 
 open import Multicategory.Free
 
@@ -23,12 +22,7 @@ private variable
   Γ Δ Θ Ξ Ψ Ρ Γ₁ Δ₁ Γm Δm Θ₂ : Ctx
   As : List G.Ob
 
--- The spine analogue of Kit's cast-≈.
-private
-  sp-cast-≈ₛ : {ts ts' : Sp Ρ As} (p : Ρ ≡ Γ)
-             → ts ≈ₛ ts' → sp-cast p ts ≈ₛ sp-cast p ts'
-  sp-cast-≈ₛ {ts = ts} {ts' = ts'} p e =
-    transport (λ i → sp-cast-filler p ts i ≈ₛ sp-cast-filler p ts' i) e
+-- (The spine analogue of cast-≈, sp-cast-≈ₛ, comes from Kit.)
 
 -- ==========================================================================
 -- The mutual induction on the congruence derivation.

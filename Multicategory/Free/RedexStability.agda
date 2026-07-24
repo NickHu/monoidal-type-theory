@@ -73,23 +73,13 @@ private
 β𝟙-sub {Γm = Γm} s N g = β𝟙-sub-handler (split-++ Γm s) N g
 
 -- ==========================================================================
--- Shared helpers for the η/β⊗ lemmas: one-dimensional path algebra (copied
--- from Identity's private block), reconciliation of canonical splits with
--- the weakenings sub-interchange/sub-assoc produce, and coherences between
--- the reassociation paths of sub's handlers and the law boundaries.
+-- Shared helpers for the η/β⊗ lemmas: reconciliation of canonical splits
+-- with the weakenings sub-interchange/sub-assoc produce, and coherences
+-- between the reassociation paths of sub's handlers and the law boundaries
+-- (the one-dimensional path algebra ap-∙-step / diag-∙ comes from Kit).
 -- ==========================================================================
 
 private
-  ap-∙-step : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {a b c : X}
-              {p : a ≡ b} {q : b ≡ c} {r : a ≡ c}
-            → p ∙ q ≡ r → ap f p ∙ ap f q ≡ ap f r
-  ap-∙-step f {p = p} {q = q} eq = sym (ap-∙ f p q) ∙ ap (ap f) eq
-
-  diag-∙ : ∀ {ℓa ℓb ℓc} {X : Type ℓa} {Y : Type ℓb} {Z : Type ℓc}
-           (f : X → Y → Z) {a a' : X} {b b' : Y} (q : a ≡ a') (p : b ≡ b')
-         → (λ i → f (q i) (p i)) ≡ (λ i → f a (p i)) ∙ (λ i → f (q i) b')
-  diag-∙ f q p = ∙-unique _ λ i j → f (q (i ∧ j)) (p j)
-
   -- Every split is the canonical one, over its own witnessed path.
   split-canon : ∀ {x : Ty} {Θ Ρ Ξ : Ctx} (s : Split x Θ Ρ Ξ)
               → PathP (λ i → Split x Θ (split-path s i) Ξ) (split-here Θ x Ξ) s

@@ -3,7 +3,6 @@ open import Data.List
 open import Data.List.Properties
 open import Data.Set.Coequaliser
 
-open import Multicategory
 open import Multicategory.Free
 import Multicategory.Representable as Rep
 

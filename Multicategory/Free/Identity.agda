@@ -17,61 +17,10 @@ private variable
   x z A B C : Ty
   Γ Δ Θ Ξ Ψ Ρ Λ Μ Κ : Ctx
 
--- ==========================================================================
--- One-dimensional path algebra.  The view's soundness fields are squares
--- whose moving edge is the p/q boundary path; here we convert them into
--- equalities between composite boundary paths.  These are coherences
--- BETWEEN structural paths, so ∙-composites are fine inside them.
--- ==========================================================================
-
-private
-  -- A square with constant right edge commutes: L ∙ v ≡ u.
-  square→∙ˡ : ∀ {ℓ} {X : Type ℓ} {a b c : X} {L : a ≡ b} {u : a ≡ c} {v : b ≡ c}
-            → PathP (λ k → L k ≡ c) u v → L ∙ v ≡ u
-  square→∙ˡ {u = u} sq = square→commutes sq ∙ ∙-idr u
-
-  -- Move a composite equation to the other side of an inverse.
-  flip-cancel : ∀ {ℓ} {X : Type ℓ} {a b c : X} (p : a ≡ b) {d : a ≡ c} {e : b ≡ c}
-              → p ∙ e ≡ d → sym p ∙ d ≡ e
-  flip-cancel p θ = ap (sym p ∙_) (sym θ) ∙ ∙-cancell p _
-
-  -- Absorb one soundness square into a flatten-style composite: given the
-  -- co-square of the view (u ⇝ v over the moving edge w) and the δ-lemma
-  -- for the flatten path F, the whole cast boundary composed with the
-  -- goal's base path v is the constructor's base path r.
-  θ-step : ∀ {ℓ} {X : Type ℓ} {a b c d' : X} (F : a ≡ b)
-           {w : b ≡ c} {v : c ≡ d'} {u : b ≡ d'} {r : a ≡ d'}
-         → PathP (λ k → w k ≡ d') u v
-         → F ∙ u ≡ r
-         → (F ∙ w) ∙ v ≡ r
-  θ-step F {w = w} {v = v} sq δ =
-    sym (∙-assoc F w v) ∙ ap (F ∙_) (square→∙ˡ sq) ∙ δ
-
-  -- Same, absorbing two nested soundness squares (two-level match views).
-  θ-step₂ : ∀ {ℓ} {X : Type ℓ} {a b c c' d' : X} (F : a ≡ b)
-            {w₂ : b ≡ c} {w₁ : c ≡ c'} {v : c' ≡ d'}
-            {m₂ : c ≡ d'} {u : b ≡ d'} {r : a ≡ d'}
-          → PathP (λ k → w₁ k ≡ d') m₂ v
-          → PathP (λ k → w₂ k ≡ d') u m₂
-          → F ∙ u ≡ r
-          → (F ∙ (w₂ ∙ w₁)) ∙ v ≡ r
-  θ-step₂ F {w₂ = w₂} {w₁ = w₁} {v = v} sq₁ sq₂ δ =
-    sym (∙-assoc F (w₂ ∙ w₁) v)
-    ∙ ap (F ∙_) (sym (∙-assoc w₂ w₁ v) ∙ ap (w₂ ∙_) (square→∙ˡ sq₁) ∙ square→∙ˡ sq₂)
-    ∙ δ
-
-  -- Push a composite equation under an ap (the cons step of every δ-lemma
-  -- below).  p, q, r are implicit so the recursive call's type pins them.
-  ap-∙-step : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {a b c : X}
-              {p : a ≡ b} {q : b ≡ c} {r : a ≡ c}
-            → p ∙ q ≡ r → ap f p ∙ ap f q ≡ ap f r
-  ap-∙-step f {p = p} {q = q} eq = sym (ap-∙ f p q) ∙ ap (ap f) eq
-
-  -- The diagonal of a two-parameter family is the composite of its edges.
-  diag-∙ : ∀ {ℓa ℓb ℓc} {X : Type ℓa} {Y : Type ℓb} {Z : Type ℓc}
-           (f : X → Y → Z) {a a' : X} {b b' : Y} (q : a ≡ a') (p : b ≡ b')
-         → (λ i → f (q i) (p i)) ≡ (λ i → f a (p i)) ∙ (λ i → f (q i) b')
-  diag-∙ f q p = ∙-unique _ λ i j → f (q (i ∧ j)) (p j)
+-- The one-dimensional path algebra (square→∙ˡ, flip-cancel, θ-step,
+-- θ-step₂, ap-∙-step, diag-∙) lives in Kit: the view's soundness fields are
+-- squares whose moving edge is the p/q boundary path, and those combinators
+-- convert them into equalities between composite boundary paths.
 
 -- ==========================================================================
 -- Cast eliminators: peel a cast off an endpoint of a Tm/Sp PathP, moving

@@ -23,19 +23,12 @@ private variable
   Γ Δ Θ Ξ Ψ Ρ Γ₁ Δ₁ Γm Δm Θ₂ : Ctx
   As : List G.Ob
 
--- Reflexivity of the spine congruence, cons-by-cons.
+-- Reflexivity of the spine congruence, cons-by-cons.  (The spine analogue
+-- of cast-≈, sp-cast-≈ₛ, comes from Kit.)
 private
   ≈ₛ-refl : (ts : Sp Γ As) → ts ≈ₛ ts
   ≈ₛ-refl []       = nil
   ≈ₛ-refl (t ∷ ts) = cons ≈-refl (≈ₛ-refl ts)
-
--- The spine analogue of Kit's cast-≈: _≈ₛ_ transported along the two
--- sp-cast fillers.
-private
-  sp-cast-≈ₛ : {ts ts' : Sp Ρ As} (p : Ρ ≡ Γ)
-             → ts ≈ₛ ts' → sp-cast p ts ≈ₛ sp-cast p ts'
-  sp-cast-≈ₛ {ts = ts} {ts' = ts'} p e =
-    transport (λ i → sp-cast-filler p ts i ≈ₛ sp-cast-filler p ts' i) e
 
 -- ==========================================================================
 -- The mutual induction, one lemma per branch handler of sub.

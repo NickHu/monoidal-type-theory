@@ -4,7 +4,6 @@ open import Data.List.Properties
 
 open import Multicategory
 open import Multicategory.Free
-open import Multicategory.Functor using (map-++₂)
 import Multicategory.Representable as Rep
 import Multicategory.Free.Eval as EvalMod
 
@@ -102,46 +101,8 @@ hom-∙P {w = w} {P = P} {Q = Q} {f = f} {g = g} {k = k} p q i =
     j (i = i0) → f
     j (i = i1) → q j
 
--- One-dimensional path algebra, verbatim from Identity.agda (coherences
--- BETWEEN structural paths, so ∙-composites are fine inside them).
-private
-  square→∙ˡ : ∀ {ℓ} {X : Type ℓ} {a b c : X} {L : a ≡ b} {u' : a ≡ c} {v' : b ≡ c}
-            → PathP (λ k → L k ≡ c) u' v' → L ∙ v' ≡ u'
-  square→∙ˡ {u' = u'} sq = square→commutes sq ∙ ∙-idr u'
-
-  flip-cancel : ∀ {ℓ} {X : Type ℓ} {a b c : X} (p : a ≡ b) {d : a ≡ c} {e : b ≡ c}
-              → p ∙ e ≡ d → sym p ∙ d ≡ e
-  flip-cancel p θ = ap (sym p ∙_) (sym θ) ∙ ∙-cancell p _
-
-  θ-step : ∀ {ℓ} {X : Type ℓ} {a b c d' : X} (F : a ≡ b)
-           {w' : b ≡ c} {v' : c ≡ d'} {u' : b ≡ d'} {r : a ≡ d'}
-         → PathP (λ k → w' k ≡ d') u' v'
-         → F ∙ u' ≡ r
-         → (F ∙ w') ∙ v' ≡ r
-  θ-step F {w' = w'} {v' = v'} sq δ =
-    sym (∙-assoc F w' v') ∙ ap (F ∙_) (square→∙ˡ sq) ∙ δ
-
-  θ-step₂ : ∀ {ℓ} {X : Type ℓ} {a b c c' d' : X} (F : a ≡ b)
-            {w₂ : b ≡ c} {w₁ : c ≡ c'} {v' : c' ≡ d'}
-            {m₂ : c ≡ d'} {u' : b ≡ d'} {r : a ≡ d'}
-          → PathP (λ k → w₁ k ≡ d') m₂ v'
-          → PathP (λ k → w₂ k ≡ d') u' m₂
-          → F ∙ u' ≡ r
-          → (F ∙ (w₂ ∙ w₁)) ∙ v' ≡ r
-  θ-step₂ F {w₂ = w₂} {w₁ = w₁} {v' = v'} sq₁ sq₂ δ =
-    sym (∙-assoc F (w₂ ∙ w₁) v')
-    ∙ ap (F ∙_) (sym (∙-assoc w₂ w₁ v') ∙ ap (w₂ ∙_) (square→∙ˡ sq₁) ∙ square→∙ˡ sq₂)
-    ∙ δ
-
-  ap-∙-step : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {a b c : X}
-              {p : a ≡ b} {q : b ≡ c} {r : a ≡ c}
-            → p ∙ q ≡ r → ap f p ∙ ap f q ≡ ap f r
-  ap-∙-step f {p = p} {q = q} eq = sym (ap-∙ f p q) ∙ ap (ap f) eq
-
-  diag-∙ : ∀ {ℓa ℓb ℓc} {X : Type ℓa} {Y : Type ℓb} {Z : Type ℓc}
-           (f : X → Y → Z) {a a' : X} {b b' : Y} (q : a ≡ a') (p : b ≡ b')
-         → (λ i → f (q i) (p i)) ≡ (λ i → f a (p i)) ∙ (λ i → f (q i) b')
-  diag-∙ f q p = ∙-unique _ λ i j → f (q (i ∧ j)) (p j)
+-- The one-dimensional path algebra (square→∙ˡ, flip-cancel, θ-step,
+-- θ-step₂, ap-∙-step, diag-∙) comes from Kit.
 
 -- Cast eliminators: peel a castₘ (or an eval'd syntactic cast) off an
 -- endpoint of a Homₘ PathP, moving the base path by an α given in either

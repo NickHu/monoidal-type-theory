@@ -56,11 +56,17 @@ Multicategory/Free.agda            Shulman's simple type theory for monoidal
                                    FMonCat G : Premulticategory (quotient
                                    hom-sets), prove it representable
                                    (Representable), and instantiate
-                                   Strictification: Free/Strict.agda is the
-                                   free STRICT monoidal category on a
-                                   multigraph.  Eval/Freeness: evaluation
-                                   into any representable multicategory
-                                   (Thm 2.4.10).  See docs/shulman-stt.md
+                                   Strictification: Free/Strict.agda is a
+                                   strict monoidal category strictifying
+                                   FMonCat G (morally the free monoidal
+                                   category; no universal property proven —
+                                   strict 1-categorical freeness would fail:
+                                   its objects are all contexts List Ty, not
+                                   lists of generators).  Eval/Freeness:
+                                   evaluation into any representable
+                                   multicategory (Thm 2.4.10); Uniqueness:
+                                   the extension is unique.  See
+                                   docs/shulman-stt.md
 Monoidal/Strict.agda               is-strict-monoidal: tensor descends from a
                                    coherent path-monoid on the object type
                                    (path-level pentagon/triangle; free when Ob

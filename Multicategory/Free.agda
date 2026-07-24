@@ -29,9 +29,9 @@ module Multicategory.Free where
 --
 -- The β/η-congruence _≈_ closes the file; quotienting Tm by it yields the
 -- hom-sets of the free representable multicategory FMonCat G (the syntactic
--- multicategory of Theorem 2.4.10).  The multicategory laws for `sub` and
--- the universality of ⦅var,var⦆/⋆ are future work; see the module comment
--- at the end for the roadmap.
+-- multicategory of Theorem 2.4.10).  The multicategory laws for `sub`, the
+-- universality of ⦅var,var⦆/⋆, and freeness are all proved in the Free/*
+-- modules; see the module comment at the end for the map.
 
 private variable
   o h : Level
@@ -386,25 +386,17 @@ module Syntax {o h} (G : Multigraph o h) where
   idₘ : Homₘ (z ∷ []) z
   idₘ = inc var
 
-  -- Roadmap (not yet formalised):
-  --  1. sub respects _≈_ in both arguments (mutual induction with sub-sp;
-  --     needs cast-≈ : t ≈ t' → cast p t ≈ cast p t' transported along p),
-  --     so sub descends to _∘ₘ_ : Homₘ (Θ ++ x ∷ Ξ) z → Homₘ Γ x →
-  --     Homₘ (Θ ++ Γ ++ Ξ) z via Quot-op₂.
-  --  2. The Premulticategory laws for sub: idₘl/idₘr are near-immediate
-  --     (the var clause is a transport-filler); assocₘ and interchangeₘ are
-  --     Lemma 2.4.9's associativity/interchange, by the same induction as
-  --     sub with the boundary transports reconciled via ∘ₘ-subst-style
-  --     lemmas.  This yields FMonCat G : Premulticategory.
-  --  3. Representability: ⦅var,var⦆ and ⋆ are universal — the inverse to
-  --     (- ∘ₘ ⦅var,var⦆) is match⊗(var, -), with the round trips exactly β⊗
-  --     and η⊗ (and likewise for 𝟙); n-ary universal arrows by induction on
-  --     the context, giving Rep.is-representable (FMonCat G).  Then
-  --     Multicategory.Strictification applied to FMonCat G is the *free
-  --     strict monoidal category* on G, and Instances/Monoidal/Coherence's
-  --     comparison machinery gives the free monoidal category story.
-  --  4. Freeness (Theorem 2.4.10): for M a representable multicategory and
-  --     P : G → M a multigraph map, extend by recursion on Tm/Sp, prove it
-  --     maps sub to _∘ₘ_ (induction), then that it respects _≈_ (β/η go to
-  --     the universality equivalences), descend to Homₘ, and prove unique
-  --     such extension by induction.
+  -- Where the rest of the development lives (all formalised):
+  --  1. sub respects _≈_ in both arguments — Free/CongruenceLeft,
+  --     Free/CongruenceRight (β/η cases: Free/RedexStability) — so sub
+  --     descends to _∘ₘ_ via Quot-op₂.
+  --  2. The Premulticategory laws for sub — Free/Identity, Free/Assoc,
+  --     Free/Interchange — assembled into FMonCat G : Premulticategory in
+  --     Free/Multicategory (on the shared kit Free/Kit, Free/SplitLemmas).
+  --  3. Representability of FMonCat G (⦅var,var⦆/⋆ universal via the β/η
+  --     round-trips, n-ary arrows by induction) — Free/Representable;
+  --     Free/Strict feeds it through Multicategory.Strictification.
+  --  4. Freeness (Theorem 2.4.10): evaluation into any representable
+  --     premulticategory — Free/Eval; it maps sub to _∘ₘ_, respects _≈_,
+  --     and descends to a multifunctor — Free/Freeness; uniqueness of the
+  --     extension — Free/Uniqueness.

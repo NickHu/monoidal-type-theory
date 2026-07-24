@@ -142,11 +142,7 @@ view² (a ∷ Γ₁) (there s₁) s₂ = view²-step (view² Γ₁ s₁ s₂)
 -- base-path square below is one of these followed by ap (ap (a ∷_)) of the
 -- inductive hypothesis).
 private
-  ∙-ap₂ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {v w x : X}
-          (p₁ : v ≡ w) (p₂ : w ≡ x)
-        → ap f p₁ ∙ ap f p₂ ≡ ap f (p₁ ∙ p₂)
-  ∙-ap₂ f p₁ p₂ = sym (ap-∙ f p₁ p₂)
-
+  -- (∙-ap₂, the two-segment distribution, comes from Kit.)
   ∙-ap₃ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {v w x y : X}
           (p₁ : v ≡ w) (p₂ : w ≡ x) (p₃ : x ≡ y)
         → (ap f p₁ ∙ ap f p₂) ∙ ap f p₃ ≡ ap f ((p₁ ∙ p₂) ∙ p₃)
@@ -176,14 +172,8 @@ flattenʳ≡ : ∀ (Γ₁ Θ₂ Γ Ξ : Ctx)
 flattenʳ≡ []       Θ₂ Γ Ξ = refl
 flattenʳ≡ (a ∷ Γ₁) Θ₂ Γ Ξ = ap (ap (a ∷_)) (flattenʳ≡ Γ₁ Θ₂ Γ Ξ)
 
--- Collapse the ∙ refl left by the p-component of a view computation.
-cast-∙idr : ∀ {z : Ty} {Ρ Γ' : Ctx} (p : Ρ ≡ Γ') (t : Tm Ρ z)
-          → cast (p ∙ refl) t ≡ cast p t
-cast-∙idr p t = ap (λ ρ → cast ρ t) (∙-idr p)
-
-sp-cast-∙idr : ∀ {As : List G.Ob} {Ρ Γ' : Ctx} (p : Ρ ≡ Γ') (ts : Sp Ρ As)
-             → sp-cast (p ∙ refl) ts ≡ sp-cast p ts
-sp-cast-∙idr p ts = ap (λ ρ → sp-cast ρ ts) (∙-idr p)
+-- (cast-∙idr / sp-cast-∙idr, collapsing the ∙ refl left by the p-component
+-- of a view computation, come from Kit.)
 
 -- ==========================================================================
 -- §4  Split squares: PathP's of splits over the flatten paths.  All are
