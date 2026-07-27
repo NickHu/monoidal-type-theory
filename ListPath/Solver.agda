@@ -189,6 +189,15 @@ module NbE {o} (X : Type o) where
                   → PExp ((E₁ ⊕ E₃) ⊕ E₄) (E₁ ⊕ (E₃ ⊕ E₄))
     bury-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
               → PExp (E₁ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ E₃) ⊕ E₄)
+    -- cons-scope degenerate instances: ++-assoc / flattenʳ with a 2-cons
+    -- middle argument (the ⊗-binder telescope).  Endpoint types carry the
+    -- cons HOISTED over the ⊕, which is where the plain generators clash.
+    assoc-cons₂ᵖ : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ : LExp)
+                 → PExp ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃)
+                        (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃)))
+    flattenʳ-cons₂ᵖ : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ E₄ : LExp)
+                    → PExp (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃ ⊕ E₄)))
+                           ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃ ⊕ E₄)
 
   infixr 30 _∙ᵖ_
   infix 34 _◁ᵖ_
@@ -215,6 +224,10 @@ module NbE {o} (X : Type o) where
   ⟦ pivotᵖ E₁ E₂ E₃ E₄ ⟧ᵖ       = pivot ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
   ⟦ flattenˡ-nilᵖ E₁ E₃ E₄ ⟧ᵖ   = flattenˡ ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
   ⟦ bury-nilᵖ E₁ E₃ E₄ ⟧ᵖ       = bury ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+  ⟦ assoc-cons₂ᵖ E₁ a b E₂ E₃ ⟧ᵖ =
+    ++-assoc ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ
+  ⟦ flattenʳ-cons₂ᵖ E₁ a b E₂ E₃ E₄ ⟧ᵖ =
+    flattenʳ ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
 
   -- ==========================================================================
   -- §3  The nf-level residue.  Thanks to eval's accumulator, every pure
@@ -245,6 +258,8 @@ module NbE {o} (X : Type o) where
   flatκ (pivotᵖ E₁ E₂ E₃ E₄) κ = refl
   flatκ (flattenˡ-nilᵖ E₁ E₃ E₄) κ = refl
   flatκ (bury-nilᵖ E₁ E₃ E₄) κ = refl
+  flatκ (assoc-cons₂ᵖ E₁ a b E₂ E₃) κ = refl
+  flatκ (flattenʳ-cons₂ᵖ E₁ a b E₂ E₃ E₄) κ = refl
 
   flat : PExp E₁ E₂ → nf E₁ ≡ nf E₂
   flat P = flatκ P []
@@ -662,6 +677,49 @@ module NbE {o} (X : Type o) where
   sound-bury-nil E₁ E₃ E₄ κ =
     sq-cast (ap (ap (_++ κ)) (sym (bury-nil≡ ⟦ E₁ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ)))
       (λ i → sound-assoc E₁ E₃ E₄ κ (~ i))
+
+  private
+    -- The two spellings of a cons-headed append, at the normκ level: a
+    -- chain OF ap-images equals the ap-image OF the chain (ap-∙ thrice).
+    normκ-cons₂
+      : ∀ (a b : X) (E F : LExp) (κ : List X)
+      → normκ ((a ∷ᵉ b ∷ᵉ E) ⊕ F) κ ≡ normκ (a ∷ᵉ b ∷ᵉ (E ⊕ F)) κ
+    normκ-cons₂ a b E F κ =
+      sym ( ap-∙ f p₁ (p₂ ∙ (p₃ ∙ refl))
+          ∙ ap (ap f p₁ ∙_) (ap-∙ f p₂ (p₃ ∙ refl))
+          ∙ ap (λ z → ap f p₁ ∙ (ap f p₂ ∙ z)) (ap-∙ f p₃ refl) )
+      where
+        f : List X → List X
+        f l = a ∷ b ∷ l
+        p₁ = ++-assoc ⟦ E ⟧ᵉ ⟦ F ⟧ᵉ κ
+        p₂ = ap (⟦ E ⟧ᵉ ++_) (normκ F κ)
+        p₃ = normκ E (eval F κ)
+
+  sound-assoc-cons₂
+    : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ : LExp) (κ : List X)
+    → PathP (λ i → ap (_++ κ) (++-assoc ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ) i
+                 ≡ eval E₁ (a ∷ b ∷ eval E₂ (eval E₃ κ)))
+        (normκ ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃) κ)
+        (normκ (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃))) κ)
+  sound-assoc-cons₂ E₁ a b E₂ E₃ κ =
+    sound-assoc E₁ (a ∷ᵉ b ∷ᵉ E₂) E₃ κ
+    ▷ ap (λ z → ++-assoc ⟦ E₁ ⟧ᵉ (a ∷ b ∷ (⟦ E₂ ⟧ᵉ ++ ⟦ E₃ ⟧ᵉ)) κ
+              ∙ (ap (⟦ E₁ ⟧ᵉ ++_) z
+              ∙ (normκ E₁ (a ∷ b ∷ eval E₂ (eval E₃ κ)) ∙ refl)))
+        (normκ-cons₂ a b E₂ E₃ κ)
+
+  sound-flattenʳ-cons₂
+    : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ E₄ : LExp) (κ : List X)
+    → PathP (λ i → ap (_++ κ) (flattenʳ ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ) i
+                 ≡ eval E₁ (a ∷ b ∷ eval E₂ (eval E₃ (eval E₄ κ))))
+        (normκ (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃ ⊕ E₄))) κ)
+        (normκ ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃ ⊕ E₄) κ)
+  sound-flattenʳ-cons₂ E₁ a b E₂ E₃ E₄ κ =
+    ap (λ z → ++-assoc ⟦ E₁ ⟧ᵉ (a ∷ b ∷ (⟦ E₂ ⟧ᵉ ++ ⟦ E₃ ⟧ᵉ ++ ⟦ E₄ ⟧ᵉ)) κ
+            ∙ (ap (⟦ E₁ ⟧ᵉ ++_) z
+            ∙ (normκ E₁ (a ∷ b ∷ eval E₂ (eval E₃ (eval E₄ κ))) ∙ refl)))
+       (sym (normκ-cons₂ a b E₂ (E₃ ⊕ E₄) κ))
+    ◁ sound-flattenʳ E₁ (a ∷ᵉ b ∷ᵉ E₂) E₃ E₄ κ
   -- ---- the induction ------------------------------------------------------
 
   soundκ : (P : PExp E₁ E₂) (κ : List X)
@@ -721,6 +779,8 @@ module NbE {o} (X : Type o) where
   soundκ (pivotᵖ E₁' E₂' E₃' E₄') κ = sound-pivot E₁' E₂' E₃' E₄' κ
   soundκ (flattenˡ-nilᵖ E₁' E₃' E₄') κ = sound-flattenˡ-nil E₁' E₃' E₄' κ
   soundκ (bury-nilᵖ E₁' E₃' E₄') κ = sound-bury-nil E₁' E₃' E₄' κ
+  soundκ (assoc-cons₂ᵖ E₁' a b E₂' E₃') κ = sound-assoc-cons₂ E₁' a b E₂' E₃' κ
+  soundκ (flattenʳ-cons₂ᵖ E₁' a b E₂' E₃' E₄') κ = sound-flattenʳ-cons₂ E₁' a b E₂' E₃' E₄' κ
 
   -- Closed form at κ = []: mirror norm₀'s definition at interval i.
   sound : (P : PExp E₁ E₂)
@@ -870,6 +930,12 @@ module Reflection where
     strip1 : Term → Term
     strip1 = subst-tm (singletonS 0 unknown)
 
+    -- Deconstruct one cons layer of a quoted list term.
+    un-cons : Term → Maybe (Term × Term)
+    un-cons (con (quote List._∷_) (x v∷ xs v∷ [])) = just (x , xs)
+    un-cons (con (quote List._∷_) (_ h∷ _ h∷ x v∷ xs v∷ [])) = just (x , xs)
+    un-cons _ = nothing
+
     -- Detect a path applied to the interval variable: an application spine
     -- ending in var 0.  Returns the spine without it.
     unsnoc-var0 : List (Arg Term) → Maybe (List (Arg Term))
@@ -917,6 +983,10 @@ module Reflection where
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ e₄)
     lhsE (con (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₃) e₄
+    lhsE (con (quote NbE.assoc-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ e₂ v∷ []) v∷ []))) e₃
+    lhsE (con (quote NbE.flattenʳ-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ mk-⊕ e₂ (mk-⊕ e₃ e₄) v∷ []) v∷ []))
     lhsE (con (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₃ e₄)
     lhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
@@ -945,6 +1015,10 @@ module Reflection where
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ e₃) e₄)
     rhsE (con (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₃ e₄)
+    rhsE (con (quote NbE.assoc-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ [])) =
+      mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ mk-⊕ e₂ e₃ v∷ []) v∷ []))
+    rhsE (con (quote NbE.flattenʳ-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ e₂ v∷ []) v∷ []))) (mk-⊕ e₃ e₄)
     rhsE (con (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₃) e₄
     rhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
@@ -970,10 +1044,20 @@ module Reflection where
     (eP , cP) ← build-path p
     pure ( con (quote NbE.symᵖ) (eP v∷ [])
          , def (quote collapse-sym) (cP v∷ []) )
-  build-path (def (quote ++-assoc) (_ h∷ _ h∷ xs v∷ ys v∷ zs v∷ [])) =
-    pure ( con (quote NbE.assocᵖ)
-             (build-lexp xs v∷ build-lexp ys v∷ build-lexp zs v∷ [])
-         , “refl” )
+  build-path (def (quote ++-assoc) (_ h∷ _ h∷ xs v∷ ys v∷ zs v∷ [])) with un-cons ys
+  ... | nothing = pure
+    ( con (quote NbE.assocᵖ)
+        (build-lexp xs v∷ build-lexp ys v∷ build-lexp zs v∷ [])
+    , “refl” )
+  ... | just (a , ys¹) with un-cons ys¹
+  ...   | just (b , ys²) = pure
+    ( con (quote NbE.assoc-cons₂ᵖ)
+        (build-lexp xs v∷ a v∷ b v∷ build-lexp ys² v∷ build-lexp zs v∷ [])
+    , “refl” )
+  ...   | nothing = pure
+    ( con (quote NbE.assocᵖ)
+        (build-lexp xs v∷ build-lexp ys v∷ build-lexp zs v∷ [])
+    , “refl” )
   build-path (def (quote ++-idr) (_ h∷ _ h∷ xs v∷ [])) =
     pure (con (quote NbE.idrᵖ) (build-lexp xs v∷ []) , “refl”)
   build-path (def (quote NbE.flattenˡ) (_ h∷ _ v∷ t₁ v∷ con (quote List.[]) _ v∷ t₃ v∷ t₄ v∷ [])) =
@@ -989,10 +1073,21 @@ module Reflection where
              (unknown h∷ unknown v∷
               mk-⊕ (build-lexp t₂) (mk-⊕ (build-lexp t₃) (build-lexp t₄)) v∷ [])
          , “refl” )
-  build-path (def (quote NbE.flattenʳ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
-    pure ( con (quote NbE.flattenʳᵖ)
-             (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
-         , “refl” )
+  build-path (def (quote NbE.flattenʳ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) with un-cons t₂
+  ... | nothing = pure
+    ( con (quote NbE.flattenʳᵖ)
+        (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
+    , “refl” )
+  ... | just (a , t₂¹) with un-cons t₂¹
+  ...   | just (b , t₂²) = pure
+    ( con (quote NbE.flattenʳ-cons₂ᵖ)
+        (build-lexp t₁ v∷ a v∷ b v∷ build-lexp t₂² v∷ build-lexp t₃ v∷
+         build-lexp t₄ v∷ [])
+    , “refl” )
+  ...   | nothing = pure
+    ( con (quote NbE.flattenʳᵖ)
+        (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
+    , “refl” )
   build-path (def (quote NbE.flattenᵐ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ t₅ v∷ [])) =
     pure ( con (quote NbE.flattenᵐᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷

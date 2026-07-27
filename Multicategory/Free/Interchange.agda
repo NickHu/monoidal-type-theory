@@ -135,38 +135,6 @@ view² []       s₁         s₂ = both-right s₁ refl refl
 view² (a ∷ Γ₁) here       s₂ = view²-here (split-++ Γ₁ s₂)
 view² (a ∷ Γ₁) (there s₁) s₂ = view²-step (view² Γ₁ s₁ s₂)
 
--- ==========================================================================
--- §3  Path-algebra helpers
--- ==========================================================================
-
--- ap distributes over left-associated composites (the cons step of every
--- base-path square below is one of these followed by ap (ap (a ∷_)) of the
--- inductive hypothesis).
-private
-  -- (∙-ap₂, the two-segment distribution, comes from Kit.)
-  ∙-ap₃ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {v w x y : X}
-          (p₁ : v ≡ w) (p₂ : w ≡ x) (p₃ : x ≡ y)
-        → (ap f p₁ ∙ ap f p₂) ∙ ap f p₃ ≡ ap f ((p₁ ∙ p₂) ∙ p₃)
-  ∙-ap₃ f p₁ p₂ p₃ =
-      ap (_∙ ap f p₃) (∙-ap₂ f p₁ p₂)
-    ∙ ∙-ap₂ f (p₁ ∙ p₂) p₃
-
-  ∙-ap₄ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {v w x y z : X}
-          (p₁ : v ≡ w) (p₂ : w ≡ x) (p₃ : x ≡ y) (p₄ : y ≡ z)
-        → ((ap f p₁ ∙ ap f p₂) ∙ ap f p₃) ∙ ap f p₄
-        ≡ ap f (((p₁ ∙ p₂) ∙ p₃) ∙ p₄)
-  ∙-ap₄ f p₁ p₂ p₃ p₄ =
-      ap (_∙ ap f p₄) (∙-ap₃ f p₁ p₂ p₃)
-    ∙ ∙-ap₂ f ((p₁ ∙ p₂) ∙ p₃) p₄
-
-  ∙-ap₅ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {u v w x y z : X}
-          (p₁ : u ≡ v) (p₂ : v ≡ w) (p₃ : w ≡ x) (p₄ : x ≡ y) (p₅ : y ≡ z)
-        → (((ap f p₁ ∙ ap f p₂) ∙ ap f p₃) ∙ ap f p₄) ∙ ap f p₅
-        ≡ ap f ((((p₁ ∙ p₂) ∙ p₃) ∙ p₄) ∙ p₅)
-  ∙-ap₅ f p₁ p₂ p₃ p₄ p₅ =
-      ap (_∙ ap f p₅) (∙-ap₄ f p₁ p₂ p₃ p₄)
-    ∙ ∙-ap₂ f (((p₁ ∙ p₂) ∙ p₃) ∙ p₄) p₅
-
 -- flattenʳ is the inverse reassociation, named.
 flattenʳ≡ : ∀ (Γ₁ Θ₂ Γ Ξ : Ctx)
           → flattenʳ Γ₁ Θ₂ Γ Ξ ≡ sym (++-assoc Γ₁ Θ₂ (Γ ++ Ξ))
@@ -2732,17 +2700,7 @@ core-m⊗-ΔΔ {x = x} {y = y} {A = A} {B = B} {C = C} {Θ₃ = Θ₃} {Γ = Γ}
          ∙ interchangeₘ-boundary (Γ₁ ++ βctx Θ₃) Γ Μ Δ Κ)
         ∙ sym (flattenʳ Γ₁ (βctx Θ₃) Γ (Μ ++ Δ ++ Κ))
       ≡ ap (λ l → Γ₁ ++ βctx l) (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ)
-    sq-inner [] =
-        ∙-idr _
-      ∙ ap (_∙ interchangeₘ-boundary (βctx Θ₃) Γ Μ Δ Κ) (∙-idl refl)
-      ∙ ∙-idl (interchangeₘ-boundary (βctx Θ₃) Γ Μ Δ Κ)
-    sq-inner (a ∷ Γ₁) =
-        ∙-ap₄ (a ∷_)
-          (flattenʳ Γ₁ (βctx (Θ₃ ++ Γ ++ Μ)) Δ Κ)
-          (ap (_++ Δ ++ Κ) (flattenʳ Γ₁ (βctx Θ₃) Γ Μ))
-          (interchangeₘ-boundary (Γ₁ ++ βctx Θ₃) Γ Μ Δ Κ)
-          (sym (flattenʳ Γ₁ (βctx Θ₃) Γ (Μ ++ Δ ++ Κ)))
-      ∙ ap (ap (a ∷_)) (sq-inner Γ₁)
+    sq-inner Γ₁ = list!
 
     M : PathP (λ j → TmC (ap (λ l → Γm ++ βctx l) bdΘ₃ j)) uL uR
     M = tm-over (sq-inner Γm) M₃
@@ -3830,17 +3788,7 @@ core-m𝟙-ΔΔ {x = x} {y = y} {C = C} {Θ₃ = Θ₃} {Γ = Γ} {Μ = Μ} {Δ 
          ∙ interchangeₘ-boundary (Γ₁ ++ βctx Θ₃) Γ Μ Δ Κ)
         ∙ sym (flattenʳ Γ₁ (βctx Θ₃) Γ (Μ ++ Δ ++ Κ))
       ≡ ap (λ l → Γ₁ ++ βctx l) (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ)
-    sq-inner [] =
-        ∙-idr _
-      ∙ ap (_∙ interchangeₘ-boundary (βctx Θ₃) Γ Μ Δ Κ) (∙-idl refl)
-      ∙ ∙-idl (interchangeₘ-boundary (βctx Θ₃) Γ Μ Δ Κ)
-    sq-inner (a ∷ Γ₁) =
-        ∙-ap₄ (a ∷_)
-          (flattenʳ Γ₁ (βctx (Θ₃ ++ Γ ++ Μ)) Δ Κ)
-          (ap (_++ Δ ++ Κ) (flattenʳ Γ₁ (βctx Θ₃) Γ Μ))
-          (interchangeₘ-boundary (Γ₁ ++ βctx Θ₃) Γ Μ Δ Κ)
-          (sym (flattenʳ Γ₁ (βctx Θ₃) Γ (Μ ++ Δ ++ Κ)))
-      ∙ ap (ap (a ∷_)) (sq-inner Γ₁)
+    sq-inner Γ₁ = list!
 
     M : PathP (λ j → TmC (ap (λ l → Γm ++ βctx l) bdΘ₃ j)) uL uR
     M = tm-over (sq-inner Γm) M₃
