@@ -46,10 +46,11 @@ assocₘ-flatten {A = A} = ListPath.Solver.NbE.bury A
 
 -- The associativity boundary:
 --   (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ)  ≡  Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
+-- Clause-for-clause identical to the generic list-path solver's buryᵐ, and
+-- aliased to it so solver goals are in-vocabulary.
 assocₘ-boundary : ∀ {A : Type o} (Θ Φ Ρ Ψ Ξ : List A)
   → (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ) ≡ Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
-assocₘ-boundary []       Φ Ρ Ψ Ξ = assocₘ-flatten Φ Ρ Ψ Ξ
-assocₘ-boundary (a ∷ Θ') Φ Ρ Ψ Ξ = ap (a ∷_) (assocₘ-boundary Θ' Φ Ρ Ψ Ξ)
+assocₘ-boundary {A = A} = ListPath.Solver.NbE.buryᵐ A
 
 -- Reassociations for interchange.  f has two slots: Θ ++ x ∷ Μ ++ y ∷ Κ.
 

@@ -8,6 +8,7 @@ open import Multicategory.Free
 module Multicategory.Free.Assoc {o h} (G : Multigraph o h) where
 
 open import Multicategory.Free.SplitLemmas G
+open import ListPath.Solver using (list!)
 
 -- Associativity of substitution (Shulman's Lemma 2.4.9, associativity
 -- half): plugging h into the slot inherited from g commutes with plugging
@@ -121,47 +122,12 @@ co-B []       Ψm Θ₃ s' Ξ = symP (split-++ʳ-++ Ψm Θ₃ (split-++ˡ s' Ξ)
 co-B (a ∷ Γm) Ψm Θ₃ s' Ξ i = there (co-B Γm Ψm Θ₃ s' Ξ i)
 
 -- ==========================================================================
--- Base-path squares.  Each reconciles the a ∙ ((b ∙ c) ∙ d) composite of a
--- core's segment base paths against the target assocₘ-boundary.  Structural
--- list inductions; cons steps are sq-step, bases are groupoid algebra.
+-- Base-path squares, discharged by the generic list-path solver: each
+-- reconciles the composite of a core's segment base paths against the
+-- target assocₘ-boundary (ListPath.Solver's list! macro).
 -- ==========================================================================
 
 private
-  -- Square for the on-left cores, innermost level (Θ = [], Φ = []).
-  sq-LΜ : ∀ (Μ Ψ Ξ₁ Δ₁ : Ctx)
-    → sym (ap (λ l → Μ ++ l) (++-assoc Ψ Ξ₁ Δ₁))
-      ∙ ((sym (flattenˡ [] Μ (Ψ ++ Ξ₁) Δ₁)
-          ∙ ap (_++ Δ₁) (sym (++-assoc Μ Ψ Ξ₁)))
-         ∙ ++-assoc (Μ ++ Ψ) Ξ₁ Δ₁)
-    ≡ sym (++-assoc Μ Ψ (Ξ₁ ++ Δ₁))
-  sq-LΜ [] Ψ Ξ₁ Δ₁ =
-      ap (sym (++-assoc Ψ Ξ₁ Δ₁) ∙_)
-         (ap (_∙ ++-assoc Ψ Ξ₁ Δ₁) (∙-idl refl) ∙ ∙-idl (++-assoc Ψ Ξ₁ Δ₁))
-    ∙ ∙-invl (++-assoc Ψ Ξ₁ Δ₁)
-  sq-LΜ (a ∷ Μ) Ψ Ξ₁ Δ₁ =
-    sq-step a
-      (sym (ap (λ l → Μ ++ l) (++-assoc Ψ Ξ₁ Δ₁)))
-      (sym (flattenˡ [] Μ (Ψ ++ Ξ₁) Δ₁))
-      (ap (_++ Δ₁) (sym (++-assoc Μ Ψ Ξ₁)))
-      (++-assoc (Μ ++ Ψ) Ξ₁ Δ₁)
-      (sq-LΜ Μ Ψ Ξ₁ Δ₁)
-
-  -- Θ = [] level of sq-L.
-  sq-LΦ : ∀ (Φ Μ Ψ Ξ₁ Δ₁ : Ctx)
-    → sym (ap (λ l → Φ ++ Μ ++ l) (++-assoc Ψ Ξ₁ Δ₁))
-      ∙ ((sym (flattenˡ Φ Μ (Ψ ++ Ξ₁) Δ₁)
-          ∙ ap (_++ Δ₁) (assocₘ-flatten Φ Μ Ψ Ξ₁))
-         ∙ ++-assoc (Φ ++ Μ ++ Ψ) Ξ₁ Δ₁)
-    ≡ assocₘ-flatten Φ Μ Ψ (Ξ₁ ++ Δ₁)
-  sq-LΦ []      Μ Ψ Ξ₁ Δ₁ = sq-LΜ Μ Ψ Ξ₁ Δ₁
-  sq-LΦ (a ∷ Φ) Μ Ψ Ξ₁ Δ₁ =
-    sq-step a
-      (sym (ap (λ l → Φ ++ Μ ++ l) (++-assoc Ψ Ξ₁ Δ₁)))
-      (sym (flattenˡ Φ Μ (Ψ ++ Ξ₁) Δ₁))
-      (ap (_++ Δ₁) (assocₘ-flatten Φ Μ Ψ Ξ₁))
-      (++-assoc (Φ ++ Μ ++ Ψ) Ξ₁ Δ₁)
-      (sq-LΦ Φ Μ Ψ Ξ₁ Δ₁)
-
   -- Square for the on-left cores (pair, cons, and the outer layer of the
   -- match on-left cores, with Δ₁ instantiated to the trailing region).
   sq-L : ∀ (Θ Φ Μ Ψ Ξ₁ Δ₁ : Ctx)
@@ -170,40 +136,15 @@ private
           ∙ ap (_++ Δ₁) (assocₘ-boundary Θ Φ Μ Ψ Ξ₁))
          ∙ flattenˡ Θ (Φ ++ Μ ++ Ψ) Ξ₁ Δ₁)
     ≡ assocₘ-boundary Θ Φ Μ Ψ (Ξ₁ ++ Δ₁)
-  sq-L []      Φ Μ Ψ Ξ₁ Δ₁ = sq-LΦ Φ Μ Ψ Ξ₁ Δ₁
-  sq-L (a ∷ Θ) Φ Μ Ψ Ξ₁ Δ₁ =
-    sq-step a
-      (sym (ap (λ l → (Θ ++ Φ) ++ Μ ++ l) (++-assoc Ψ Ξ₁ Δ₁)))
-      (sym (flattenˡ (Θ ++ Φ) Μ (Ψ ++ Ξ₁) Δ₁))
-      (ap (_++ Δ₁) (assocₘ-boundary Θ Φ Μ Ψ Ξ₁))
-      (flattenˡ Θ (Φ ++ Μ ++ Ψ) Ξ₁ Δ₁)
-      (sq-L Θ Φ Μ Ψ Ξ₁ Δ₁)
+  sq-L Θ Φ Μ Ψ Ξ₁ Δ₁ = list!
 
   -- Square for the var case (two segments only).
-  var-α₀ : ∀ (Μ' Ψ : Ctx)
-    → (λ i → Μ' ++ ++-idr Ψ i) ∙ sym (++-idr (Μ' ++ Ψ))
-    ≡ sym (++-assoc Μ' Ψ [])
-  var-α₀ []       Ψ = ∙-invr (++-idr Ψ)
-  var-α₀ (a ∷ Μ') Ψ =
-    ap-∙-step (a ∷_)
-      {p = λ i → Μ' ++ ++-idr Ψ i} {q = sym (++-idr (Μ' ++ Ψ))}
-      (var-α₀ Μ' Ψ)
-
   var-α : ∀ (Φ Μ' Ψ : Ctx)
     → (λ i → Φ ++ Μ' ++ ++-idr Ψ i) ∙ sym (++-idr (Φ ++ Μ' ++ Ψ))
     ≡ assocₘ-flatten Φ Μ' Ψ []
-  var-α []      Μ' Ψ = var-α₀ Μ' Ψ
-  var-α (a ∷ Φ) Μ' Ψ =
-    ap-∙-step (a ∷_)
-      {p = λ i → Φ ++ Μ' ++ ++-idr Ψ i} {q = sym (++-idr (Φ ++ Μ' ++ Ψ))}
-      (var-α Φ Μ' Ψ)
+  var-α Φ Μ' Ψ = list!
 
 private
-  -- Shared groupoid base: the degenerate square with three refl segments.
-  sq-base : ∀ {ℓ} {X : Type ℓ} {u v : X} (p : u ≡ v)
-          → refl ∙ ((refl ∙ p) ∙ refl) ≡ p
-  sq-base p = ∙-idl _ ∙ ∙-idr _ ∙ ∙-idl p
-
   -- Square for the on-right cores (pair, cons).
   sq-R : ∀ (Γ₁ Θ₂ Φ Μ Ψ Ξ : Ctx)
     → ap (_++ Μ ++ Ψ ++ Ξ) (++-assoc Γ₁ Θ₂ Φ)
@@ -211,14 +152,7 @@ private
           ∙ ap (Γ₁ ++_) (assocₘ-boundary Θ₂ Φ Μ Ψ Ξ))
          ∙ flattenʳ Γ₁ Θ₂ (Φ ++ Μ ++ Ψ) Ξ)
     ≡ assocₘ-boundary (Γ₁ ++ Θ₂) Φ Μ Ψ Ξ
-  sq-R []       Θ₂ Φ Μ Ψ Ξ = sq-base (assocₘ-boundary Θ₂ Φ Μ Ψ Ξ)
-  sq-R (a ∷ Γ₁) Θ₂ Φ Μ Ψ Ξ =
-    sq-step a
-      (ap (_++ Μ ++ Ψ ++ Ξ) (++-assoc Γ₁ Θ₂ Φ))
-      (sym (flattenʳ Γ₁ (Θ₂ ++ Φ) Μ (Ψ ++ Ξ)))
-      (ap (Γ₁ ++_) (assocₘ-boundary Θ₂ Φ Μ Ψ Ξ))
-      (flattenʳ Γ₁ Θ₂ (Φ ++ Μ ++ Ψ) Ξ)
-      (sq-R Γ₁ Θ₂ Φ Μ Ψ Ξ)
+  sq-R Γ₁ Θ₂ Φ Μ Ψ Ξ = list!
 
   -- Square for the match ʳ/on-left cores (slot in the middle region).
   sq-M : ∀ (Γm Θ₂ Φ Μ Ψ Ξ₁ Δm : Ctx)
@@ -227,98 +161,28 @@ private
           ∙ ap (λ l → Γm ++ l ++ Δm) (assocₘ-boundary Θ₂ Φ Μ Ψ Ξ₁))
          ∙ flattenᵐ Γm Θ₂ (Φ ++ Μ ++ Ψ) Ξ₁ Δm)
     ≡ assocₘ-boundary (Γm ++ Θ₂) Φ Μ Ψ (Ξ₁ ++ Δm)
-  sq-M []       Θ₂ Φ Μ Ψ Ξ₁ Δm = sq-L Θ₂ Φ Μ Ψ Ξ₁ Δm
-  sq-M (a ∷ Γm) Θ₂ Φ Μ Ψ Ξ₁ Δm =
-    sq-step a
-      (sym (λ i → sym (++-assoc Γm Θ₂ Φ) i ++ Μ ++ ++-assoc Ψ Ξ₁ Δm i))
-      (sym (flattenᵐ Γm (Θ₂ ++ Φ) Μ (Ψ ++ Ξ₁) Δm))
-      (ap (λ l → Γm ++ l ++ Δm) (assocₘ-boundary Θ₂ Φ Μ Ψ Ξ₁))
-      (flattenᵐ Γm Θ₂ (Φ ++ Μ ++ Ψ) Ξ₁ Δm)
-      (sq-M Γm Θ₂ Φ Μ Ψ Ξ₁ Δm)
+  sq-M Γm Θ₂ Φ Μ Ψ Ξ₁ Δm = list!
 
-  -- Square for the match ʳ/on-right cores (slot in the last region),
-  -- Γm = [] level first.
-  sq-BΨ : ∀ (Ψm Θ₃ Φ Μ Ψ Ξ : Ctx)
-    → sym (λ i → sym (++-assoc Ψm Θ₃ Φ) i ++ Μ ++ Ψ ++ Ξ)
-      ∙ ((++-assoc Ψm (Θ₃ ++ Φ) (Μ ++ Ψ ++ Ξ)
-          ∙ ap (λ l → Ψm ++ l) (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ))
-         ∙ sym (++-assoc Ψm Θ₃ ((Φ ++ Μ ++ Ψ) ++ Ξ)))
-    ≡ assocₘ-boundary (Ψm ++ Θ₃) Φ Μ Ψ Ξ
-  sq-BΨ []       Θ₃ Φ Μ Ψ Ξ = sq-base (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ)
-  sq-BΨ (a ∷ Ψm) Θ₃ Φ Μ Ψ Ξ =
-    sq-step a
-      (sym (λ i → sym (++-assoc Ψm Θ₃ Φ) i ++ Μ ++ Ψ ++ Ξ))
-      (++-assoc Ψm (Θ₃ ++ Φ) (Μ ++ Ψ ++ Ξ))
-      (ap (λ l → Ψm ++ l) (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ))
-      (sym (++-assoc Ψm Θ₃ ((Φ ++ Μ ++ Ψ) ++ Ξ)))
-      (sq-BΨ Ψm Θ₃ Φ Μ Ψ Ξ)
-
+  -- Square for the match ʳ/on-right cores (slot in the last region).
   sq-B : ∀ (Γm Ψm Θ₃ Φ Μ Ψ Ξ : Ctx)
     → sym (λ i → bury Γm Ψm Θ₃ Φ i ++ Μ ++ Ψ ++ Ξ)
       ∙ ((sym (bury Γm Ψm (Θ₃ ++ Φ) (Μ ++ Ψ ++ Ξ))
           ∙ ap (λ l → Γm ++ Ψm ++ l) (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ))
          ∙ bury Γm Ψm Θ₃ ((Φ ++ Μ ++ Ψ) ++ Ξ))
     ≡ assocₘ-boundary (Γm ++ Ψm ++ Θ₃) Φ Μ Ψ Ξ
-  sq-B []       Ψm Θ₃ Φ Μ Ψ Ξ = sq-BΨ Ψm Θ₃ Φ Μ Ψ Ξ
-  sq-B (a ∷ Γm) Ψm Θ₃ Φ Μ Ψ Ξ =
-    sq-step a
-      (sym (λ i → bury Γm Ψm Θ₃ Φ i ++ Μ ++ Ψ ++ Ξ))
-      (sym (bury Γm Ψm (Θ₃ ++ Φ) (Μ ++ Ψ ++ Ξ)))
-      (ap (λ l → Γm ++ Ψm ++ l) (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ))
-      (bury Γm Ψm Θ₃ ((Φ ++ Μ ++ Ψ) ++ Ξ))
-      (sq-B Γm Ψm Θ₃ Φ Μ Ψ Ξ)
+  sq-B Γm Ψm Θ₃ Φ Μ Ψ Ξ = list!
 
 private
   -- Inner square for the match on-left cores: the under-the-binder segment
   -- against the ap (_++ D) image of the outer boundary (D is the binder
-  -- extension A ∷ B ∷ Δm, resp. Δm).  Three-level induction.
-  sq-L-innerΜ : ∀ (Μ Ψ Ξ₁ D : Ctx)
-    → ++-assoc Μ (Ψ ++ Ξ₁) D
-      ∙ ((ap (λ l → Μ ++ l) (++-assoc Ψ Ξ₁ D)
-          ∙ sym (++-assoc Μ Ψ (Ξ₁ ++ D)))
-         ∙ sym (++-assoc (Μ ++ Ψ) Ξ₁ D))
-    ≡ ap (_++ D) (sym (++-assoc Μ Ψ Ξ₁))
-  sq-L-innerΜ [] Ψ Ξ₁ D =
-      ∙-idl _
-    ∙ ap (_∙ sym (++-assoc Ψ Ξ₁ D)) (∙-idr (++-assoc Ψ Ξ₁ D))
-    ∙ ∙-invr (++-assoc Ψ Ξ₁ D)
-  sq-L-innerΜ (a ∷ Μ) Ψ Ξ₁ D =
-    sq-step a
-      (++-assoc Μ (Ψ ++ Ξ₁) D)
-      (ap (λ l → Μ ++ l) (++-assoc Ψ Ξ₁ D))
-      (sym (++-assoc Μ Ψ (Ξ₁ ++ D)))
-      (sym (++-assoc (Μ ++ Ψ) Ξ₁ D))
-      (sq-L-innerΜ Μ Ψ Ξ₁ D)
-
-  sq-L-innerΦ : ∀ (Φ Μ Ψ Ξ₁ D : Ctx)
-    → flattenˡ Φ Μ (Ψ ++ Ξ₁) D
-      ∙ ((ap (λ l → Φ ++ Μ ++ l) (++-assoc Ψ Ξ₁ D)
-          ∙ assocₘ-flatten Φ Μ Ψ (Ξ₁ ++ D))
-         ∙ sym (++-assoc (Φ ++ Μ ++ Ψ) Ξ₁ D))
-    ≡ ap (_++ D) (assocₘ-flatten Φ Μ Ψ Ξ₁)
-  sq-L-innerΦ []      Μ Ψ Ξ₁ D = sq-L-innerΜ Μ Ψ Ξ₁ D
-  sq-L-innerΦ (a ∷ Φ) Μ Ψ Ξ₁ D =
-    sq-step a
-      (flattenˡ Φ Μ (Ψ ++ Ξ₁) D)
-      (ap (λ l → Φ ++ Μ ++ l) (++-assoc Ψ Ξ₁ D))
-      (assocₘ-flatten Φ Μ Ψ (Ξ₁ ++ D))
-      (sym (++-assoc (Φ ++ Μ ++ Ψ) Ξ₁ D))
-      (sq-L-innerΦ Φ Μ Ψ Ξ₁ D)
-
+  -- extension A ∷ B ∷ Δm, resp. Δm).
   sq-L-inner : ∀ (Θ Φ Μ Ψ Ξ₁ D : Ctx)
     → flattenˡ (Θ ++ Φ) Μ (Ψ ++ Ξ₁) D
       ∙ ((ap (λ l → (Θ ++ Φ) ++ Μ ++ l) (++-assoc Ψ Ξ₁ D)
           ∙ assocₘ-boundary Θ Φ Μ Ψ (Ξ₁ ++ D))
          ∙ sym (flattenˡ Θ (Φ ++ Μ ++ Ψ) Ξ₁ D))
     ≡ ap (_++ D) (assocₘ-boundary Θ Φ Μ Ψ Ξ₁)
-  sq-L-inner []      Φ Μ Ψ Ξ₁ D = sq-L-innerΦ Φ Μ Ψ Ξ₁ D
-  sq-L-inner (a ∷ Θ) Φ Μ Ψ Ξ₁ D =
-    sq-step a
-      (flattenˡ (Θ ++ Φ) Μ (Ψ ++ Ξ₁) D)
-      (ap (λ l → (Θ ++ Φ) ++ Μ ++ l) (++-assoc Ψ Ξ₁ D))
-      (assocₘ-boundary Θ Φ Μ Ψ (Ξ₁ ++ D))
-      (sym (flattenˡ Θ (Φ ++ Μ ++ Ψ) Ξ₁ D))
-      (sq-L-inner Θ Φ Μ Ψ Ξ₁ D)
+  sq-L-inner Θ Φ Μ Ψ Ξ₁ D = list!
 
   -- Inner square for the match⊗ on-right/on-right core: the binder segment
   -- against the boundary buried under Γm and the two bound slots.
@@ -328,6 +192,12 @@ private
           ∙ assocₘ-boundary (Γm ++ a ∷ b ∷ Θ₃) Φ Μ Ψ Ξ)
          ∙ sym (flattenʳ Γm (a ∷ b ∷ Θ₃) (Φ ++ Μ ++ Ψ) Ξ))
     ≡ ap (λ l → Γm ++ a ∷ b ∷ l) (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ)
+  -- (These two stay hand-proved: their segments mix the spellings
+  -- (a ∷ b ∷ Θ₃) ++ Φ and a ∷ b ∷ (Θ₃ ++ Φ), whose quoted expressions
+  -- cannot meet at a common endpoint — a known limitation of the quoter.)
+  sq-base : ∀ {ℓ} {X : Type ℓ} {u v : X} (p : u ≡ v)
+          → refl ∙ ((refl ∙ p) ∙ refl) ≡ p
+  sq-base p = ∙-idl _ ∙ ∙-idr _ ∙ ∙-idl p
   sq-B-inner⊗ [] a b Θ₃ Φ Μ Ψ Ξ =
     sq-base (assocₘ-boundary (a ∷ b ∷ Θ₃) Φ Μ Ψ Ξ)
   sq-B-inner⊗ (a' ∷ Γm) a b Θ₃ Φ Μ Ψ Ξ =

@@ -73,6 +73,11 @@ module NbE {o} (X : Type o) where
   bury []       ys zs ws = sym (++-assoc ys zs ws)
   bury (x ∷ xs) ys zs ws = ap (x ∷_) (bury xs ys zs ws)
 
+  buryᵐ : ∀ (xs ys zs ws us : List X)
+        → (xs ++ ys) ++ zs ++ (ws ++ us) ≡ xs ++ ((ys ++ zs ++ ws) ++ us)
+  buryᵐ []       ys zs ws us = bury ys zs ws us
+  buryᵐ (x ∷ xs) ys zs ws us = ap (x ∷_) (buryᵐ xs ys zs ws us)
+
   -- (Add further named reassociations by the same five-step pattern:
   -- generic definition here, a PExp generator, a ⟦_⟧ᵖ clause, a refl clause
   -- in flatκ, and a soundκ leaf — sound-bury is the closest template.)
@@ -148,6 +153,9 @@ module NbE {o} (X : Type o) where
     consᵖ : (x : X) → PExp E₁ E₂ → PExp (x ∷ᵉ E₁) (x ∷ᵉ E₂)
     _◁ᵖ_  : (E : LExp) → PExp F₁ F₂ → PExp (E ⊕ F₁) (E ⊕ F₂)
     _▷ᵖ_  : PExp E₁ E₂ → (E : LExp) → PExp (E₁ ⊕ E) (E₂ ⊕ E)
+    -- pointwise congruence: interprets as the interval-diagonal
+    -- λ i → ⟦P⟧ᵖ i ++ ⟦Q⟧ᵖ i (which is NOT judgmentally a whisker composite)
+    _⊕ᵖ_  : PExp E₁ E₂ → PExp F₁ F₂ → PExp (E₁ ⊕ F₁) (E₂ ⊕ F₂)
     -- base generators
     assocᵖ : (E₁ E₂ E₃ : LExp) → PExp ((E₁ ⊕ E₂) ⊕ E₃) (E₁ ⊕ (E₂ ⊕ E₃))
     idrᵖ   : (E : LExp) → PExp (E ⊕ εᵉ) E
@@ -164,10 +172,14 @@ module NbE {o} (X : Type o) where
                      ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
     buryᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
           → PExp (E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ (E₂ ⊕ E₃)) ⊕ E₄)
+    buryᵐᵖ : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp)
+           → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
+                  (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
 
   infixr 30 _∙ᵖ_
   infix 34 _◁ᵖ_
   infix 34 _▷ᵖ_
+  infixr 33 _⊕ᵖ_
 
   -- Interpretation.  Every clause is DEFINITIONALLY the path a client
   -- writes, so `solve P Q h` typechecks against goals verbatim.
@@ -178,12 +190,14 @@ module NbE {o} (X : Type o) where
   ⟦ consᵖ x P ⟧ᵖ           = ap (x ∷_) ⟦ P ⟧ᵖ
   ⟦ E ◁ᵖ P ⟧ᵖ              = ap (⟦ E ⟧ᵉ ++_) ⟦ P ⟧ᵖ
   ⟦ P ▷ᵖ E ⟧ᵖ              = ap (_++ ⟦ E ⟧ᵉ) ⟦ P ⟧ᵖ
+  ⟦ P ⊕ᵖ Q ⟧ᵖ i            = ⟦ P ⟧ᵖ i ++ ⟦ Q ⟧ᵖ i
   ⟦ assocᵖ E₁ E₂ E₃ ⟧ᵖ     = ++-assoc ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ
   ⟦ idrᵖ E ⟧ᵖ              = ++-idr ⟦ E ⟧ᵉ
   ⟦ flattenˡᵖ E₁ E₂ E₃ E₄ ⟧ᵖ    = flattenˡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
   ⟦ flattenʳᵖ E₁ E₂ E₃ E₄ ⟧ᵖ    = flattenʳ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
   ⟦ flattenᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ = flattenᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
   ⟦ buryᵖ E₁ E₂ E₃ E₄ ⟧ᵖ        = bury ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+  ⟦ buryᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ    = buryᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
 
   -- ==========================================================================
   -- §3  The nf-level residue.  Thanks to eval's accumulator, every pure
@@ -202,15 +216,23 @@ module NbE {o} (X : Type o) where
   flatκ (consᵖ x P) κ = ap (x ∷_) (flatκ P κ)
   flatκ (E ◁ᵖ P)    κ = ap (eval E) (flatκ P κ)
   flatκ (P ▷ᵖ E)    κ = flatκ P (eval E κ)
+  flatκ (_⊕ᵖ_ {E₂ = E₂} {F₁ = F₁} P Q) κ =
+    flatκ P (eval F₁ κ) ∙ ap (eval E₂) (flatκ Q κ)
   flatκ (assocᵖ E₁ E₂ E₃) κ = refl
   flatκ (idrᵖ E)    κ = refl
   flatκ (flattenˡᵖ E₁ E₂ E₃ E₄) κ = refl
   flatκ (flattenʳᵖ E₁ E₂ E₃ E₄) κ = refl
   flatκ (flattenᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
   flatκ (buryᵖ E₁ E₂ E₃ E₄) κ = refl
+  flatκ (buryᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
 
   flat : PExp E₁ E₂ → nf E₁ ≡ nf E₂
   flat P = flatκ P []
+
+  -- Explicit-argument identity code (used by the reflection layer, whose
+  -- emitted constant leaves need a predictable argument spine).
+  idᵉ : (E : LExp) → PExp E E
+  idᵉ E = idᵖ
 
   -- ==========================================================================
   -- §4  Soundness: ⟦P⟧ᵖ fits in a square over its residue, with the
@@ -259,6 +281,15 @@ module NbE {o} (X : Type o) where
          → L ≡ T ∙ R → PathP (λ i → T i ≡ zs) L R
     ∙→sq {T = T} {R = R} h =
       h ◁ ((λ i → (λ j → T (i ∨ j)) ∙ R) ▷ ∙-idl R)
+
+    -- The interval diagonal of a pointwise ++ decomposes as right whisker
+    -- then left whisker (J is harmless here).
+    ap₂-decomp
+      : {xs xs' ys ys' : List X} (p : xs ≡ xs') (q : ys ≡ ys')
+      → (λ i → p i ++ q i) ≡ ap (_++ ys) p ∙ ap (xs' ++_) q
+    ap₂-decomp {xs' = xs'} {ys} p =
+      J (λ ys' q → (λ i → p i ++ q i) ≡ ap (_++ ys) p ∙ ap (xs' ++_) q)
+        (sym (∙-idr _))
 
     -- Naturality of ++-assoc in its last argument (J is harmless here:
     -- nothing ever computes through these 2-cells).
@@ -513,6 +544,41 @@ module NbE {o} (X : Type o) where
                 (sym (++-assoc ⟦ E₁ ⟧ᵉ (⟦ E₂ ⟧ᵉ ++ ⟦ E₃ ⟧ᵉ) ⟦ E₄ ⟧ᵉ)))
         ∙ ap (ap (_++ κ)) (sym (bury≡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ))
 
+  buryᵐ≡
+    : ∀ (xs ys zs ws us : List X)
+    → buryᵐ xs ys zs ws us
+    ≡ ++-assoc xs ys (zs ++ ws ++ us) ∙ ap (xs ++_) (bury ys zs ws us)
+  buryᵐ≡ []       ys zs ws us = sym (∙-idl _)
+  buryᵐ≡ (x ∷ xs) ys zs ws us =
+      ap (ap (x ∷_)) (buryᵐ≡ xs ys zs ws us)
+    ∙ ap-∙ (x ∷_) (++-assoc xs ys (zs ++ ws ++ us)) (ap (xs ++_) (bury ys zs ws us))
+
+  sound-buryᵐ
+    : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp) (κ : List X)
+    → PathP (λ i → ap (_++ κ) (buryᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ) i
+                 ≡ eval E₁ (eval E₂ (eval E₃ (eval E₄ (eval E₅ κ)))))
+        (normκ ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅)) κ)
+        (normκ (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅)) κ)
+  sound-buryᵐ E₁ E₂ E₃ E₄ E₅ κ =
+    sq-cast₂ et (∙-idl refl)
+      (sound-assoc E₁ E₂ (E₃ ⊕ (E₄ ⊕ E₅)) κ ∙₂ whisk)
+    where
+      whisk
+        : PathP (λ i → ap (_++ κ)
+                          (ap (⟦ E₁ ⟧ᵉ ++_) (bury ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ)) i
+                     ≡ eval E₁ (eval E₂ (eval E₃ (eval E₄ (eval E₅ κ)))))
+            (normκ (E₁ ⊕ (E₂ ⊕ (E₃ ⊕ (E₄ ⊕ E₅)))) κ)
+            (normκ (E₁ ⊕ ((E₂ ⊕ (E₃ ⊕ E₄)) ⊕ E₅)) κ)
+      whisk i =
+          ++-assoc ⟦ E₁ ⟧ᵉ (bury ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ i) κ
+        ∙ ap (⟦ E₁ ⟧ᵉ ++_) (sound-bury E₂ E₃ E₄ E₅ κ i)
+        ∙ normκ E₁ (eval E₂ (eval E₃ (eval E₄ (eval E₅ κ))))
+        ∙ refl
+      et =
+          sym (ap-∙ (_++ κ) (++-assoc ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ (⟦ E₃ ⟧ᵉ ++ ⟦ E₄ ⟧ᵉ ++ ⟦ E₅ ⟧ᵉ))
+                (ap (⟦ E₁ ⟧ᵉ ++_) (bury ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ)))
+        ∙ ap (ap (_++ κ)) (sym (buryᵐ≡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ))
+
   -- ---- the induction ------------------------------------------------------
 
   soundκ : (P : PExp E₁ E₂) (κ : List X)
@@ -541,12 +607,34 @@ module NbE {o} (X : Type o) where
       ≡⟨ soundκ P (eval E κ) i ⟩
     flatκ P (eval E κ) i
       ∎
+  soundκ (_⊕ᵖ_ {E₁} {E₂} {F₁} {F₂} P Q) κ = sq-cast et (sqR ∙₂ sqL)
+    where
+      sqR : PathP (λ i → ap (_++ κ) (ap (_++ ⟦ F₁ ⟧ᵉ) ⟦ P ⟧ᵖ) i
+                       ≡ flatκ P (eval F₁ κ) i)
+              (normκ (E₁ ⊕ F₁) κ) (normκ (E₂ ⊕ F₁) κ)
+      sqR i =
+          ++-assoc (⟦ P ⟧ᵖ i) ⟦ F₁ ⟧ᵉ κ
+        ∙ ap (⟦ P ⟧ᵖ i ++_) (normκ F₁ κ)
+        ∙ soundκ P (eval F₁ κ) i
+        ∙ refl
+      sqL : PathP (λ i → ap (_++ κ) (ap (⟦ E₂ ⟧ᵉ ++_) ⟦ Q ⟧ᵖ) i
+                       ≡ ap (eval E₂) (flatκ Q κ) i)
+              (normκ (E₂ ⊕ F₁) κ) (normκ (E₂ ⊕ F₂) κ)
+      sqL i =
+          ++-assoc ⟦ E₂ ⟧ᵉ (⟦ Q ⟧ᵖ i) κ
+        ∙ ap (⟦ E₂ ⟧ᵉ ++_) (soundκ Q κ i)
+        ∙ normκ E₂ (flatκ Q κ i)
+        ∙ refl
+      et =
+          sym (ap-∙ (_++ κ) (ap (_++ ⟦ F₁ ⟧ᵉ) ⟦ P ⟧ᵖ) (ap (⟦ E₂ ⟧ᵉ ++_) ⟦ Q ⟧ᵖ))
+        ∙ ap (ap (_++ κ)) (sym (ap₂-decomp ⟦ P ⟧ᵖ ⟦ Q ⟧ᵖ))
   soundκ (assocᵖ E₁ E₂ E₃) κ = sound-assoc E₁ E₂ E₃ κ
   soundκ (idrᵖ E) κ = sound-idr E κ
   soundκ (flattenˡᵖ E₁' E₂' E₃' E₄') κ = sound-flattenˡ E₁' E₂' E₃' E₄' κ
   soundκ (flattenʳᵖ E₁' E₂' E₃' E₄') κ = sound-flattenʳ E₁' E₂' E₃' E₄' κ
   soundκ (flattenᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-flattenᵐ E₁' E₂' E₃' E₄' E₅' κ
   soundκ (buryᵖ E₁' E₂' E₃' E₄') κ = sound-bury E₁' E₂' E₃' E₄' κ
+  soundκ (buryᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-buryᵐ E₁' E₂' E₃' E₄' E₅' κ
 
   -- Closed form at κ = []: mirror norm₀'s definition at interval i.
   sound : (P : PExp E₁ E₂)
@@ -670,19 +758,100 @@ module Reflection where
   open import 1Lab.Reflection.Subst using (subst-tm ; singletonS)
 
   private
+    -- Smart ⊕: hoist cons-atoms out of the left component, so that the two
+    -- spellings (x ∷ xs) ++ ys and x ∷ (xs ++ ys) of the same list quote to
+    -- the SAME expression (their interpretations are convertible, but code
+    -- endpoints must meet judgmentally).
+    mk-⊕ : Term → Term → Term
+    mk-⊕ (con (quote NbE._∷ᵉ_) (x v∷ e v∷ [])) f =
+      con (quote NbE._∷ᵉ_) (x v∷ mk-⊕ e f v∷ [])
+    mk-⊕ e f = con (quote NbE._⊕_) (e v∷ f v∷ [])
+
     -- Quote a list-valued Term into an LExp code.
     build-lexp : Term → Term
     build-lexp (con (quote List._∷_) (x v∷ xs v∷ [])) =
       con (quote NbE._∷ᵉ_) (x v∷ build-lexp xs v∷ [])
+    build-lexp (con (quote List._∷_) (_ h∷ _ h∷ x v∷ xs v∷ [])) =
+      con (quote NbE._∷ᵉ_) (x v∷ build-lexp xs v∷ [])
     build-lexp (def (quote _++_) (_ h∷ _ h∷ xs v∷ ys v∷ [])) =
-      con (quote NbE._⊕_) (build-lexp xs v∷ build-lexp ys v∷ [])
+      mk-⊕ (build-lexp xs) (build-lexp ys)
     build-lexp (con (quote List.[]) _) = con (quote NbE.εᵉ) []
     build-lexp t = con (quote NbE.[_]) (t v∷ [])
 
+  private
+    -- Strengthen a term out of one binder (sound where the term does not
+    -- mention the bound variable, which every use below guarantees).
+    strip1 : Term → Term
+    strip1 = subst-tm (singletonS 0 unknown)
+
+    -- Detect a path applied to the interval variable: an application spine
+    -- ending in var 0.  Returns the spine without it.
+    unsnoc-var0 : List (Arg Term) → Maybe (List (Arg Term))
+    unsnoc-var0 [] = nothing
+    unsnoc-var0 (arg _ (var 0 []) ∷ []) = just []
+    unsnoc-var0 (a ∷ as) with unsnoc-var0 as
+    ... | just as' = just (a ∷ as')
+    ... | nothing  = nothing
+
+
+  private
+    -- Endpoint expressions of emitted codes (partial: exactly the heads the
+    -- quoter emits; anything unrecognised yields unknown, to be solved by
+    -- unification).  Used to make premise functions rigid and concrete.
+    lhsE : Term → Term
+    rhsE : Term → Term
+    lhsE (def (quote NbE.idᵉ) (_ h∷ _ v∷ e v∷ [])) = e
+    lhsE (con (quote NbE._∙ᵖ_) (l v∷ r v∷ [])) = lhsE l
+    lhsE (con (quote NbE.symᵖ) (p v∷ [])) = rhsE p
+    lhsE (con (quote NbE.consᵖ) (x v∷ e v∷ [])) =
+      con (quote NbE._∷ᵉ_) (x v∷ lhsE e v∷ [])
+    lhsE (con (quote NbE._◁ᵖ_) (e v∷ p v∷ [])) = mk-⊕ e (lhsE p)
+    lhsE (con (quote NbE._▷ᵖ_) (p v∷ e v∷ [])) = mk-⊕ (lhsE p) e
+    lhsE (con (quote NbE._⊕ᵖ_) (l v∷ r v∷ [])) = mk-⊕ (lhsE l) (lhsE r)
+    lhsE (con (quote NbE.assocᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₂) e₃
+    lhsE (con (quote NbE.idrᵖ) (e v∷ [])) = mk-⊕ e (con (quote NbE.εᵉ) [])
+    lhsE (con (quote NbE.flattenˡᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ (mk-⊕ e₂ e₃)) e₄
+    lhsE (con (quote NbE.flattenʳᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
+    lhsE (con (quote NbE.flattenᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
+    lhsE (con (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
+    lhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
+    lhsE _ = unknown
+    rhsE (def (quote NbE.idᵉ) (_ h∷ _ v∷ e v∷ [])) = e
+    rhsE (con (quote NbE._∙ᵖ_) (l v∷ r v∷ [])) = rhsE r
+    rhsE (con (quote NbE.symᵖ) (p v∷ [])) = lhsE p
+    rhsE (con (quote NbE.consᵖ) (x v∷ e v∷ [])) =
+      con (quote NbE._∷ᵉ_) (x v∷ rhsE e v∷ [])
+    rhsE (con (quote NbE._◁ᵖ_) (e v∷ p v∷ [])) = mk-⊕ e (rhsE p)
+    rhsE (con (quote NbE._▷ᵖ_) (p v∷ e v∷ [])) = mk-⊕ (rhsE p) e
+    rhsE (con (quote NbE._⊕ᵖ_) (l v∷ r v∷ [])) = mk-⊕ (rhsE l) (rhsE r)
+    rhsE (con (quote NbE.assocᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ e₂ e₃)
+    rhsE (con (quote NbE.idrᵖ) (e v∷ [])) = e
+    rhsE (con (quote NbE.flattenˡᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
+    rhsE (con (quote NbE.flattenʳᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ e₄)
+    rhsE (con (quote NbE.flattenᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
+    rhsE (con (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ (mk-⊕ e₂ e₃)) e₄
+    rhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
+    rhsE _ = unknown
   -- build-path tm ⇒ (code, loop-collapse proof for the code's residue).
+  -- (TERMINATING: the pointwise-leaf recursion goes through strip1, whose
+  -- output the termination checker cannot compare.)
+  {-# TERMINATING #-}
   build-path : Term → TC (Term × Term)
   private
     build-ap : Term → Term → TC (Term × Term)
+    build-pointwise : Term → TC (Term × Term)
 
   build-path (def (quote refl) _) =
     pure (con (quote NbE.idᵖ) [] , “refl”)
@@ -718,10 +887,46 @@ module Reflection where
     pure ( con (quote NbE.buryᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
+  build-path (def (quote NbE.buryᵐ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ t₅ v∷ [])) =
+    pure ( con (quote NbE.buryᵐᵖ)
+             (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷
+              build-lexp t₅ v∷ [])
+         , “refl” )
   build-path (def (quote ap) (_ h∷ _ h∷ _ h∷ _ h∷ f v∷ _ h∷ _ h∷ p v∷ [])) =
     build-ap f p
+  -- A raw interval lambda: a hand-written pointwise square diagonal such as
+  -- λ i → p i ++ ys ++ q i.  Quote it with the pointwise congruence ⊕ᵖ;
+  -- leaves are either paths applied to the interval variable (strip the
+  -- application and recurse) or interval-free constants (idᵖ).
+  build-path (lam visible (abs _ body)) = build-pointwise body
   build-path tm =
     typeError (strErr "list!: cannot quote path\n  " ∷ termErr tm ∷ [])
+
+  build-pointwise (def (quote _++_) (_ h∷ _ h∷ l v∷ r v∷ [])) = do
+    (eL , cL) ← build-pointwise l
+    (eR , cR) ← build-pointwise r
+    pure ( con (quote NbE._⊕ᵖ_) (eL v∷ eR v∷ [])
+         , def (quote collapse-∙)
+             (cL v∷
+              def (quote collapse-ap)
+                (def (quote NbE.eval) (unknown h∷ unknown v∷ rhsE eL v∷ []) v∷
+                 cR v∷ []) v∷ []) )
+  build-pointwise (con (quote List._∷_) (x v∷ rest v∷ [])) = do
+    (e , c) ← build-pointwise rest
+    pure ( con (quote NbE.consᵖ) (strip1 x v∷ e v∷ [])
+         , def (quote collapse-ap)
+             (con (quote List._∷_) (strip1 x v∷ []) v∷ c v∷ []) )
+  build-pointwise (con (quote List._∷_) (_ h∷ _ h∷ x v∷ rest v∷ [])) = do
+    (e , c) ← build-pointwise rest
+    pure ( con (quote NbE.consᵖ) (strip1 x v∷ e v∷ [])
+         , def (quote collapse-ap)
+             (con (quote List._∷_) (strip1 x v∷ []) v∷ c v∷ []) )
+  build-pointwise t@(def nm args) with unsnoc-var0 args
+  ... | just args' = build-path (strip1 (def nm args'))
+  ... | nothing    =
+    pure (def (quote NbE.idᵉ) (unknown h∷ unknown v∷ build-lexp (strip1 t) v∷ []) , “refl”)
+  build-pointwise t =
+    pure (def (quote NbE.idᵉ) (unknown h∷ unknown v∷ build-lexp (strip1 t) v∷ []) , “refl”)
 
   -- Sections quote as partial applications when the missing argument is
   -- rightmost — with the bonus that the head argument is NOT under a binder.
@@ -746,10 +951,6 @@ module Reflection where
     (eP , cP) ← build-path p
     wrap-body body (eP , cP)
     where
-      -- Strengthen a term out of the λ-binder (sound because at each layer
-      -- the prefix/suffix does not mention the bound variable).
-      strip1 : Term → Term
-      strip1 = subst-tm (singletonS 0 unknown)
 
       -- Nested λ-bodies of ∷/++ layers around var 0 (e.g. λ l → xs ++ ys ++ l
       -- or λ l → xs ++ l ++ ys): emit nested cons/whisker codes and layered
@@ -789,7 +990,7 @@ module Reflection where
     quote _∙_ ∷ quote sym ∷ quote ap ∷ quote refl ∷ quote _++_ ∷
     quote ++-assoc ∷ quote ++-idr ∷
     quote NbE.flattenˡ ∷ quote NbE.flattenʳ ∷ quote NbE.flattenᵐ ∷
-    quote NbE.bury ∷ []
+    quote NbE.bury ∷ quote NbE.buryᵐ ∷ []
 
   list-worker : Term → TC ⊤
   list-worker hole =
