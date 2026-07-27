@@ -9,7 +9,7 @@
 -- (dropping exhausted atoms definitionally, crossing element slots under an
 -- `ap`-cons, stopping with refl as soon as the residual shapes coincide),
 -- and EMITS the resulting recursion as an ordinary definition built from
--- `list-elim` and `ap (x ∷_)`.  The emitted path is ∙-free and cons-headed
+-- 1lab's `List-elim` and `ap (x ∷_)`.  The emitted path is ∙-free and cons-headed
 -- under every concrete cons — the structural discipline of
 -- Multicategory.agda — and closed instances reduce to refl.
 --
@@ -35,16 +35,9 @@ open import Data.Bool
 open import 1Lab.Reflection
 open import 1Lab.Reflection.Subst using (raise)
 
--- The recursion engine of every generated boundary: dependent list
--- elimination.  Generated terms contain no self-reference, so the
+-- The recursion engine of every generated boundary is 1lab's List-elim
+-- (Data.List.Base): generated terms contain no self-reference, so the
 -- termination checker never sees a recursive definition.
-list-elim
-  : ∀ {ℓ ℓ'} {A : Type ℓ} (P : List A → Type ℓ')
-  → P []
-  → (∀ x xs → P xs → P (x ∷ xs))
-  → ∀ xs → P xs
-list-elim P n c []       = n
-list-elim P n c (x ∷ xs) = c x xs (list-elim P n c xs)
 
 -- ==========================================================================
 -- Shapes: bracketing trees over a frontier of list slots (●) and element
@@ -177,7 +170,7 @@ private
     base ← go n s₁' s₂' vs
     let vs' = var 0 [] ∷ map (raise 1) vs
         motive = vlam "Γ" (path-ty (sh-tm s₁ vs') (sh-tm s₂ vs'))
-    pure (def (quote list-elim)
+    pure (def (quote List-elim)
       (unknown h∷ unknown h∷ unknown h∷ motive v∷ base v∷ step-tm v∷ x v∷ []))
   go-ne _ _ _ _ [] =
     typeError (strErr "declare-boundary: slot variables exhausted" ∷ [])
