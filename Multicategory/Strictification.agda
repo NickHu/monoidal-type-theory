@@ -12,6 +12,7 @@ import Cat.Morphism
 open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 
 open import Multicategory
+open import ListPath.Solver using (list!)
 open import Multicategory.Unary
 open import Monoidal.Strict
 import Multicategory.Representable as Rep
@@ -65,8 +66,7 @@ module Multicategory.Strictification
   private
     -- Naturality of ++-idr against the constant tail [].
     ++-idr-nat : (Γ : List Obₘ) → ap (_++ []) (++-idr Γ) ≡ ++-idr (Γ ++ [])
-    ++-idr-nat []      = refl
-    ++-idr-nat (a ∷ Γ) = ap (ap (a ∷_)) (++-idr-nat Γ)
+    ++-idr-nat Γ = list!
 
     -- interchange-flatten with empty first/third slots is a ++-idr reindex.
     flatten-nil-mid : (Γ Ε : List Obₘ)
@@ -98,19 +98,7 @@ module Multicategory.Strictification
       → ap (_++ D) (++-assoc A B C) ∙ ++-assoc A (B ++ C) D
           ∙ ap (A ++_) (++-assoc B C D)
         ≡ ++-assoc (A ++ B) C D ∙ ++-assoc A B (C ++ D)
-    ++-pentagon→ [] B C D =
-      ∙-idl _ ∙ ∙-idl _ ∙ sym (∙-idr _)
-    ++-pentagon→ (a ∷ A) B C D =
-        ap (ap (a ∷_) p₁ ∙_) (sym (ap-∙ (a ∷_) p₂ p₃))
-      ∙ sym (ap-∙ (a ∷_) p₁ (p₂ ∙ p₃))
-      ∙ ap (ap (a ∷_)) (++-pentagon→ A B C D)
-      ∙ ap-∙ (a ∷_) q₁ q₂
-      where
-        p₁ = ap (_++ D) (++-assoc A B C)
-        p₂ = ++-assoc A (B ++ C) D
-        p₃ = ap (A ++_) (++-assoc B C D)
-        q₁ = ++-assoc (A ++ B) C D
-        q₂ = ++-assoc A B (C ++ D)
+    ++-pentagon→ A B C D = list!
 
     -- Spine reconciliation for splitμ: the composite of its segment paths
     -- (Ε-pull, Δ-pull, μ-collapse, final ++-idr) against ap (Δ ++_) (++-idr Ε).

@@ -8,6 +8,7 @@ open import Multicategory.Free
 module Multicategory.Free.RedexStability {o h} (G : Multigraph o h) where
 
 open import Multicategory.Free.SplitLemmas G
+open import ListPath.Solver using (list!)
 open import Multicategory.Free.Identity G
 open import Multicategory.Free.Assoc G
 open import Multicategory.Free.Interchange G
@@ -99,19 +100,14 @@ private
   flattenˡ-∙ : ∀ (Θ Γ Ξ₁ Δ' : Ctx)
              → ++-assoc Θ (Γ ++ Ξ₁) Δ' ∙ ap (Θ ++_) (++-assoc Γ Ξ₁ Δ')
              ≡ flattenˡ Θ Γ Ξ₁ Δ'
-  flattenˡ-∙ []      Γ Ξ₁ Δ' = ∙-idl (++-assoc Γ Ξ₁ Δ')
-  flattenˡ-∙ (a ∷ Θ) Γ Ξ₁ Δ' =
-    ap-∙-step (a ∷_)
-      {p = ++-assoc Θ (Γ ++ Ξ₁) Δ'} {q = ap (Θ ++_) (++-assoc Γ Ξ₁ Δ')}
-      (flattenˡ-∙ Θ Γ Ξ₁ Δ')
+  flattenˡ-∙ Θ Γ Ξ₁ Δ' = list!
 
   -- The interchange boundary against flattenˡ / flattenʳ / bury, and the
   -- associativity boundary against flattenᵐ (each cons-by-cons, so the
   -- base cases agree definitionally).
   int-flatˡ : ∀ (Θ Γ Ξ₁ Δh Δm : Ctx)
             → interchangeₘ-boundary Θ Γ Ξ₁ Δh Δm ≡ flattenˡ Θ Γ Ξ₁ (Δh ++ Δm)
-  int-flatˡ []      Γ Ξ₁ Δh Δm = refl
-  int-flatˡ (a ∷ Θ) Γ Ξ₁ Δh Δm = ap (ap (a ∷_)) (int-flatˡ Θ Γ Ξ₁ Δh Δm)
+  int-flatˡ Θ Γ Ξ₁ Δh Δm = refl -- definitional after the solver aliasing
 
   int-flatʳ : ∀ (Γm Θ₃ Γ Ξ : Ctx)
             → interchangeₘ-boundary Γm [] Θ₃ Γ Ξ ≡ sym (flattenʳ Γm Θ₃ Γ Ξ)
@@ -126,18 +122,15 @@ private
 
   int-bury : ∀ (Γm Ψm Θ₃ Γ Ξ : Ctx)
            → sym (interchangeₘ-boundary Γm Ψm Θ₃ Γ Ξ) ≡ bury Γm Ψm Θ₃ (Γ ++ Ξ)
-  int-bury []       Ψm Θ₃ Γ Ξ = refl
-  int-bury (a ∷ Γm) Ψm Θ₃ Γ Ξ = ap (ap (a ∷_)) (int-bury Γm Ψm Θ₃ Γ Ξ)
+  int-bury Γm Ψm Θ₃ Γ Ξ = list!
 
   flatˡ-symₐ : ∀ (Θ₂ Γ Ξ₁ Δm : Ctx)
              → sym (assocₘ-flatten Θ₂ Γ Ξ₁ Δm) ≡ flattenˡ Θ₂ Γ Ξ₁ Δm
-  flatˡ-symₐ []       Γ Ξ₁ Δm = refl
-  flatˡ-symₐ (a ∷ Θ₂) Γ Ξ₁ Δm = ap (ap (a ∷_)) (flatˡ-symₐ Θ₂ Γ Ξ₁ Δm)
+  flatˡ-symₐ Θ₂ Γ Ξ₁ Δm = list!
 
   flatᵐ-sym : ∀ (Γm Θ₂ Γ Ξ₁ Δm : Ctx)
             → sym (assocₘ-boundary Γm Θ₂ Γ Ξ₁ Δm) ≡ flattenᵐ Γm Θ₂ Γ Ξ₁ Δm
-  flatᵐ-sym []       Θ₂ Γ Ξ₁ Δm = flatˡ-symₐ Θ₂ Γ Ξ₁ Δm
-  flatᵐ-sym (a ∷ Γm) Θ₂ Γ Ξ₁ Δm = ap (ap (a ∷_)) (flatᵐ-sym Γm Θ₂ Γ Ξ₁ Δm)
+  flatᵐ-sym Γm Θ₂ Γ Ξ₁ Δm = list!
 
   -- ==========================================================================
   -- Region lemmas.  plugˡ: the ambient slot x sits in the Γm-prefix of a
@@ -467,19 +460,7 @@ private
                ∙ (λ _ → (Γ₁ ++ Θ₂₂) ++ Γ ++ (Ξ₁' ++ Δm)))
           ≡ (λ i → flattenʳ Γ₁ Θ₂₂ Γ Ξ₁' i ++ Δm)
             ∙ flattenˡ (Γ₁ ++ Θ₂₂) Γ Ξ₁' Δm
-  core2bΓ []       Θ₂₂ Γ Ξ₁' Δm =
-      ∙-idl (sym (assocₘ-flatten Θ₂₂ Γ Ξ₁' Δm) ∙ refl)
-    ∙ ∙-idr (sym (assocₘ-flatten Θ₂₂ Γ Ξ₁' Δm))
-    ∙ flatˡ-symₐ Θ₂₂ Γ Ξ₁' Δm
-    ∙ sym (∙-idl (flattenˡ Θ₂₂ Γ Ξ₁' Δm))
-  core2bΓ (a ∷ Γ₁) Θ₂₂ Γ Ξ₁' Δm =
-    ap-eq₃₂ (a ∷_)
-      {p₁ = ++-assoc Γ₁ (Θ₂₂ ++ Γ ++ Ξ₁') Δm}
-      {p₂ = sym (assocₘ-boundary Γ₁ Θ₂₂ Γ Ξ₁' Δm)}
-      {p₃ = λ _ → (Γ₁ ++ Θ₂₂) ++ Γ ++ (Ξ₁' ++ Δm)}
-      {q₁ = λ i → flattenʳ Γ₁ Θ₂₂ Γ Ξ₁' i ++ Δm}
-      {q₂ = flattenˡ (Γ₁ ++ Θ₂₂) Γ Ξ₁' Δm}
-      (core2bΓ Γ₁ Θ₂₂ Γ Ξ₁' Δm)
+  core2bΓ Γ₁ Θ₂₂ Γ Ξ₁' Δm = list!
 
   core2b : ∀ (Γm Γ₁ Θ₂₂ Γ Ξ₁' Δm : Ctx)
          → sym (β⊗-boundary Γm Γ₁ (Θ₂₂ ++ Γ ++ Ξ₁') Δm)
@@ -487,15 +468,7 @@ private
               ∙ (λ i → ++-assoc Γm Γ₁ Θ₂₂ i ++ Γ ++ (Ξ₁' ++ Δm)))
          ≡ (λ i → Γm ++ flattenʳ Γ₁ Θ₂₂ Γ Ξ₁' i ++ Δm)
            ∙ flattenᵐ Γm (Γ₁ ++ Θ₂₂) Γ Ξ₁' Δm
-  core2b []       Γ₁ Θ₂₂ Γ Ξ₁' Δm = core2bΓ Γ₁ Θ₂₂ Γ Ξ₁' Δm
-  core2b (a ∷ Γm) Γ₁ Θ₂₂ Γ Ξ₁' Δm =
-    ap-eq₃₂ (a ∷_)
-      {p₁ = sym (β⊗-boundary Γm Γ₁ (Θ₂₂ ++ Γ ++ Ξ₁') Δm)}
-      {p₂ = sym (assocₘ-boundary (Γm ++ Γ₁) Θ₂₂ Γ Ξ₁' Δm)}
-      {p₃ = λ i → ++-assoc Γm Γ₁ Θ₂₂ i ++ Γ ++ (Ξ₁' ++ Δm)}
-      {q₁ = λ i → Γm ++ flattenʳ Γ₁ Θ₂₂ Γ Ξ₁' i ++ Δm}
-      {q₂ = flattenᵐ Γm (Γ₁ ++ Θ₂₂) Γ Ξ₁' Δm}
-      (core2b Γm Γ₁ Θ₂₂ Γ Ξ₁' Δm)
+  core2b Γm Γ₁ Θ₂₂ Γ Ξ₁' Δm = list!
 
   -- Case: the ambient slot x sits in Δ₁ (the pair's right component).
   -- One sub-assoc (g goes through N into the B-slot plug), then the
@@ -619,20 +592,7 @@ private
                 ∙ (++-assoc Γ Ξ (Δ₁ ++ Δm)
                    ∙ ap (Γ ++_) (sym (++-assoc Ξ Δ₁ Δm))))
            ≡ ap (_++ Δm) (++-assoc Γ Ξ Δ₁) ∙ ++-assoc Γ (Ξ ++ Δ₁) Δm
-  pentagon [] Ξ Δ₁ Δm =
-      ap (++-assoc Ξ Δ₁ Δm ∙_) (∙-idl (refl ∙ sym (++-assoc Ξ Δ₁ Δm)))
-    ∙ ap (++-assoc Ξ Δ₁ Δm ∙_) (∙-idl (sym (++-assoc Ξ Δ₁ Δm)))
-    ∙ ∙-invr (++-assoc Ξ Δ₁ Δm)
-    ∙ sym (∙-idl refl)
-  pentagon (a ∷ Γ) Ξ Δ₁ Δm =
-    ap-eq₄₂ (a ∷_)
-      {p₁ = ++-assoc (Γ ++ Ξ) Δ₁ Δm}
-      {p₂ = λ _ → (Γ ++ Ξ) ++ Δ₁ ++ Δm}
-      {p₃ = ++-assoc Γ Ξ (Δ₁ ++ Δm)}
-      {p₄ = ap (Γ ++_) (sym (++-assoc Ξ Δ₁ Δm))}
-      {q₁ = ap (_++ Δm) (++-assoc Γ Ξ Δ₁)}
-      {q₂ = ++-assoc Γ (Ξ ++ Δ₁) Δm}
-      (pentagon Γ Ξ Δ₁ Δm)
+  pentagon Γ Ξ Δ₁ Δm = list!
 
   -- Core coherence for the Γ₁-region, Θ₂-level (Γm = []).
   core2aΘ : ∀ (Θ₂ Γ Ξ₁ Δ₁ Δm : Ctx)
@@ -641,16 +601,7 @@ private
                ∙ (interchangeₘ-boundary Θ₂ Γ Ξ₁ Δ₁ Δm
                   ∙ (λ i → Θ₂ ++ Γ ++ ++-assoc Ξ₁ Δ₁ Δm (~ i))))
           ≡ (λ i → flattenˡ Θ₂ Γ Ξ₁ Δ₁ i ++ Δm) ∙ flattenˡ Θ₂ Γ (Ξ₁ ++ Δ₁) Δm
-  core2aΘ []       Γ Ξ₁ Δ₁ Δm = pentagon Γ Ξ₁ Δ₁ Δm
-  core2aΘ (a ∷ Θ₂) Γ Ξ₁ Δ₁ Δm =
-    ap-eq₄₂ (a ∷_)
-      {p₁ = ++-assoc (Θ₂ ++ Γ ++ Ξ₁) Δ₁ Δm}
-      {p₂ = λ i → flattenʳ [] Θ₂ Γ Ξ₁ i ++ Δ₁ ++ Δm}
-      {p₃ = interchangeₘ-boundary Θ₂ Γ Ξ₁ Δ₁ Δm}
-      {p₄ = λ i → Θ₂ ++ Γ ++ ++-assoc Ξ₁ Δ₁ Δm (~ i)}
-      {q₁ = λ i → flattenˡ Θ₂ Γ Ξ₁ Δ₁ i ++ Δm}
-      {q₂ = flattenˡ Θ₂ Γ (Ξ₁ ++ Δ₁) Δm}
-      (core2aΘ Θ₂ Γ Ξ₁ Δ₁ Δm)
+  core2aΘ Θ₂ Γ Ξ₁ Δ₁ Δm = list!
 
   core2a : ∀ (Γm Θ₂ Γ Ξ₁ Δ₁ Δm : Ctx)
          → sym (β⊗-boundary Γm (Θ₂ ++ Γ ++ Ξ₁) Δ₁ Δm)
@@ -659,16 +610,7 @@ private
                  ∙ (λ i → (Γm ++ Θ₂) ++ Γ ++ ++-assoc Ξ₁ Δ₁ Δm (~ i))))
          ≡ (λ i → Γm ++ flattenˡ Θ₂ Γ Ξ₁ Δ₁ i ++ Δm)
            ∙ flattenᵐ Γm Θ₂ Γ (Ξ₁ ++ Δ₁) Δm
-  core2a []       Θ₂ Γ Ξ₁ Δ₁ Δm = core2aΘ Θ₂ Γ Ξ₁ Δ₁ Δm
-  core2a (a ∷ Γm) Θ₂ Γ Ξ₁ Δ₁ Δm =
-    ap-eq₄₂ (a ∷_)
-      {p₁ = sym (β⊗-boundary Γm (Θ₂ ++ Γ ++ Ξ₁) Δ₁ Δm)}
-      {p₂ = λ i → flattenʳ Γm Θ₂ Γ Ξ₁ i ++ Δ₁ ++ Δm}
-      {p₃ = interchangeₘ-boundary (Γm ++ Θ₂) Γ Ξ₁ Δ₁ Δm}
-      {p₄ = λ i → (Γm ++ Θ₂) ++ Γ ++ ++-assoc Ξ₁ Δ₁ Δm (~ i)}
-      {q₁ = λ i → Γm ++ flattenˡ Θ₂ Γ Ξ₁ Δ₁ i ++ Δm}
-      {q₂ = flattenᵐ Γm Θ₂ Γ (Ξ₁ ++ Δ₁) Δm}
-      (core2a Γm Θ₂ Γ Ξ₁ Δ₁ Δm)
+  core2a Γm Θ₂ Γ Ξ₁ Δ₁ Δm = list!
 
   -- The canonical B-slot after the middle-region reduction, against the
   -- fully weakened one sub-interchange expects (base case is plugˡ's Sq).

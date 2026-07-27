@@ -78,6 +78,11 @@ module NbE {o} (X : Type o) where
   buryᵐ []       ys zs ws us = bury ys zs ws us
   buryᵐ (x ∷ xs) ys zs ws us = ap (x ∷_) (buryᵐ xs ys zs ws us)
 
+  pivot : ∀ (xs ys zs ws : List X)
+        → (xs ++ ys) ++ zs ++ ws ≡ xs ++ ((ys ++ zs) ++ ws)
+  pivot []       ys zs ws = sym (++-assoc ys zs ws)
+  pivot (x ∷ xs) ys zs ws = ap (x ∷_) (pivot xs ys zs ws)
+
   -- (Add further named reassociations by the same five-step pattern:
   -- generic definition here, a PExp generator, a ⟦_⟧ᵖ clause, a refl clause
   -- in flatκ, and a soundκ leaf — sound-bury is the closest template.)
@@ -175,6 +180,8 @@ module NbE {o} (X : Type o) where
     buryᵐᵖ : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp)
            → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
                   (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
+    pivotᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
+           → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄) (E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄))
 
   infixr 30 _∙ᵖ_
   infix 34 _◁ᵖ_
@@ -198,6 +205,7 @@ module NbE {o} (X : Type o) where
   ⟦ flattenᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ = flattenᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
   ⟦ buryᵖ E₁ E₂ E₃ E₄ ⟧ᵖ        = bury ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
   ⟦ buryᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ    = buryᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
+  ⟦ pivotᵖ E₁ E₂ E₃ E₄ ⟧ᵖ       = pivot ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
 
   -- ==========================================================================
   -- §3  The nf-level residue.  Thanks to eval's accumulator, every pure
@@ -225,6 +233,7 @@ module NbE {o} (X : Type o) where
   flatκ (flattenᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
   flatκ (buryᵖ E₁ E₂ E₃ E₄) κ = refl
   flatκ (buryᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
+  flatκ (pivotᵖ E₁ E₂ E₃ E₄) κ = refl
 
   flat : PExp E₁ E₂ → nf E₁ ≡ nf E₂
   flat P = flatκ P []
@@ -579,6 +588,41 @@ module NbE {o} (X : Type o) where
                 (ap (⟦ E₁ ⟧ᵉ ++_) (bury ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ)))
         ∙ ap (ap (_++ κ)) (sym (buryᵐ≡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ))
 
+
+  pivot≡
+    : ∀ (xs ys zs ws : List X)
+    → pivot xs ys zs ws
+    ≡ ++-assoc xs ys (zs ++ ws) ∙ ap (xs ++_) (sym (++-assoc ys zs ws))
+  pivot≡ []       ys zs ws = sym (∙-idl _)
+  pivot≡ (x ∷ xs) ys zs ws =
+      ap (ap (x ∷_)) (pivot≡ xs ys zs ws)
+    ∙ ap-∙ (x ∷_) (++-assoc xs ys (zs ++ ws)) (ap (xs ++_) (sym (++-assoc ys zs ws)))
+
+  sound-pivot
+    : ∀ (E₁ E₂ E₃ E₄ : LExp) (κ : List X)
+    → PathP (λ i → ap (_++ κ) (pivot ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ) i
+                 ≡ eval E₁ (eval E₂ (eval E₃ (eval E₄ κ))))
+        (normκ ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄) κ)
+        (normκ (E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄)) κ)
+  sound-pivot E₁ E₂ E₃ E₄ κ =
+    sq-cast₂ et (∙-idl refl)
+      (sound-assoc E₁ E₂ (E₃ ⊕ E₄) κ ∙₂ whisk)
+    where
+      whisk
+        : PathP (λ i → ap (_++ κ)
+                          (ap (⟦ E₁ ⟧ᵉ ++_) (sym (++-assoc ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ))) i
+                     ≡ eval E₁ (eval E₂ (eval E₃ (eval E₄ κ))))
+            (normκ (E₁ ⊕ (E₂ ⊕ (E₃ ⊕ E₄))) κ)
+            (normκ (E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄)) κ)
+      whisk i =
+          ++-assoc ⟦ E₁ ⟧ᵉ (sym (++-assoc ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ) i) κ
+        ∙ ap (⟦ E₁ ⟧ᵉ ++_) (sound-assoc E₂ E₃ E₄ κ (~ i))
+        ∙ normκ E₁ (eval E₂ (eval E₃ (eval E₄ κ)))
+        ∙ refl
+      et =
+          sym (ap-∙ (_++ κ) (++-assoc ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ (⟦ E₃ ⟧ᵉ ++ ⟦ E₄ ⟧ᵉ))
+                (ap (⟦ E₁ ⟧ᵉ ++_) (sym (++-assoc ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ))))
+        ∙ ap (ap (_++ κ)) (sym (pivot≡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ))
   -- ---- the induction ------------------------------------------------------
 
   soundκ : (P : PExp E₁ E₂) (κ : List X)
@@ -635,6 +679,7 @@ module NbE {o} (X : Type o) where
   soundκ (flattenᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-flattenᵐ E₁' E₂' E₃' E₄' E₅' κ
   soundκ (buryᵖ E₁' E₂' E₃' E₄') κ = sound-bury E₁' E₂' E₃' E₄' κ
   soundκ (buryᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-buryᵐ E₁' E₂' E₃' E₄' E₅' κ
+  soundκ (pivotᵖ E₁' E₂' E₃' E₄') κ = sound-pivot E₁' E₂' E₃' E₄' κ
 
   -- Closed form at κ = []: mirror norm₀'s definition at interval i.
   sound : (P : PExp E₁ E₂)
@@ -793,6 +838,14 @@ module Reflection where
     ... | just as' = just (a ∷ as')
     ... | nothing  = nothing
 
+    -- Ditto for application to the negated interval variable (p (~ i)).
+    unsnoc-neg : List (Arg Term) → Maybe (List (Arg Term))
+    unsnoc-neg [] = nothing
+    unsnoc-neg (arg _ (def (quote ~_) (arg _ (var 0 []) ∷ [])) ∷ []) = just []
+    unsnoc-neg (a ∷ as) with unsnoc-neg as
+    ... | just as' = just (a ∷ as')
+    ... | nothing  = nothing
+
 
   private
     -- Endpoint expressions of emitted codes (partial: exactly the heads the
@@ -819,6 +872,8 @@ module Reflection where
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
     lhsE (con (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
+    lhsE (con (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ e₄)
     lhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
     lhsE _ = unknown
@@ -841,6 +896,8 @@ module Reflection where
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
     rhsE (con (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ (mk-⊕ e₂ e₃)) e₄
+    rhsE (con (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ e₃) e₄)
     rhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
     rhsE _ = unknown
@@ -874,6 +931,11 @@ module Reflection where
     pure ( con (quote NbE.flattenˡᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
+  build-path (def (quote NbE.flattenʳ) (_ h∷ _ v∷ con (quote List.[]) _ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
+    pure ( def (quote NbE.idᵉ)
+             (unknown h∷ unknown v∷
+              mk-⊕ (build-lexp t₂) (mk-⊕ (build-lexp t₃) (build-lexp t₄)) v∷ [])
+         , “refl” )
   build-path (def (quote NbE.flattenʳ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
     pure ( con (quote NbE.flattenʳᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
@@ -891,6 +953,10 @@ module Reflection where
     pure ( con (quote NbE.buryᵐᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷
               build-lexp t₅ v∷ [])
+         , “refl” )
+  build-path (def (quote NbE.pivot) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
+    pure ( con (quote NbE.pivotᵖ)
+             (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote ap) (_ h∷ _ h∷ _ h∷ _ h∷ f v∷ _ h∷ _ h∷ p v∷ [])) =
     build-ap f p
@@ -921,9 +987,13 @@ module Reflection where
     pure ( con (quote NbE.consᵖ) (strip1 x v∷ e v∷ [])
          , def (quote collapse-ap)
              (con (quote List._∷_) (strip1 x v∷ []) v∷ c v∷ []) )
-  build-pointwise t@(def nm args) with unsnoc-var0 args
-  ... | just args' = build-path (strip1 (def nm args'))
-  ... | nothing    =
+  build-pointwise t@(def nm args) with unsnoc-var0 args | unsnoc-neg args
+  ... | just args' | _ = build-path (strip1 (def nm args'))
+  ... | nothing | just args' = do
+    (e , c) ← build-path (strip1 (def nm args'))
+    pure ( con (quote NbE.symᵖ) (e v∷ [])
+         , def (quote collapse-sym) (c v∷ []) )
+  ... | nothing | nothing =
     pure (def (quote NbE.idᵉ) (unknown h∷ unknown v∷ build-lexp (strip1 t) v∷ []) , “refl”)
   build-pointwise t =
     pure (def (quote NbE.idᵉ) (unknown h∷ unknown v∷ build-lexp (strip1 t) v∷ []) , “refl”)
@@ -990,7 +1060,7 @@ module Reflection where
     quote _∙_ ∷ quote sym ∷ quote ap ∷ quote refl ∷ quote _++_ ∷
     quote ++-assoc ∷ quote ++-idr ∷
     quote NbE.flattenˡ ∷ quote NbE.flattenʳ ∷ quote NbE.flattenᵐ ∷
-    quote NbE.bury ∷ quote NbE.buryᵐ ∷ []
+    quote NbE.bury ∷ quote NbE.buryᵐ ∷ quote NbE.pivot ∷ []
 
   list-worker : Term → TC ⊤
   list-worker hole =

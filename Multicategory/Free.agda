@@ -327,8 +327,7 @@ module Syntax {o h} (G : Multigraph o h) where
 
   --   (Γm ++ Γ₁) ++ Δ₁ ++ Δm ≡ Γm ++ (Γ₁ ++ Δ₁) ++ Δm
   β⊗-boundary : ∀ (Γm Γ₁ Δ₁ Δm : Ctx) → (Γm ++ Γ₁) ++ Δ₁ ++ Δm ≡ Γm ++ (Γ₁ ++ Δ₁) ++ Δm
-  β⊗-boundary []       Γ₁ Δ₁ Δm = sym (++-assoc Γ₁ Δ₁ Δm)
-  β⊗-boundary (a ∷ Γm) Γ₁ Δ₁ Δm = ap (a ∷_) (β⊗-boundary Γm Γ₁ Δ₁ Δm)
+  β⊗-boundary = LP.pivot
 
   data _≈_  : Tm Γ z → Tm Γ z → Type (o ⊔ h)
   data _≈ₛ_ : Sp Γ As → Sp Γ As → Type (o ⊔ h)
