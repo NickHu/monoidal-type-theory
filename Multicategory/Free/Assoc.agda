@@ -215,14 +215,7 @@ private
           ∙ assocₘ-boundary (Γm ++ Θ₃) Φ Μ Ψ Ξ)
          ∙ sym (flattenʳ Γm Θ₃ (Φ ++ Μ ++ Ψ) Ξ))
     ≡ ap (λ l → Γm ++ l) (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ)
-  sq-B-inner𝟙 [] Θ₃ Φ Μ Ψ Ξ = sq-base (assocₘ-boundary Θ₃ Φ Μ Ψ Ξ)
-  sq-B-inner𝟙 (a' ∷ Γm) Θ₃ Φ Μ Ψ Ξ =
-    sq-step a'
-      (flattenʳ Γm (Θ₃ ++ Φ) Μ (Ψ ++ Ξ))
-      (ap (_++ Μ ++ Ψ ++ Ξ) (sym (++-assoc Γm Θ₃ Φ)))
-      (assocₘ-boundary (Γm ++ Θ₃) Φ Μ Ψ Ξ)
-      (sym (flattenʳ Γm Θ₃ (Φ ++ Μ ++ Ψ) Ξ))
-      (sq-B-inner𝟙 Γm Θ₃ Φ Μ Ψ Ξ)
+  sq-B-inner𝟙 Γm Θ₃ Φ Μ Ψ Ξ = list!
 
 -- ==========================================================================
 -- Canonicalisers.  Transport an associativity goal stated at the canonical

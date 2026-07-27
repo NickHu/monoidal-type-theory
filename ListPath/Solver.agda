@@ -182,6 +182,13 @@ module NbE {o} (X : Type o) where
                   (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
     pivotᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
            → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄) (E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄))
+    -- degenerate-instance generators: named boundaries at [] arguments,
+    -- whose interpretations are CONVERTIBLE to clean ⊕-shapes (the []
+    -- computes through ++), so their endpoint types avoid εᵉ-in-⊕ entirely.
+    flattenˡ-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
+                  → PExp ((E₁ ⊕ E₃) ⊕ E₄) (E₁ ⊕ (E₃ ⊕ E₄))
+    bury-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
+              → PExp (E₁ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ E₃) ⊕ E₄)
 
   infixr 30 _∙ᵖ_
   infix 34 _◁ᵖ_
@@ -206,6 +213,8 @@ module NbE {o} (X : Type o) where
   ⟦ buryᵖ E₁ E₂ E₃ E₄ ⟧ᵖ        = bury ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
   ⟦ buryᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ    = buryᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
   ⟦ pivotᵖ E₁ E₂ E₃ E₄ ⟧ᵖ       = pivot ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+  ⟦ flattenˡ-nilᵖ E₁ E₃ E₄ ⟧ᵖ   = flattenˡ ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+  ⟦ bury-nilᵖ E₁ E₃ E₄ ⟧ᵖ       = bury ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
 
   -- ==========================================================================
   -- §3  The nf-level residue.  Thanks to eval's accumulator, every pure
@@ -234,6 +243,8 @@ module NbE {o} (X : Type o) where
   flatκ (buryᵖ E₁ E₂ E₃ E₄) κ = refl
   flatκ (buryᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
   flatκ (pivotᵖ E₁ E₂ E₃ E₄) κ = refl
+  flatκ (flattenˡ-nilᵖ E₁ E₃ E₄) κ = refl
+  flatκ (bury-nilᵖ E₁ E₃ E₄) κ = refl
 
   flat : PExp E₁ E₂ → nf E₁ ≡ nf E₂
   flat P = flatκ P []
@@ -623,6 +634,34 @@ module NbE {o} (X : Type o) where
           sym (ap-∙ (_++ κ) (++-assoc ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ (⟦ E₃ ⟧ᵉ ++ ⟦ E₄ ⟧ᵉ))
                 (ap (⟦ E₁ ⟧ᵉ ++_) (sym (++-assoc ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ))))
         ∙ ap (ap (_++ κ)) (sym (pivot≡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ))
+
+  flattenˡ-nil≡
+    : ∀ (xs zs ws : List X) → flattenˡ xs [] zs ws ≡ ++-assoc xs zs ws
+  flattenˡ-nil≡ []       zs ws = refl
+  flattenˡ-nil≡ (x ∷ xs) zs ws = ap (ap (x ∷_)) (flattenˡ-nil≡ xs zs ws)
+
+  bury-nil≡
+    : ∀ (xs zs ws : List X) → bury xs [] zs ws ≡ sym (++-assoc xs zs ws)
+  bury-nil≡ []       zs ws = refl
+  bury-nil≡ (x ∷ xs) zs ws = ap (ap (x ∷_)) (bury-nil≡ xs zs ws)
+
+  sound-flattenˡ-nil
+    : ∀ (E₁ E₃ E₄ : LExp) (κ : List X)
+    → PathP (λ i → ap (_++ κ) (flattenˡ ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ) i
+                 ≡ eval E₁ (eval E₃ (eval E₄ κ)))
+        (normκ ((E₁ ⊕ E₃) ⊕ E₄) κ) (normκ (E₁ ⊕ (E₃ ⊕ E₄)) κ)
+  sound-flattenˡ-nil E₁ E₃ E₄ κ =
+    sq-cast (ap (ap (_++ κ)) (sym (flattenˡ-nil≡ ⟦ E₁ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ)))
+      (sound-assoc E₁ E₃ E₄ κ)
+
+  sound-bury-nil
+    : ∀ (E₁ E₃ E₄ : LExp) (κ : List X)
+    → PathP (λ i → ap (_++ κ) (bury ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ) i
+                 ≡ eval E₁ (eval E₃ (eval E₄ κ)))
+        (normκ (E₁ ⊕ (E₃ ⊕ E₄)) κ) (normκ ((E₁ ⊕ E₃) ⊕ E₄) κ)
+  sound-bury-nil E₁ E₃ E₄ κ =
+    sq-cast (ap (ap (_++ κ)) (sym (bury-nil≡ ⟦ E₁ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ)))
+      (λ i → sound-assoc E₁ E₃ E₄ κ (~ i))
   -- ---- the induction ------------------------------------------------------
 
   soundκ : (P : PExp E₁ E₂) (κ : List X)
@@ -680,6 +719,8 @@ module NbE {o} (X : Type o) where
   soundκ (buryᵖ E₁' E₂' E₃' E₄') κ = sound-bury E₁' E₂' E₃' E₄' κ
   soundκ (buryᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-buryᵐ E₁' E₂' E₃' E₄' E₅' κ
   soundκ (pivotᵖ E₁' E₂' E₃' E₄') κ = sound-pivot E₁' E₂' E₃' E₄' κ
+  soundκ (flattenˡ-nilᵖ E₁' E₃' E₄') κ = sound-flattenˡ-nil E₁' E₃' E₄' κ
+  soundκ (bury-nilᵖ E₁' E₃' E₄') κ = sound-bury-nil E₁' E₃' E₄' κ
 
   -- Closed form at κ = []: mirror norm₀'s definition at interval i.
   sound : (P : PExp E₁ E₂)
@@ -874,6 +915,10 @@ module Reflection where
       mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
     lhsE (con (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ e₄)
+    lhsE (con (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₃) e₄
+    lhsE (con (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ e₃ e₄)
     lhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
     lhsE _ = unknown
@@ -898,6 +943,10 @@ module Reflection where
       mk-⊕ (mk-⊕ e₁ (mk-⊕ e₂ e₃)) e₄
     rhsE (con (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ e₃) e₄)
+    rhsE (con (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ e₁ (mk-⊕ e₃ e₄)
+    rhsE (con (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+      mk-⊕ (mk-⊕ e₁ e₃) e₄
     rhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
     rhsE _ = unknown
@@ -927,6 +976,10 @@ module Reflection where
          , “refl” )
   build-path (def (quote ++-idr) (_ h∷ _ h∷ xs v∷ [])) =
     pure (con (quote NbE.idrᵖ) (build-lexp xs v∷ []) , “refl”)
+  build-path (def (quote NbE.flattenˡ) (_ h∷ _ v∷ t₁ v∷ con (quote List.[]) _ v∷ t₃ v∷ t₄ v∷ [])) =
+    pure ( con (quote NbE.flattenˡ-nilᵖ)
+             (build-lexp t₁ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
+         , “refl” )
   build-path (def (quote NbE.flattenˡ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
     pure ( con (quote NbE.flattenˡᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
@@ -944,6 +997,10 @@ module Reflection where
     pure ( con (quote NbE.flattenᵐᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷
               build-lexp t₅ v∷ [])
+         , “refl” )
+  build-path (def (quote NbE.bury) (_ h∷ _ v∷ t₁ v∷ con (quote List.[]) _ v∷ t₃ v∷ t₄ v∷ [])) =
+    pure ( con (quote NbE.bury-nilᵖ)
+             (build-lexp t₁ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote NbE.bury) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
     pure ( con (quote NbE.buryᵖ)

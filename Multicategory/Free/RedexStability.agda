@@ -33,8 +33,7 @@ private
   -- sym refl vs refl, which agree definitionally).
   bury-nil : ∀ (Γm Θ₂ Γ Ξ : Ctx)
            → bury Γm [] Θ₂ (Γ ++ Ξ) ≡ flattenʳ Γm Θ₂ Γ Ξ
-  bury-nil []       Θ₂ Γ Ξ = refl
-  bury-nil (a ∷ Γm) Θ₂ Γ Ξ = ap (ap (a ∷_)) (bury-nil Γm Θ₂ Γ Ξ)
+  bury-nil Γm Θ₂ Γ Ξ = list!
 
   β𝟙-sub-handler : ∀ {x C : Ty} {Θ Γm Δm Ξ Γ : Ctx} {s : Split x Θ (Γm ++ Δm) Ξ}
       (v : Split-++ Γm Δm s) (N : Tm (Γm ++ Δm) C) (g : Tm Γ x)
@@ -111,8 +110,7 @@ private
 
   int-flatʳ : ∀ (Γm Θ₃ Γ Ξ : Ctx)
             → interchangeₘ-boundary Γm [] Θ₃ Γ Ξ ≡ sym (flattenʳ Γm Θ₃ Γ Ξ)
-  int-flatʳ []       Θ₃ Γ Ξ = refl
-  int-flatʳ (a ∷ Γm) Θ₃ Γ Ξ = ap (ap (a ∷_)) (int-flatʳ Γm Θ₃ Γ Ξ)
+  int-flatʳ Γm Θ₃ Γ Ξ = list!
 
   int-flatʳ₂ : ∀ (Γm Θ₃ Γ Ξ : Ctx) {A B : Ty}
              → interchangeₘ-boundary Γm (A ∷ B ∷ []) Θ₃ Γ Ξ
@@ -427,19 +425,7 @@ private
       → p ∙ (q ∙ (r ∙ T)) ≡ (p ∙ (q ∙ r)) ∙ T
   sh₃ p q r T = ap (p ∙_) (∙-assoc q r T) ∙ ∙-assoc p (q ∙ r) T
 
-  -- Cons step for base-path coherences: distribute ap f over a
-  -- three-segment ≡ two-segment equation.
-  ap-eq₃₂ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {a b c d e : X}
-            {p₁ : a ≡ b} {p₂ : b ≡ c} {p₃ : c ≡ d} {q₁ : a ≡ e} {q₂ : e ≡ d}
-          → p₁ ∙ (p₂ ∙ p₃) ≡ q₁ ∙ q₂
-          → ap f p₁ ∙ (ap f p₂ ∙ ap f p₃) ≡ ap f q₁ ∙ ap f q₂
-  ap-eq₃₂ f {p₁ = p₁} {p₂ = p₂} {p₃ = p₃} {q₁ = q₁} {q₂ = q₂} eq =
-    ap (ap f p₁ ∙_) (sym (ap-∙ f p₂ p₃))
-    ∙ sym (ap-∙ f p₁ (p₂ ∙ p₃))
-    ∙ ap (ap f) eq
-    ∙ ap-∙ f q₁ q₂
-
-  -- The slot sits in Δ₁ (the pair's right component): the canonical x-split
+    -- The slot sits in Δ₁ (the pair's right component): the canonical x-split
   -- of X₂'s context, transported across β⊗-boundary.
   split-ββᴮ : ∀ (Γm : Ctx) {x : Ty} {Θ₂₂ Δ₁ Ξ₁' : Ctx}
               (s₂ : Split x Θ₂₂ Δ₁ Ξ₁') (Γ₁ Δm : Ctx)
@@ -571,18 +557,6 @@ private
     ap (p ∙_) (ap (q ∙_) (∙-assoc r u T))
     ∙ ap (p ∙_) (∙-assoc q (r ∙ u) T)
     ∙ ∙-assoc p (q ∙ (r ∙ u)) T
-
-  ap-eq₄₂ : ∀ {ℓ ℓ'} {X : Type ℓ} {Y : Type ℓ'} (f : X → Y) {a b c d e w : X}
-            {p₁ : a ≡ b} {p₂ : b ≡ c} {p₃ : c ≡ d} {p₄ : d ≡ e}
-            {q₁ : a ≡ w} {q₂ : w ≡ e}
-          → p₁ ∙ (p₂ ∙ (p₃ ∙ p₄)) ≡ q₁ ∙ q₂
-          → ap f p₁ ∙ (ap f p₂ ∙ (ap f p₃ ∙ ap f p₄)) ≡ ap f q₁ ∙ ap f q₂
-  ap-eq₄₂ f {p₁ = p₁} {p₂ = p₂} {p₃ = p₃} {p₄ = p₄} {q₁ = q₁} {q₂ = q₂} eq =
-    ap (ap f p₁ ∙_) (ap (ap f p₂ ∙_) (sym (ap-∙ f p₃ p₄)))
-    ∙ ap (ap f p₁ ∙_) (sym (ap-∙ f p₂ (p₃ ∙ p₄)))
-    ∙ sym (ap-∙ f p₁ (p₂ ∙ (p₃ ∙ p₄)))
-    ∙ ap (ap f) eq
-    ∙ ap-∙ f q₁ q₂
 
   -- The ++-assoc pentagon (with a unit segment kept where the flattenʳ of
   -- the enclosing induction degenerates).
