@@ -8,6 +8,7 @@ open import Cat.Functor.Naturality
 open import Cat.Monoidal.Base
 open import Cat.Univalent using (path→iso; path→to-sym; Hom-pathp-refll; Hom-pathp-reflr)
 open import 1Lab.Path.Reasoning using (∙-swapl)
+open import 1Lab.Reflection.Regularity using (module Regularity)
 import Cat.Morphism
 open import Data.List using (List; []; _∷_; _++_; ++-idr; ++-assoc)
 
@@ -198,9 +199,7 @@ module Multicategory.Strictification
            {q = interchange-flatten Γ [] Δ []}
            leg
            (interchangeₘ {Θ = []} {Μ = []} {Κ = []} {Γ = Γ} {Δ = Δ} χ g h))
-    ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Δ ++ []} q g)
-         ( transport-refl _
-         ∙ ap (λ q → _∘ₘ_ {Θ = x ∷ []} {Ξ = []} q h) (transport-refl χ) )
+    ∙ ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Δ ++ []} q g) Regularity.reduce!
     where
       BΩ : List Obₘ → Type _
       BΩ Ω = Homₘ Ω z
@@ -236,9 +235,7 @@ module Multicategory.Strictification
               (_∘ₘ_ {Θ = []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g) h)
               (_∘ₘ_ {Θ = []} {Ξ = Ξ} f (_∘ₘ_ {Θ = []} {Ξ = Ψ} g h))
   assoc₀₀ {Ξ} {Ψ} f g h =
-    ap (λ q → _∘ₘ_ {Θ = []} {Ξ = Ψ ++ Ξ} q h)
-       (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g)))
-      ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = []} f g h
+    sym Regularity.reduce! ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = []} f g h
 
   assoc₁₀ : {Ξ Ψ Ρ : List Obₘ} {w x y z : Obₘ}
             (f : Homₘ (w ∷ x ∷ Ξ) z) (g : Homₘ (y ∷ Ψ) x) (h : Homₘ Ρ y)
@@ -246,9 +243,7 @@ module Multicategory.Strictification
               (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f g) h)
               (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f (_∘ₘ_ {Θ = []} {Ξ = Ψ} g h))
   assoc₁₀ {Ξ} {Ψ} f g h =
-    ap (λ q → _∘ₘ_ {Θ = _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
-       (sym (transport-refl (_∘ₘ_ {Θ = _ ∷ []} {Ξ = Ξ} f g)))
-      ◁ assocₘ {Θ = _ ∷ []} {Ξ = Ξ} {Φ = []} f g h
+    sym Regularity.reduce! ◁ assocₘ {Θ = _ ∷ []} {Ξ = Ξ} {Φ = []} f g h
 
   assoc₁₁ : {Ξ Ψ Ρ : List Obₘ} {w v x y z : Obₘ}
             (f : Homₘ (w ∷ x ∷ Ξ) z) (g : Homₘ (v ∷ y ∷ Ψ) x) (h : Homₘ Ρ y)
@@ -256,9 +251,7 @@ module Multicategory.Strictification
               (_∘ₘ_ {Θ = w ∷ v ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f g) h)
               (_∘ₘ_ {Θ = w ∷ []} {Ξ = Ξ} f (_∘ₘ_ {Θ = v ∷ []} {Ξ = Ψ} g h))
   assoc₁₁ {Ξ} {Ψ} f g h =
-    ap (λ q → _∘ₘ_ {Θ = _ ∷ _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
-       (sym (transport-refl (_∘ₘ_ {Θ = _ ∷ []} {Ξ = Ξ} f g)))
-      ◁ assocₘ {Θ = _ ∷ []} {Ξ = Ξ} {Φ = _ ∷ []} f g h
+    sym Regularity.reduce! ◁ assocₘ {Θ = _ ∷ []} {Ξ = Ξ} {Φ = _ ∷ []} f g h
 
   assoc₀₁ : {Ξ Ψ Ρ : List Obₘ} {v x y z : Obₘ}
             (f : Homₘ (x ∷ Ξ) z) (g : Homₘ (v ∷ y ∷ Ψ) x) (h : Homₘ Ρ y)
@@ -266,9 +259,7 @@ module Multicategory.Strictification
               (_∘ₘ_ {Θ = v ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g) h)
               (_∘ₘ_ {Θ = []} {Ξ = Ξ} f (_∘ₘ_ {Θ = v ∷ []} {Ξ = Ψ} g h))
   assoc₀₁ {Ξ} {Ψ} f g h =
-    ap (λ q → _∘ₘ_ {Θ = _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
-       (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g)))
-      ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = _ ∷ []} f g h
+    sym Regularity.reduce! ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = _ ∷ []} f g h
 
   assoc₀₂ : {Ξ Ψ Ρ : List Obₘ} {v w x y z : Obₘ}
             (f : Homₘ (x ∷ Ξ) z) (g : Homₘ (v ∷ w ∷ y ∷ Ψ) x) (h : Homₘ Ρ y)
@@ -276,9 +267,7 @@ module Multicategory.Strictification
               (_∘ₘ_ {Θ = v ∷ w ∷ []} {Ξ = Ψ ++ Ξ} (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g) h)
               (_∘ₘ_ {Θ = []} {Ξ = Ξ} f (_∘ₘ_ {Θ = v ∷ w ∷ []} {Ξ = Ψ} g h))
   assoc₀₂ {Ξ} {Ψ} f g h =
-    ap (λ q → _∘ₘ_ {Θ = _ ∷ _ ∷ []} {Ξ = Ψ ++ Ξ} q h)
-       (sym (transport-refl (_∘ₘ_ {Θ = []} {Ξ = Ξ} f g)))
-      ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = _ ∷ _ ∷ []} f g h
+    sym Regularity.reduce! ◁ assocₘ {Θ = []} {Ξ = Ξ} {Φ = _ ∷ _ ∷ []} f g h
 
   -- Universality, packaged as an equivalence between unary maps out of ⊗Γ and
   -- multimaps out of the context Γ: Representable's `restrE` at the universal
