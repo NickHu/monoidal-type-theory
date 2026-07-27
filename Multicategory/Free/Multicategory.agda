@@ -19,8 +19,7 @@ open import Multicategory.Free.SplitLemmas G
 open import Multicategory.Free.Identity G
 open import Multicategory.Free.Assoc G
 open import Multicategory.Free.Interchange G
-open import Multicategory.Free.CongruenceLeft G
-open import Multicategory.Free.CongruenceRight G
+open import Multicategory.Free.Congruence G
 
 private variable
   x y z A B C : Ty
