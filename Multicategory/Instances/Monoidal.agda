@@ -125,7 +125,13 @@ module Repr {o h} (C : Precategory o h) (M : Monoidal-category C) where
   -- below (refl, cons, sym) generate every characterisation by one short
   -- recursion per boundary.  The .⊗iso projections reduce definitionally at
   -- cons (to ▶.F-map-iso of the tail), which the equational displays in the
-  -- law proofs rely on.
+  -- law proofs rely on — e.g. the F-α→ display peels
+  -- slot-unbury-iso (a ∷ Θ) to a ▶ slot-unbury-iso Θ silently.  That
+  -- reduction is also why these stay hand-written recursions: deriving
+  -- them generically (interpreting ListPath.Solver codes into chains, or
+  -- subst ⊗-chain along a solver-proved path identification) yields values
+  -- that are not cons-headed, so every such peel would become a
+  -- propositional rewrite at each use site.
   ----------------------------------------------------------------------
 
   record ⊗-chain {Γ Δ : List Ob} (p : Γ ≡ Δ) : Type h where
