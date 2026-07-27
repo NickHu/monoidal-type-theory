@@ -93,6 +93,20 @@ split-path-here : ∀ (Θ : Ctx) (x : Ty) (Ξ : Ctx)
 split-path-here []      x Ξ = refl
 split-path-here (a ∷ Θ) x Ξ = ap (ap (a ∷_)) (split-path-here Θ x Ξ)
 
+-- Every split is the canonical one, over its own witnessed path.  This is
+-- the "to-path-over" of an identity system: Split x Θ – Ξ is the graph of
+-- split-here (its total space Σ Ρ (Split x Θ Ρ Ξ) is contractible, with no
+-- set-ness of Ty — split-canon paired with split-path IS the contraction),
+-- so Split x Θ Ρ Ξ ≃ (Θ ++ x ∷ Ξ ≡ Ρ) and a PathP between splits carries
+-- exactly the information of a square between their split-paths.  The
+-- cons-by-cons split squares in this development (co-* and friends) are the
+-- optimal concrete form of those squares — each mirrors its boundary path's
+-- own recursion — which is why none of them route through this fact.
+split-canon : (s : Split x Θ Λ Ξ)
+            → PathP (λ i → Split x Θ (split-path s i) Ξ) (split-here Θ x Ξ) s
+split-canon here        = refl
+split-canon (there s) i = there (split-canon s i)
+
 -- Squares relating split-path before/after weakening; the moving edge is
 -- ++-assoc, the still edge is the weakened carrier.
 split-path-++ˡ : (s : Split x Θ Λ Ξ) (Γ₂ : Ctx)

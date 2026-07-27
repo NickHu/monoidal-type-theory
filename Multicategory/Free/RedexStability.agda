@@ -80,11 +80,8 @@ private
 -- ==========================================================================
 
 private
-  -- Every split is the canonical one, over its own witnessed path.
-  split-canon : ∀ {x : Ty} {Θ Ρ Ξ : Ctx} (s : Split x Θ Ρ Ξ)
-              → PathP (λ i → Split x Θ (split-path s i) Ξ) (split-here Θ x Ξ) s
-  split-canon here        = refl
-  split-canon (there s) i = there (split-canon s i)
+  -- (split-canon — every split is the canonical one over its own witnessed
+  -- path — comes from SplitLemmas.)
 
   -- split-behind of a suffix-weakened split against the canonical inner
   -- split is the canonical split, over the outer split's path.
