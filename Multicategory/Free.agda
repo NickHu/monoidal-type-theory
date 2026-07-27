@@ -4,6 +4,7 @@ open import Data.List.Properties
 open import Data.Set.Coequaliser using (_/_ ; inc)
 
 open import Multicategory
+import ListPath.Solver
 
 module Multicategory.Free where
 
@@ -59,6 +60,11 @@ module Syntax {o h} (G : Multigraph o h) where
 
   Ctx : Type o
   Ctx = List Ty
+
+  -- The structural reassociation paths below are aliases of the generic
+  -- list-path solver's, so ListPath.Solver's solve/list! vocabulary matches
+  -- this module's boundaries definitionally.
+  private module LP = ListPath.Solver.NbE Ty
 
   ⟦_⟧ᵍ : List G.Ob → Ctx
   ⟦_⟧ᵍ = map base
@@ -179,27 +185,23 @@ module Syntax {o h} (G : Multigraph o h) where
   -- The slot was in the left region of a concatenation: flatten the suffix.
   --   (Θ ++ Γ ++ Ξ₁) ++ Δ ≡ Θ ++ Γ ++ (Ξ₁ ++ Δ)
   flattenˡ : ∀ (Θ Γ Ξ₁ Δ : Ctx) → (Θ ++ Γ ++ Ξ₁) ++ Δ ≡ Θ ++ Γ ++ (Ξ₁ ++ Δ)
-  flattenˡ []      Γ Ξ₁ Δ = ++-assoc Γ Ξ₁ Δ
-  flattenˡ (a ∷ Θ) Γ Ξ₁ Δ = ap (a ∷_) (flattenˡ Θ Γ Ξ₁ Δ)
+  flattenˡ = LP.flattenˡ
 
   -- The slot was in the right region: bury the prefix.
   --   Γ₁ ++ (Θ₂ ++ Γ ++ Ξ) ≡ (Γ₁ ++ Θ₂) ++ Γ ++ Ξ
   flattenʳ : ∀ (Γ₁ Θ₂ Γ Ξ : Ctx) → Γ₁ ++ (Θ₂ ++ Γ ++ Ξ) ≡ (Γ₁ ++ Θ₂) ++ Γ ++ Ξ
-  flattenʳ []       Θ₂ Γ Ξ = refl
-  flattenʳ (a ∷ Γ₁) Θ₂ Γ Ξ = ap (a ∷_) (flattenʳ Γ₁ Θ₂ Γ Ξ)
+  flattenʳ = LP.flattenʳ
 
   -- The slot was in the middle region of a three-part context.
   --   Γm ++ (Θ₂ ++ Γ ++ Ξ₁) ++ Δ ≡ (Γm ++ Θ₂) ++ Γ ++ (Ξ₁ ++ Δ)
   flattenᵐ : ∀ (Γm Θ₂ Γ Ξ₁ Δ : Ctx)
            → Γm ++ ((Θ₂ ++ Γ ++ Ξ₁) ++ Δ) ≡ (Γm ++ Θ₂) ++ Γ ++ (Ξ₁ ++ Δ)
-  flattenᵐ []       Θ₂ Γ Ξ₁ Δ = flattenˡ Θ₂ Γ Ξ₁ Δ
-  flattenᵐ (a ∷ Γm) Θ₂ Γ Ξ₁ Δ = ap (a ∷_) (flattenᵐ Γm Θ₂ Γ Ξ₁ Δ)
+  flattenᵐ = LP.flattenᵐ
 
   -- The slot was in the last region: bury both prefixes.
   --   Γm ++ Ψ ++ (Θ₃ ++ Ρ) ≡ (Γm ++ Ψ ++ Θ₃) ++ Ρ
   bury : ∀ (Γm Ψ Θ₃ Ρ : Ctx) → Γm ++ Ψ ++ (Θ₃ ++ Ρ) ≡ (Γm ++ (Ψ ++ Θ₃)) ++ Ρ
-  bury []       Ψ Θ₃ Ρ = sym (++-assoc Ψ Θ₃ Ρ)
-  bury (a ∷ Γm) Ψ Θ₃ Ρ = ap (a ∷_) (bury Γm Ψ Θ₃ Ρ)
+  bury = LP.bury
 
   -- No split points into the empty context ("?[M/x] cannot happen").
   split-[] : Split x Θ [] Ξ → ⊥

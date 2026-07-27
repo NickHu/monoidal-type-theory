@@ -2,6 +2,8 @@ open import 1Lab.Prelude hiding (id ; _∘_)
 open import Data.List
 open import Data.List.Properties
 
+import ListPath.Solver
+
 module Multicategory where
 
 -- Multicategories: multimorphisms take a list of objects (the context) to a
@@ -36,10 +38,11 @@ slot-unbury []       Φ x Ψ Ξ = ++-assoc Φ (x ∷ Ψ) Ξ
 slot-unbury (a ∷ Θ') Φ x Ψ Ξ = ap (a ∷_) (slot-unbury Θ' Φ x Ψ Ξ)
 
 -- Φ ++ Ρ ++ (Ψ ++ Ξ) ≡ (Φ ++ Ρ ++ Ψ) ++ Ξ  (base case of assocₘ-boundary)
+-- Clause-for-clause identical to the generic list-path solver's `bury`, and
+-- aliased to it so solver goals mentioning it are in-vocabulary.
 assocₘ-flatten : ∀ {A : Type o} (Φ Ρ Ψ Ξ : List A)
   → Φ ++ Ρ ++ (Ψ ++ Ξ) ≡ (Φ ++ Ρ ++ Ψ) ++ Ξ
-assocₘ-flatten []       Ρ Ψ Ξ = sym (++-assoc Ρ Ψ Ξ)
-assocₘ-flatten (a ∷ Φ') Ρ Ψ Ξ = ap (a ∷_) (assocₘ-flatten Φ' Ρ Ψ Ξ)
+assocₘ-flatten {A = A} = ListPath.Solver.NbE.bury A
 
 -- The associativity boundary:
 --   (Θ ++ Φ) ++ Ρ ++ (Ψ ++ Ξ)  ≡  Θ ++ ((Φ ++ Ρ ++ Ψ) ++ Ξ)
@@ -80,10 +83,12 @@ interchange-flatten Γ Μ Δ Κ = ++-assoc Γ Μ (Δ ++ Κ)
 
 -- The interchange boundary:
 --   (Θ ++ Γ ++ Μ) ++ Δ ++ Κ  ≡  Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
+-- Clause-for-clause identical to the generic list-path solver's flattenˡ at
+-- ws := Δ ++ Κ, and aliased to it so solver goals are in-vocabulary.
 interchangeₘ-boundary : ∀ {A : Type o} (Θ Γ Μ Δ Κ : List A)
   → (Θ ++ Γ ++ Μ) ++ Δ ++ Κ ≡ Θ ++ Γ ++ (Μ ++ Δ ++ Κ)
-interchangeₘ-boundary []       Γ Μ Δ Κ = interchange-flatten Γ Μ Δ Κ
-interchangeₘ-boundary (a ∷ Θ') Γ Μ Δ Κ = ap (a ∷_) (interchangeₘ-boundary Θ' Γ Μ Δ Κ)
+interchangeₘ-boundary {A = A} Θ Γ Μ Δ Κ =
+  ListPath.Solver.NbE.flattenˡ A Θ Γ Μ (Δ ++ Κ)
 
 record Premulticategory (o h : Level) : Type (lsuc (o ⊔ h)) where
   no-eta-equality

@@ -8,6 +8,7 @@ open import Multicategory.Free
 module Multicategory.Free.Interchange {o h} (G : Multigraph o h) where
 
 open import Multicategory.Free.SplitLemmas G
+open import ListPath.Solver using (list!)
 
 -- Interchange of substitution (Shulman, Lemma 2.4.9, interchange half):
 -- plugging g and h into two disjoint slots of the same term commutes, over
@@ -169,8 +170,7 @@ private
 -- flattenʳ is the inverse reassociation, named.
 flattenʳ≡ : ∀ (Γ₁ Θ₂ Γ Ξ : Ctx)
           → flattenʳ Γ₁ Θ₂ Γ Ξ ≡ sym (++-assoc Γ₁ Θ₂ (Γ ++ Ξ))
-flattenʳ≡ []       Θ₂ Γ Ξ = refl
-flattenʳ≡ (a ∷ Γ₁) Θ₂ Γ Ξ = ap (ap (a ∷_)) (flattenʳ≡ Γ₁ Θ₂ Γ Ξ)
+flattenʳ≡ Γ₁ Θ₂ Γ Ξ = list!
 
 -- (cast-∙idr / sp-cast-∙idr, collapsing the ∙ refl left by the p-component
 -- of a view computation, come from Kit.)
@@ -350,31 +350,11 @@ co-midᵇ [] {Ψ = Ψ} s₁ Μᵧ Δ' Κ' =
 co-midᵇ (a ∷ Γm) s₁ Μᵧ Δ' Κ' i = there (co-midᵇ Γm s₁ Μᵧ Δ' Κ' i)
 
 -- ==========================================================================
--- §5  Base-path squares.  Each reconciles the (left-associated) composite of
--- a core lemma's segment base paths against the target interchange boundary.
--- Two-level list induction; the cons steps are ∙-ap₄ + ap (ap (a ∷_)) of
--- the inductive hypothesis, the bases are groupoid algebra.
+-- §5  Base-path squares, discharged by the generic list-path solver: each
+-- reconciles a composite of structural reassociations against the target
+-- interchange boundary, which is exactly the solver's decision problem
+-- (ListPath.Solver's list! macro).
 -- ==========================================================================
-
--- Square for the both-left cores (both slots inside the Γ₁-component).
-private
-  sq-LLΓ : ∀ (Γ Μ Δ Κ₁ Δ₁ : Ctx)
-    → ((sym (flattenˡ (Γ ++ Μ) Δ Κ₁ Δ₁)
-        ∙ ap (_++ Δ₁) (++-assoc Γ Μ (Δ ++ Κ₁)))
-       ∙ ++-assoc Γ (Μ ++ Δ ++ Κ₁) Δ₁)
-      ∙ ap (λ l → Γ ++ l) (flattenˡ Μ Δ Κ₁ Δ₁)
-    ≡ ++-assoc Γ Μ (Δ ++ Κ₁ ++ Δ₁)
-  sq-LLΓ [] Μ Δ Κ₁ Δ₁ =
-      ap (_∙ flattenˡ Μ Δ Κ₁ Δ₁)
-         (∙-idr _ ∙ ∙-idr (sym (flattenˡ Μ Δ Κ₁ Δ₁)))
-    ∙ ∙-invl (flattenˡ Μ Δ Κ₁ Δ₁)
-  sq-LLΓ (a ∷ Γ) Μ Δ Κ₁ Δ₁ =
-      ∙-ap₄ (a ∷_)
-        (sym (flattenˡ (Γ ++ Μ) Δ Κ₁ Δ₁))
-        (ap (_++ Δ₁) (++-assoc Γ Μ (Δ ++ Κ₁)))
-        (++-assoc Γ (Μ ++ Δ ++ Κ₁) Δ₁)
-        (ap (λ l → Γ ++ l) (flattenˡ Μ Δ Κ₁ Δ₁))
-    ∙ ap (ap (a ∷_)) (sq-LLΓ Γ Μ Δ Κ₁ Δ₁)
 
 sq-LL : ∀ (Θ Γ Μ Δ Κ₁ Δ₁ : Ctx)
   → ((sym (flattenˡ (Θ ++ Γ ++ Μ) Δ Κ₁ Δ₁)
@@ -382,53 +362,15 @@ sq-LL : ∀ (Θ Γ Μ Δ Κ₁ Δ₁ : Ctx)
      ∙ flattenˡ Θ Γ (Μ ++ Δ ++ Κ₁) Δ₁)
     ∙ ap (λ l → Θ ++ Γ ++ l) (flattenˡ Μ Δ Κ₁ Δ₁)
   ≡ interchangeₘ-boundary Θ Γ Μ Δ (Κ₁ ++ Δ₁)
-sq-LL []      Γ Μ Δ Κ₁ Δ₁ = sq-LLΓ Γ Μ Δ Κ₁ Δ₁
-sq-LL (a ∷ Θ) Γ Μ Δ Κ₁ Δ₁ =
-    ∙-ap₄ (a ∷_)
-      (sym (flattenˡ (Θ ++ Γ ++ Μ) Δ Κ₁ Δ₁))
-      (ap (_++ Δ₁) (interchangeₘ-boundary Θ Γ Μ Δ Κ₁))
-      (flattenˡ Θ Γ (Μ ++ Δ ++ Κ₁) Δ₁)
-      (ap (λ l → Θ ++ Γ ++ l) (flattenˡ Μ Δ Κ₁ Δ₁))
-  ∙ ap (ap (a ∷_)) (sq-LL Θ Γ Μ Δ Κ₁ Δ₁)
+sq-LL Θ Γ Μ Δ Κ₁ Δ₁ = list!
 
--- Square for the both-right cores (both slots inside the Δ₁-component).
 sq-RR : ∀ (Γ₁ Θ₂ Γ Μ Δ Κ : Ctx)
   → ((sym (ap (_++ Δ ++ Κ) (flattenʳ Γ₁ Θ₂ Γ Μ))
       ∙ sym (flattenʳ Γ₁ (Θ₂ ++ Γ ++ Μ) Δ Κ))
      ∙ ap (Γ₁ ++_) (interchangeₘ-boundary Θ₂ Γ Μ Δ Κ))
     ∙ flattenʳ Γ₁ Θ₂ Γ (Μ ++ Δ ++ Κ)
   ≡ interchangeₘ-boundary (Γ₁ ++ Θ₂) Γ Μ Δ Κ
-sq-RR [] Θ₂ Γ Μ Δ Κ =
-    ∙-idr _
-  ∙ ap (_∙ interchangeₘ-boundary Θ₂ Γ Μ Δ Κ) (∙-idl refl)
-  ∙ ∙-idl (interchangeₘ-boundary Θ₂ Γ Μ Δ Κ)
-sq-RR (a ∷ Γ₁) Θ₂ Γ Μ Δ Κ =
-    ∙-ap₄ (a ∷_)
-      (sym (ap (_++ Δ ++ Κ) (flattenʳ Γ₁ Θ₂ Γ Μ)))
-      (sym (flattenʳ Γ₁ (Θ₂ ++ Γ ++ Μ) Δ Κ))
-      (ap (Γ₁ ++_) (interchangeₘ-boundary Θ₂ Γ Μ Δ Κ))
-      (flattenʳ Γ₁ Θ₂ Γ (Μ ++ Δ ++ Κ))
-  ∙ ap (ap (a ∷_)) (sq-RR Γ₁ Θ₂ Γ Μ Δ Κ)
-
--- Square for the cross cores (slots in the two different components).
-private
-  sq-LRΓ : ∀ (Γ Ξ₁ Μ₂ Δ Κ : Ctx)
-    → ((sym (ap (_++ Δ ++ Κ) (++-assoc Γ Ξ₁ Μ₂))
-        ∙ sym (flattenʳ (Γ ++ Ξ₁) Μ₂ Δ Κ))
-       ∙ ++-assoc Γ Ξ₁ (Μ₂ ++ Δ ++ Κ))
-      ∙ ap (λ l → Γ ++ l) (flattenʳ Ξ₁ Μ₂ Δ Κ)
-    ≡ ++-assoc Γ (Ξ₁ ++ Μ₂) (Δ ++ Κ)
-  sq-LRΓ [] Ξ₁ Μ₂ Δ Κ =
-      ap (_∙ flattenʳ Ξ₁ Μ₂ Δ Κ)
-         (∙-idr _ ∙ ∙-idl (sym (flattenʳ Ξ₁ Μ₂ Δ Κ)))
-    ∙ ∙-invl (flattenʳ Ξ₁ Μ₂ Δ Κ)
-  sq-LRΓ (a ∷ Γ) Ξ₁ Μ₂ Δ Κ =
-      ∙-ap₄ (a ∷_)
-        (sym (ap (_++ Δ ++ Κ) (++-assoc Γ Ξ₁ Μ₂)))
-        (sym (flattenʳ (Γ ++ Ξ₁) Μ₂ Δ Κ))
-        (++-assoc Γ Ξ₁ (Μ₂ ++ Δ ++ Κ))
-        (ap (λ l → Γ ++ l) (flattenʳ Ξ₁ Μ₂ Δ Κ))
-    ∙ ap (ap (a ∷_)) (sq-LRΓ Γ Ξ₁ Μ₂ Δ Κ)
+sq-RR Γ₁ Θ₂ Γ Μ Δ Κ = list!
 
 sq-LR : ∀ (Θ Γ Ξ₁ Μ₂ Δ Κ : Ctx)
   → ((sym (ap (_++ Δ ++ Κ) (flattenˡ Θ Γ Ξ₁ Μ₂))
@@ -436,51 +378,15 @@ sq-LR : ∀ (Θ Γ Ξ₁ Μ₂ Δ Κ : Ctx)
      ∙ flattenˡ Θ Γ Ξ₁ (Μ₂ ++ Δ ++ Κ))
     ∙ ap (λ l → Θ ++ Γ ++ l) (flattenʳ Ξ₁ Μ₂ Δ Κ)
   ≡ interchangeₘ-boundary Θ Γ (Ξ₁ ++ Μ₂) Δ Κ
-sq-LR []      Γ Ξ₁ Μ₂ Δ Κ = sq-LRΓ Γ Ξ₁ Μ₂ Δ Κ
-sq-LR (a ∷ Θ) Γ Ξ₁ Μ₂ Δ Κ =
-    ∙-ap₄ (a ∷_)
-      (sym (ap (_++ Δ ++ Κ) (flattenˡ Θ Γ Ξ₁ Μ₂)))
-      (sym (flattenʳ (Θ ++ Γ ++ Ξ₁) Μ₂ Δ Κ))
-      (flattenˡ Θ Γ Ξ₁ (Μ₂ ++ Δ ++ Κ))
-      (ap (λ l → Θ ++ Γ ++ l) (flattenʳ Ξ₁ Μ₂ Δ Κ))
-  ∙ ap (ap (a ∷_)) (sq-LR Θ Γ Ξ₁ Μ₂ Δ Κ)
-
--- Inverted variant of sq-LL: the inner (under-the-binder) reconciliation of
--- the match⊗/match𝟙 both-left cores, solved for the middle edge.
-private
-  sq-LL-invΓ : ∀ (Γ Μ Δ Κ₁ Δ₁ : Ctx)
-    → ((flattenˡ (Γ ++ Μ) Δ Κ₁ Δ₁ ∙ ++-assoc Γ Μ (Δ ++ Κ₁ ++ Δ₁))
-       ∙ ap (λ l → Γ ++ l) (sym (flattenˡ Μ Δ Κ₁ Δ₁)))
-      ∙ sym (++-assoc Γ (Μ ++ Δ ++ Κ₁) Δ₁)
-    ≡ ap (_++ Δ₁) (++-assoc Γ Μ (Δ ++ Κ₁))
-  sq-LL-invΓ [] Μ Δ Κ₁ Δ₁ =
-      ∙-idr _
-    ∙ ap (_∙ sym (flattenˡ Μ Δ Κ₁ Δ₁)) (∙-idr (flattenˡ Μ Δ Κ₁ Δ₁))
-    ∙ ∙-invr (flattenˡ Μ Δ Κ₁ Δ₁)
-  sq-LL-invΓ (a ∷ Γ) Μ Δ Κ₁ Δ₁ =
-      ∙-ap₄ (a ∷_)
-        (flattenˡ (Γ ++ Μ) Δ Κ₁ Δ₁)
-        (++-assoc Γ Μ (Δ ++ Κ₁ ++ Δ₁))
-        (ap (λ l → Γ ++ l) (sym (flattenˡ Μ Δ Κ₁ Δ₁)))
-        (sym (++-assoc Γ (Μ ++ Δ ++ Κ₁) Δ₁))
-    ∙ ap (ap (a ∷_)) (sq-LL-invΓ Γ Μ Δ Κ₁ Δ₁)
+sq-LR Θ Γ Ξ₁ Μ₂ Δ Κ = list!
 
 sq-LL-inv : ∀ (Θ Γ Μ Δ Κ₁ Δ₁ : Ctx)
   → ((flattenˡ (Θ ++ Γ ++ Μ) Δ Κ₁ Δ₁ ∙ interchangeₘ-boundary Θ Γ Μ Δ (Κ₁ ++ Δ₁))
      ∙ ap (λ l → Θ ++ Γ ++ l) (sym (flattenˡ Μ Δ Κ₁ Δ₁)))
     ∙ sym (flattenˡ Θ Γ (Μ ++ Δ ++ Κ₁) Δ₁)
   ≡ ap (_++ Δ₁) (interchangeₘ-boundary Θ Γ Μ Δ Κ₁)
-sq-LL-inv []      Γ Μ Δ Κ₁ Δ₁ = sq-LL-invΓ Γ Μ Δ Κ₁ Δ₁
-sq-LL-inv (a ∷ Θ) Γ Μ Δ Κ₁ Δ₁ =
-    ∙-ap₄ (a ∷_)
-      (flattenˡ (Θ ++ Γ ++ Μ) Δ Κ₁ Δ₁)
-      (interchangeₘ-boundary Θ Γ Μ Δ (Κ₁ ++ Δ₁))
-      (ap (λ l → Θ ++ Γ ++ l) (sym (flattenˡ Μ Δ Κ₁ Δ₁)))
-      (sym (flattenˡ Θ Γ (Μ ++ Δ ++ Κ₁) Δ₁))
-  ∙ ap (ap (a ∷_)) (sq-LL-inv Θ Γ Μ Δ Κ₁ Δ₁)
+sq-LL-inv Θ Γ Μ Δ Κ₁ Δ₁ = list!
 
--- Square for the ΨΨ cores (both slots in the match scrutinee P): five
--- segments; the Γm-base is sq-LL after cancelling the vacuous first leg.
 sq-ΨΨ : ∀ (Γm Θ₂ Γ Μ Δ Κ₁ Δm : Ctx)
   → (((sym (ap (_++ Δ ++ Κ₁ ++ Δm) (flattenʳ Γm Θ₂ Γ Μ))
         ∙ sym (flattenᵐ Γm (Θ₂ ++ Γ ++ Μ) Δ Κ₁ Δm))
@@ -488,41 +394,7 @@ sq-ΨΨ : ∀ (Γm Θ₂ Γ Μ Δ Κ₁ Δm : Ctx)
       ∙ flattenᵐ Γm Θ₂ Γ (Μ ++ Δ ++ Κ₁) Δm)
      ∙ ap (λ l → (Γm ++ Θ₂) ++ Γ ++ l) (flattenˡ Μ Δ Κ₁ Δm)
   ≡ interchangeₘ-boundary (Γm ++ Θ₂) Γ Μ Δ (Κ₁ ++ Δm)
-sq-ΨΨ [] Θ₂ Γ Μ Δ Κ₁ Δm =
-    ap (λ t → ((t ∙ ap (λ l → l ++ Δm) (interchangeₘ-boundary Θ₂ Γ Μ Δ Κ₁))
-               ∙ flattenˡ Θ₂ Γ (Μ ++ Δ ++ Κ₁) Δm)
-              ∙ ap (λ l → Θ₂ ++ Γ ++ l) (flattenˡ Μ Δ Κ₁ Δm))
-       (∙-idl (sym (flattenˡ (Θ₂ ++ Γ ++ Μ) Δ Κ₁ Δm)))
-  ∙ sq-LL Θ₂ Γ Μ Δ Κ₁ Δm
-sq-ΨΨ (a ∷ Γm) Θ₂ Γ Μ Δ Κ₁ Δm =
-    ∙-ap₅ (a ∷_)
-      (sym (ap (_++ Δ ++ Κ₁ ++ Δm) (flattenʳ Γm Θ₂ Γ Μ)))
-      (sym (flattenᵐ Γm (Θ₂ ++ Γ ++ Μ) Δ Κ₁ Δm))
-      (ap (λ l → Γm ++ l ++ Δm) (interchangeₘ-boundary Θ₂ Γ Μ Δ Κ₁))
-      (flattenᵐ Γm Θ₂ Γ (Μ ++ Δ ++ Κ₁) Δm)
-      (ap (λ l → (Γm ++ Θ₂) ++ Γ ++ l) (flattenˡ Μ Δ Κ₁ Δm))
-  ∙ ap (ap (a ∷_)) (sq-ΨΨ Γm Θ₂ Γ Μ Δ Κ₁ Δm)
-
--- Square for the ΔΔ cores (both slots in the match body, right of the
--- scrutinee): the outer reconciliation over bury.
-private
-  sq-ΔΔ-outerΨ : ∀ (Ψ Θ₃ Γ Μ Δ Κ : Ctx)
-    → ((sym (ap (_++ Δ ++ Κ) (sym (++-assoc Ψ Θ₃ (Γ ++ Μ))))
-         ∙ ++-assoc Ψ (Θ₃ ++ Γ ++ Μ) (Δ ++ Κ))
-        ∙ ap (λ l → Ψ ++ l) (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ))
-       ∙ sym (++-assoc Ψ Θ₃ (Γ ++ Μ ++ Δ ++ Κ))
-    ≡ interchangeₘ-boundary (Ψ ++ Θ₃) Γ Μ Δ Κ
-  sq-ΔΔ-outerΨ [] Θ₃ Γ Μ Δ Κ =
-      ∙-idr _
-    ∙ ap (_∙ interchangeₘ-boundary Θ₃ Γ Μ Δ Κ) (∙-idl refl)
-    ∙ ∙-idl (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ)
-  sq-ΔΔ-outerΨ (a ∷ Ψ) Θ₃ Γ Μ Δ Κ =
-      ∙-ap₄ (a ∷_)
-        (sym (ap (_++ Δ ++ Κ) (sym (++-assoc Ψ Θ₃ (Γ ++ Μ)))))
-        (++-assoc Ψ (Θ₃ ++ Γ ++ Μ) (Δ ++ Κ))
-        (ap (λ l → Ψ ++ l) (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ))
-        (sym (++-assoc Ψ Θ₃ (Γ ++ Μ ++ Δ ++ Κ)))
-    ∙ ap (ap (a ∷_)) (sq-ΔΔ-outerΨ Ψ Θ₃ Γ Μ Δ Κ)
+sq-ΨΨ Γm Θ₂ Γ Μ Δ Κ₁ Δm = list!
 
 sq-ΔΔ-outer : ∀ (Γm Ψ Θ₃ Γ Μ Δ Κ : Ctx)
   → ((sym (ap (_++ Δ ++ Κ) (bury Γm Ψ Θ₃ (Γ ++ Μ)))
@@ -530,34 +402,7 @@ sq-ΔΔ-outer : ∀ (Γm Ψ Θ₃ Γ Μ Δ Κ : Ctx)
       ∙ ap (λ l → Γm ++ Ψ ++ l) (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ))
      ∙ bury Γm Ψ Θ₃ (Γ ++ Μ ++ Δ ++ Κ)
   ≡ interchangeₘ-boundary (Γm ++ Ψ ++ Θ₃) Γ Μ Δ Κ
-sq-ΔΔ-outer []       Ψ Θ₃ Γ Μ Δ Κ = sq-ΔΔ-outerΨ Ψ Θ₃ Γ Μ Δ Κ
-sq-ΔΔ-outer (a ∷ Γm) Ψ Θ₃ Γ Μ Δ Κ =
-    ∙-ap₄ (a ∷_)
-      (sym (ap (_++ Δ ++ Κ) (bury Γm Ψ Θ₃ (Γ ++ Μ))))
-      (sym (bury Γm Ψ (Θ₃ ++ Γ ++ Μ) (Δ ++ Κ)))
-      (ap (λ l → Γm ++ Ψ ++ l) (interchangeₘ-boundary Θ₃ Γ Μ Δ Κ))
-      (bury Γm Ψ Θ₃ (Γ ++ Μ ++ Δ ++ Κ))
-  ∙ ap (ap (a ∷_)) (sq-ΔΔ-outer Γm Ψ Θ₃ Γ Μ Δ Κ)
-
--- Square for the ΓΨ cores (x in the match body, y in the scrutinee).
-private
-  sq-ΓΨΓ : ∀ (Γ Ξ₁ Μ₂ Δ Κᵧ Δm : Ctx)
-    → ((sym (ap (_++ Δ ++ Κᵧ ++ Δm) (++-assoc Γ Ξ₁ Μ₂))
-        ∙ sym (flattenᵐ (Γ ++ Ξ₁) Μ₂ Δ Κᵧ Δm))
-       ∙ ++-assoc Γ Ξ₁ ((Μ₂ ++ Δ ++ Κᵧ) ++ Δm))
-      ∙ ap (λ l → Γ ++ l) (flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm)
-    ≡ ++-assoc Γ (Ξ₁ ++ Μ₂) (Δ ++ Κᵧ ++ Δm)
-  sq-ΓΨΓ [] Ξ₁ Μ₂ Δ Κᵧ Δm =
-      ap (_∙ flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm)
-         (∙-idr _ ∙ ∙-idl (sym (flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm)))
-    ∙ ∙-invl (flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm)
-  sq-ΓΨΓ (a ∷ Γ) Ξ₁ Μ₂ Δ Κᵧ Δm =
-      ∙-ap₄ (a ∷_)
-        (sym (ap (_++ Δ ++ Κᵧ ++ Δm) (++-assoc Γ Ξ₁ Μ₂)))
-        (sym (flattenᵐ (Γ ++ Ξ₁) Μ₂ Δ Κᵧ Δm))
-        (++-assoc Γ Ξ₁ ((Μ₂ ++ Δ ++ Κᵧ) ++ Δm))
-        (ap (λ l → Γ ++ l) (flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm))
-    ∙ ap (ap (a ∷_)) (sq-ΓΨΓ Γ Ξ₁ Μ₂ Δ Κᵧ Δm)
+sq-ΔΔ-outer Γm Ψ Θ₃ Γ Μ Δ Κ = list!
 
 sq-ΓΨ : ∀ (Θ Γ Ξ₁ Μ₂ Δ Κᵧ Δm : Ctx)
   → ((sym (ap (_++ Δ ++ Κᵧ ++ Δm) (flattenˡ Θ Γ Ξ₁ Μ₂))
@@ -565,61 +410,15 @@ sq-ΓΨ : ∀ (Θ Γ Ξ₁ Μ₂ Δ Κᵧ Δm : Ctx)
      ∙ flattenˡ Θ Γ Ξ₁ ((Μ₂ ++ Δ ++ Κᵧ) ++ Δm))
     ∙ ap (λ l → Θ ++ Γ ++ l) (flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm)
   ≡ interchangeₘ-boundary Θ Γ (Ξ₁ ++ Μ₂) Δ (Κᵧ ++ Δm)
-sq-ΓΨ []      Γ Ξ₁ Μ₂ Δ Κᵧ Δm = sq-ΓΨΓ Γ Ξ₁ Μ₂ Δ Κᵧ Δm
-sq-ΓΨ (a ∷ Θ) Γ Ξ₁ Μ₂ Δ Κᵧ Δm =
-    ∙-ap₄ (a ∷_)
-      (sym (ap (_++ Δ ++ Κᵧ ++ Δm) (flattenˡ Θ Γ Ξ₁ Μ₂)))
-      (sym (flattenᵐ (Θ ++ Γ ++ Ξ₁) Μ₂ Δ Κᵧ Δm))
-      (flattenˡ Θ Γ Ξ₁ ((Μ₂ ++ Δ ++ Κᵧ) ++ Δm))
-      (ap (λ l → Θ ++ Γ ++ l) (flattenᵐ Ξ₁ Μ₂ Δ Κᵧ Δm))
-  ∙ ap (ap (a ∷_)) (sq-ΓΨ Θ Γ Ξ₁ Μ₂ Δ Κᵧ Δm)
+sq-ΓΨ Θ Γ Ξ₁ Μ₂ Δ Κᵧ Δm = list!
 
--- Square for the ΨΔ cores (x in the scrutinee, y in the match body): the
--- Γm-base is sq-LR after renaming the bury edge along flattenʳ≡.
 sq-ΨΔ : ∀ (Γm Θ₂ Γ Ξ₁ Μᵧ Δ Κ : Ctx)
   → ((sym (ap (_++ Δ ++ Κ) (flattenᵐ Γm Θ₂ Γ Ξ₁ Μᵧ))
       ∙ sym (bury Γm (Θ₂ ++ Γ ++ Ξ₁) Μᵧ (Δ ++ Κ)))
      ∙ flattenᵐ Γm Θ₂ Γ Ξ₁ (Μᵧ ++ Δ ++ Κ))
     ∙ ap (λ l → (Γm ++ Θ₂) ++ Γ ++ l) (flattenʳ Ξ₁ Μᵧ Δ Κ)
   ≡ interchangeₘ-boundary (Γm ++ Θ₂) Γ (Ξ₁ ++ Μᵧ) Δ Κ
-sq-ΨΔ [] Θ₂ Γ Ξ₁ Μᵧ Δ Κ =
-    ap (λ t → ((sym (ap (_++ Δ ++ Κ) (flattenˡ Θ₂ Γ Ξ₁ Μᵧ)) ∙ t)
-               ∙ flattenˡ Θ₂ Γ Ξ₁ (Μᵧ ++ Δ ++ Κ))
-              ∙ ap (λ l → Θ₂ ++ Γ ++ l) (flattenʳ Ξ₁ Μᵧ Δ Κ))
-       (sym (ap sym (flattenʳ≡ (Θ₂ ++ Γ ++ Ξ₁) Μᵧ Δ Κ)))
-  ∙ sq-LR Θ₂ Γ Ξ₁ Μᵧ Δ Κ
-sq-ΨΔ (a ∷ Γm) Θ₂ Γ Ξ₁ Μᵧ Δ Κ =
-    ∙-ap₄ (a ∷_)
-      (sym (ap (_++ Δ ++ Κ) (flattenᵐ Γm Θ₂ Γ Ξ₁ Μᵧ)))
-      (sym (bury Γm (Θ₂ ++ Γ ++ Ξ₁) Μᵧ (Δ ++ Κ)))
-      (flattenᵐ Γm Θ₂ Γ Ξ₁ (Μᵧ ++ Δ ++ Κ))
-      (ap (λ l → (Γm ++ Θ₂) ++ Γ ++ l) (flattenʳ Ξ₁ Μᵧ Δ Κ))
-  ∙ ap (ap (a ∷_)) (sq-ΨΔ Γm Θ₂ Γ Ξ₁ Μᵧ Δ Κ)
-
--- Squares for the ΓΔ cores (x left, y right of the scrutinee, both in the
--- match body).  The inner one closes a loop (the middle path of the ΓΔ
--- cores is homogeneous); Ν instantiates to A ∷ B ∷ Μᵧ resp. Μᵧ.
-private
-  sq-ΓΔ-innerΓ : ∀ (Γ Ξ₁ Ν Δ Κ : Ctx)
-    → (((flattenʳ (Γ ++ Ξ₁) Ν Δ Κ
-         ∙ ap (_++ Δ ++ Κ) (++-assoc Γ Ξ₁ Ν))
-        ∙ ++-assoc Γ (Ξ₁ ++ Ν) (Δ ++ Κ))
-       ∙ ap (λ l → Γ ++ l) (sym (flattenʳ Ξ₁ Ν Δ Κ)))
-      ∙ sym (++-assoc Γ Ξ₁ (Ν ++ Δ ++ Κ))
-    ≡ refl
-  sq-ΓΔ-innerΓ [] Ξ₁ Ν Δ Κ =
-      ∙-idr (((flattenʳ Ξ₁ Ν Δ Κ ∙ refl) ∙ refl) ∙ sym (flattenʳ Ξ₁ Ν Δ Κ))
-    ∙ ap (_∙ sym (flattenʳ Ξ₁ Ν Δ Κ))
-         (∙-idr (flattenʳ Ξ₁ Ν Δ Κ ∙ refl) ∙ ∙-idr (flattenʳ Ξ₁ Ν Δ Κ))
-    ∙ ∙-invr (flattenʳ Ξ₁ Ν Δ Κ)
-  sq-ΓΔ-innerΓ (a ∷ Γ) Ξ₁ Ν Δ Κ =
-      ∙-ap₅ (a ∷_)
-        (flattenʳ (Γ ++ Ξ₁) Ν Δ Κ)
-        (ap (_++ Δ ++ Κ) (++-assoc Γ Ξ₁ Ν))
-        (++-assoc Γ (Ξ₁ ++ Ν) (Δ ++ Κ))
-        (ap (λ l → Γ ++ l) (sym (flattenʳ Ξ₁ Ν Δ Κ)))
-        (sym (++-assoc Γ Ξ₁ (Ν ++ Δ ++ Κ)))
-    ∙ ap (ap (a ∷_)) (sq-ΓΔ-innerΓ Γ Ξ₁ Ν Δ Κ)
+sq-ΨΔ Γm Θ₂ Γ Ξ₁ Μᵧ Δ Κ = list!
 
 sq-ΓΔ-inner : ∀ (Θ Γ Ξ₁ Ν Δ Κ : Ctx)
   → (((flattenʳ (Θ ++ Γ ++ Ξ₁) Ν Δ Κ
@@ -628,34 +427,7 @@ sq-ΓΔ-inner : ∀ (Θ Γ Ξ₁ Ν Δ Κ : Ctx)
      ∙ ap (λ l → Θ ++ Γ ++ l) (sym (flattenʳ Ξ₁ Ν Δ Κ)))
     ∙ sym (flattenˡ Θ Γ Ξ₁ (Ν ++ Δ ++ Κ))
   ≡ refl
-sq-ΓΔ-inner []      Γ Ξ₁ Ν Δ Κ = sq-ΓΔ-innerΓ Γ Ξ₁ Ν Δ Κ
-sq-ΓΔ-inner (a ∷ Θ) Γ Ξ₁ Ν Δ Κ =
-    ∙-ap₅ (a ∷_)
-      (flattenʳ (Θ ++ Γ ++ Ξ₁) Ν Δ Κ)
-      (ap (_++ Δ ++ Κ) (flattenˡ Θ Γ Ξ₁ Ν))
-      (interchangeₘ-boundary Θ Γ (Ξ₁ ++ Ν) Δ Κ)
-      (ap (λ l → Θ ++ Γ ++ l) (sym (flattenʳ Ξ₁ Ν Δ Κ)))
-      (sym (flattenˡ Θ Γ Ξ₁ (Ν ++ Δ ++ Κ)))
-  ∙ ap (ap (a ∷_)) (sq-ΓΔ-inner Θ Γ Ξ₁ Ν Δ Κ)
-
-private
-  sq-ΓΔ-outerΓ : ∀ (Γ Ξ₁ Ψ Μᵧ Δ Κ : Ctx)
-    → ((sym (ap (_++ Δ ++ Κ) (++-assoc Γ Ξ₁ (Ψ ++ Μᵧ)))
-        ∙ sym (bury (Γ ++ Ξ₁) Ψ Μᵧ (Δ ++ Κ)))
-       ∙ ++-assoc Γ Ξ₁ (Ψ ++ Μᵧ ++ Δ ++ Κ))
-      ∙ ap (λ l → Γ ++ l) (bury Ξ₁ Ψ Μᵧ (Δ ++ Κ))
-    ≡ ++-assoc Γ (Ξ₁ ++ Ψ ++ Μᵧ) (Δ ++ Κ)
-  sq-ΓΔ-outerΓ [] Ξ₁ Ψ Μᵧ Δ Κ =
-      ap (_∙ bury Ξ₁ Ψ Μᵧ (Δ ++ Κ))
-         (∙-idr _ ∙ ∙-idl (sym (bury Ξ₁ Ψ Μᵧ (Δ ++ Κ))))
-    ∙ ∙-invl (bury Ξ₁ Ψ Μᵧ (Δ ++ Κ))
-  sq-ΓΔ-outerΓ (a ∷ Γ) Ξ₁ Ψ Μᵧ Δ Κ =
-      ∙-ap₄ (a ∷_)
-        (sym (ap (_++ Δ ++ Κ) (++-assoc Γ Ξ₁ (Ψ ++ Μᵧ))))
-        (sym (bury (Γ ++ Ξ₁) Ψ Μᵧ (Δ ++ Κ)))
-        (++-assoc Γ Ξ₁ (Ψ ++ Μᵧ ++ Δ ++ Κ))
-        (ap (λ l → Γ ++ l) (bury Ξ₁ Ψ Μᵧ (Δ ++ Κ)))
-    ∙ ap (ap (a ∷_)) (sq-ΓΔ-outerΓ Γ Ξ₁ Ψ Μᵧ Δ Κ)
+sq-ΓΔ-inner Θ Γ Ξ₁ Ν Δ Κ = list!
 
 sq-ΓΔ-outer : ∀ (Θ Γ Ξ₁ Ψ Μᵧ Δ Κ : Ctx)
   → ((sym (ap (_++ Δ ++ Κ) (flattenˡ Θ Γ Ξ₁ (Ψ ++ Μᵧ)))
@@ -663,14 +435,7 @@ sq-ΓΔ-outer : ∀ (Θ Γ Ξ₁ Ψ Μᵧ Δ Κ : Ctx)
      ∙ flattenˡ Θ Γ Ξ₁ (Ψ ++ Μᵧ ++ Δ ++ Κ))
     ∙ ap (λ l → Θ ++ Γ ++ l) (bury Ξ₁ Ψ Μᵧ (Δ ++ Κ))
   ≡ interchangeₘ-boundary Θ Γ (Ξ₁ ++ Ψ ++ Μᵧ) Δ Κ
-sq-ΓΔ-outer []      Γ Ξ₁ Ψ Μᵧ Δ Κ = sq-ΓΔ-outerΓ Γ Ξ₁ Ψ Μᵧ Δ Κ
-sq-ΓΔ-outer (a ∷ Θ) Γ Ξ₁ Ψ Μᵧ Δ Κ =
-    ∙-ap₄ (a ∷_)
-      (sym (ap (_++ Δ ++ Κ) (flattenˡ Θ Γ Ξ₁ (Ψ ++ Μᵧ))))
-      (sym (bury (Θ ++ Γ ++ Ξ₁) Ψ Μᵧ (Δ ++ Κ)))
-      (flattenˡ Θ Γ Ξ₁ (Ψ ++ Μᵧ ++ Δ ++ Κ))
-      (ap (λ l → Θ ++ Γ ++ l) (bury Ξ₁ Ψ Μᵧ (Δ ++ Κ)))
-  ∙ ap (ap (a ∷_)) (sq-ΓΔ-outer Θ Γ Ξ₁ Ψ Μᵧ Δ Κ)
+sq-ΓΔ-outer Θ Γ Ξ₁ Ψ Μᵧ Δ Κ = list!
 
 -- ==========================================================================
 -- §6  Canonicalisers.  Transport an interchange goal stated at the canonical
