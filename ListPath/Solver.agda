@@ -146,6 +146,25 @@ module NbE {o} (X : Type o) where
   norm₀ E = sym (++-idr ⟦ E ⟧ᵉ) ∙ normκ E []
 
   -- ==========================================================================
+  -- §1.5  The generator signature.  A named boundary enters the solver as a
+  -- VALUE of this record — endpoints as codes, the path it names, its
+  -- residue on evals, and the soundness leaf — so extending the solver
+  -- needs no surgery on PExp or its interpreters.  For every generator
+  -- below the residue is λ κ → refl (eval's accumulator makes the
+  -- reassociation definitional); the field is kept general for future
+  -- tiers whose boundaries do not flatten away (e.g. map-image paths).
+  -- ==========================================================================
+
+  record Generator : Type o where
+    field
+      dom cod : LExp
+      interp  : ⟦ dom ⟧ᵉ ≡ ⟦ cod ⟧ᵉ
+      residue : ∀ (κ : List X) → eval dom κ ≡ eval cod κ
+      leaf    : ∀ (κ : List X)
+              → PathP (λ i → ap (_++ κ) interp i ≡ residue κ i)
+                  (normκ dom κ) (normκ cod κ)
+
+  -- ==========================================================================
   -- §2  Level 1: formal structural paths.
   -- ==========================================================================
 
@@ -164,40 +183,10 @@ module NbE {o} (X : Type o) where
     -- base generators
     assocᵖ : (E₁ E₂ E₃ : LExp) → PExp ((E₁ ⊕ E₂) ⊕ E₃) (E₁ ⊕ (E₂ ⊕ E₃))
     idrᵖ   : (E : LExp) → PExp (E ⊕ εᵉ) E
-    -- named composite reassociations, one generator each.  These take LExp
-    -- arguments (not list atoms) so that quoted goals mixing granularities —
-    -- e.g. flattenʳ (xs ++ ys) … next to a segment about xs and ys — still
-    -- meet at judgmentally equal endpoint expressions.
-    flattenˡᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
-              → PExp ((E₁ ⊕ E₂ ⊕ E₃) ⊕ E₄) (E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄))
-    flattenʳᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
-              → PExp (E₁ ⊕ (E₂ ⊕ E₃ ⊕ E₄)) ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄)
-    flattenᵐᵖ : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp)
-              → PExp (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
-                     ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
-    buryᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
-          → PExp (E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ (E₂ ⊕ E₃)) ⊕ E₄)
-    buryᵐᵖ : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp)
-           → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
-                  (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
-    pivotᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
-           → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄) (E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄))
-    -- degenerate-instance generators: named boundaries at [] arguments,
-    -- whose interpretations are CONVERTIBLE to clean ⊕-shapes (the []
-    -- computes through ++), so their endpoint types avoid εᵉ-in-⊕ entirely.
-    flattenˡ-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
-                  → PExp ((E₁ ⊕ E₃) ⊕ E₄) (E₁ ⊕ (E₃ ⊕ E₄))
-    bury-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
-              → PExp (E₁ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ E₃) ⊕ E₄)
-    -- cons-scope degenerate instances: ++-assoc / flattenʳ with a 2-cons
-    -- middle argument (the ⊗-binder telescope).  Endpoint types carry the
-    -- cons HOISTED over the ⊕, which is where the plain generators clash.
-    assoc-cons₂ᵖ : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ : LExp)
-                 → PExp ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃)
-                        (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃)))
-    flattenʳ-cons₂ᵖ : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ E₄ : LExp)
-                    → PExp (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃ ⊕ E₄)))
-                           ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃ ⊕ E₄)
+    -- named-boundary leaf: any Generator value.  The named reassociations
+    -- (flattenˡᵖ, buryᵖ, …) are DEFINITIONS below, each a record literal,
+    -- so their interpretation/residue/soundness still reduce by projection.
+    genᵖ : (G : Generator) → PExp (G .Generator.dom) (G .Generator.cod)
 
   infixr 30 _∙ᵖ_
   infix 34 _◁ᵖ_
@@ -216,18 +205,7 @@ module NbE {o} (X : Type o) where
   ⟦ P ⊕ᵖ Q ⟧ᵖ i            = ⟦ P ⟧ᵖ i ++ ⟦ Q ⟧ᵖ i
   ⟦ assocᵖ E₁ E₂ E₃ ⟧ᵖ     = ++-assoc ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ
   ⟦ idrᵖ E ⟧ᵖ              = ++-idr ⟦ E ⟧ᵉ
-  ⟦ flattenˡᵖ E₁ E₂ E₃ E₄ ⟧ᵖ    = flattenˡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
-  ⟦ flattenʳᵖ E₁ E₂ E₃ E₄ ⟧ᵖ    = flattenʳ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
-  ⟦ flattenᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ = flattenᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
-  ⟦ buryᵖ E₁ E₂ E₃ E₄ ⟧ᵖ        = bury ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
-  ⟦ buryᵐᵖ E₁ E₂ E₃ E₄ E₅ ⟧ᵖ    = buryᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
-  ⟦ pivotᵖ E₁ E₂ E₃ E₄ ⟧ᵖ       = pivot ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
-  ⟦ flattenˡ-nilᵖ E₁ E₃ E₄ ⟧ᵖ   = flattenˡ ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
-  ⟦ bury-nilᵖ E₁ E₃ E₄ ⟧ᵖ       = bury ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
-  ⟦ assoc-cons₂ᵖ E₁ a b E₂ E₃ ⟧ᵖ =
-    ++-assoc ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ
-  ⟦ flattenʳ-cons₂ᵖ E₁ a b E₂ E₃ E₄ ⟧ᵖ =
-    flattenʳ ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+  ⟦ genᵖ G ⟧ᵖ              = G .Generator.interp
 
   -- ==========================================================================
   -- §3  The nf-level residue.  Thanks to eval's accumulator, every pure
@@ -250,16 +228,7 @@ module NbE {o} (X : Type o) where
     flatκ P (eval F₁ κ) ∙ ap (eval E₂) (flatκ Q κ)
   flatκ (assocᵖ E₁ E₂ E₃) κ = refl
   flatκ (idrᵖ E)    κ = refl
-  flatκ (flattenˡᵖ E₁ E₂ E₃ E₄) κ = refl
-  flatκ (flattenʳᵖ E₁ E₂ E₃ E₄) κ = refl
-  flatκ (flattenᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
-  flatκ (buryᵖ E₁ E₂ E₃ E₄) κ = refl
-  flatκ (buryᵐᵖ E₁ E₂ E₃ E₄ E₅) κ = refl
-  flatκ (pivotᵖ E₁ E₂ E₃ E₄) κ = refl
-  flatκ (flattenˡ-nilᵖ E₁ E₃ E₄) κ = refl
-  flatκ (bury-nilᵖ E₁ E₃ E₄) κ = refl
-  flatκ (assoc-cons₂ᵖ E₁ a b E₂ E₃) κ = refl
-  flatκ (flattenʳ-cons₂ᵖ E₁ a b E₂ E₃ E₄) κ = refl
+  flatκ (genᵖ G)    κ = G .Generator.residue κ
 
   flat : PExp E₁ E₂ → nf E₁ ≡ nf E₂
   flat P = flatκ P []
@@ -720,6 +689,101 @@ module NbE {o} (X : Type o) where
             ∙ (normκ E₁ (a ∷ b ∷ eval E₂ (eval E₃ (eval E₄ κ))) ∙ refl)))
        (sym (normκ-cons₂ a b E₂ (E₃ ⊕ E₄) κ))
     ◁ sound-flattenʳ E₁ (a ∷ᵉ b ∷ᵉ E₂) E₃ E₄ κ
+
+  -- ---- the named generators, packaged -------------------------------------
+  -- Each named reassociation is a Generator value under genᵖ.  These take
+  -- LExp arguments (not list atoms) so that quoted goals mixing
+  -- granularities — e.g. flattenʳ (xs ++ ys) … next to a segment about xs
+  -- and ys — still meet at judgmentally equal endpoint expressions.  The
+  -- -nil and -cons₂ families are degenerate instances: named boundaries at
+  -- []/cons arguments whose interpretations are CONVERTIBLE to clean
+  -- ⊕-shapes (the [] computes through ++; the cons is hoisted over the ⊕),
+  -- so their endpoint types avoid the shapes where the plain codes clash.
+
+  flattenˡᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
+            → PExp ((E₁ ⊕ E₂ ⊕ E₃) ⊕ E₄) (E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄))
+  flattenˡᵖ E₁ E₂ E₃ E₄ = genᵖ record
+    { dom = (E₁ ⊕ E₂ ⊕ E₃) ⊕ E₄ ; cod = E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄)
+    ; interp  = flattenˡ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-flattenˡ E₁ E₂ E₃ E₄ }
+
+  flattenʳᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
+            → PExp (E₁ ⊕ (E₂ ⊕ E₃ ⊕ E₄)) ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄)
+  flattenʳᵖ E₁ E₂ E₃ E₄ = genᵖ record
+    { dom = E₁ ⊕ (E₂ ⊕ E₃ ⊕ E₄) ; cod = (E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄
+    ; interp  = flattenʳ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-flattenʳ E₁ E₂ E₃ E₄ }
+
+  flattenᵐᵖ : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp)
+            → PExp (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
+                   ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
+  flattenᵐᵖ E₁ E₂ E₃ E₄ E₅ = genᵖ record
+    { dom = E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅) ; cod = (E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅)
+    ; interp  = flattenᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-flattenᵐ E₁ E₂ E₃ E₄ E₅ }
+
+  buryᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
+        → PExp (E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ (E₂ ⊕ E₃)) ⊕ E₄)
+  buryᵖ E₁ E₂ E₃ E₄ = genᵖ record
+    { dom = E₁ ⊕ E₂ ⊕ (E₃ ⊕ E₄) ; cod = (E₁ ⊕ (E₂ ⊕ E₃)) ⊕ E₄
+    ; interp  = bury ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-bury E₁ E₂ E₃ E₄ }
+
+  buryᵐᵖ : ∀ (E₁ E₂ E₃ E₄ E₅ : LExp)
+         → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅))
+                (E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅))
+  buryᵐᵖ E₁ E₂ E₃ E₄ E₅ = genᵖ record
+    { dom = (E₁ ⊕ E₂) ⊕ E₃ ⊕ (E₄ ⊕ E₅) ; cod = E₁ ⊕ ((E₂ ⊕ E₃ ⊕ E₄) ⊕ E₅)
+    ; interp  = buryᵐ ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ ⟦ E₅ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-buryᵐ E₁ E₂ E₃ E₄ E₅ }
+
+  pivotᵖ : ∀ (E₁ E₂ E₃ E₄ : LExp)
+         → PExp ((E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄) (E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄))
+  pivotᵖ E₁ E₂ E₃ E₄ = genᵖ record
+    { dom = (E₁ ⊕ E₂) ⊕ E₃ ⊕ E₄ ; cod = E₁ ⊕ ((E₂ ⊕ E₃) ⊕ E₄)
+    ; interp  = pivot ⟦ E₁ ⟧ᵉ ⟦ E₂ ⟧ᵉ ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-pivot E₁ E₂ E₃ E₄ }
+
+  flattenˡ-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
+                → PExp ((E₁ ⊕ E₃) ⊕ E₄) (E₁ ⊕ (E₃ ⊕ E₄))
+  flattenˡ-nilᵖ E₁ E₃ E₄ = genᵖ record
+    { dom = (E₁ ⊕ E₃) ⊕ E₄ ; cod = E₁ ⊕ (E₃ ⊕ E₄)
+    ; interp  = flattenˡ ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-flattenˡ-nil E₁ E₃ E₄ }
+
+  bury-nilᵖ : ∀ (E₁ E₃ E₄ : LExp)
+            → PExp (E₁ ⊕ (E₃ ⊕ E₄)) ((E₁ ⊕ E₃) ⊕ E₄)
+  bury-nilᵖ E₁ E₃ E₄ = genᵖ record
+    { dom = E₁ ⊕ (E₃ ⊕ E₄) ; cod = (E₁ ⊕ E₃) ⊕ E₄
+    ; interp  = bury ⟦ E₁ ⟧ᵉ [] ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-bury-nil E₁ E₃ E₄ }
+
+  assoc-cons₂ᵖ : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ : LExp)
+               → PExp ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃)
+                      (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃)))
+  assoc-cons₂ᵖ E₁ a b E₂ E₃ = genᵖ record
+    { dom = (E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃ ; cod = E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃))
+    ; interp  = ++-assoc ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-assoc-cons₂ E₁ a b E₂ E₃ }
+
+  flattenʳ-cons₂ᵖ : ∀ (E₁ : LExp) (a b : X) (E₂ E₃ E₄ : LExp)
+                  → PExp (E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃ ⊕ E₄)))
+                         ((E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃ ⊕ E₄)
+  flattenʳ-cons₂ᵖ E₁ a b E₂ E₃ E₄ = genᵖ record
+    { dom = E₁ ⊕ (a ∷ᵉ b ∷ᵉ (E₂ ⊕ E₃ ⊕ E₄)) ; cod = (E₁ ⊕ (a ∷ᵉ b ∷ᵉ E₂)) ⊕ E₃ ⊕ E₄
+    ; interp  = flattenʳ ⟦ E₁ ⟧ᵉ (a ∷ b ∷ ⟦ E₂ ⟧ᵉ) ⟦ E₃ ⟧ᵉ ⟦ E₄ ⟧ᵉ
+    ; residue = λ κ → refl
+    ; leaf    = sound-flattenʳ-cons₂ E₁ a b E₂ E₃ E₄ }
+
   -- ---- the induction ------------------------------------------------------
 
   soundκ : (P : PExp E₁ E₂) (κ : List X)
@@ -771,16 +835,7 @@ module NbE {o} (X : Type o) where
         ∙ ap (ap (_++ κ)) (sym (ap₂-decomp ⟦ P ⟧ᵖ ⟦ Q ⟧ᵖ))
   soundκ (assocᵖ E₁ E₂ E₃) κ = sound-assoc E₁ E₂ E₃ κ
   soundκ (idrᵖ E) κ = sound-idr E κ
-  soundκ (flattenˡᵖ E₁' E₂' E₃' E₄') κ = sound-flattenˡ E₁' E₂' E₃' E₄' κ
-  soundκ (flattenʳᵖ E₁' E₂' E₃' E₄') κ = sound-flattenʳ E₁' E₂' E₃' E₄' κ
-  soundκ (flattenᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-flattenᵐ E₁' E₂' E₃' E₄' E₅' κ
-  soundκ (buryᵖ E₁' E₂' E₃' E₄') κ = sound-bury E₁' E₂' E₃' E₄' κ
-  soundκ (buryᵐᵖ E₁' E₂' E₃' E₄' E₅') κ = sound-buryᵐ E₁' E₂' E₃' E₄' E₅' κ
-  soundκ (pivotᵖ E₁' E₂' E₃' E₄') κ = sound-pivot E₁' E₂' E₃' E₄' κ
-  soundκ (flattenˡ-nilᵖ E₁' E₃' E₄') κ = sound-flattenˡ-nil E₁' E₃' E₄' κ
-  soundκ (bury-nilᵖ E₁' E₃' E₄') κ = sound-bury-nil E₁' E₃' E₄' κ
-  soundκ (assoc-cons₂ᵖ E₁' a b E₂' E₃') κ = sound-assoc-cons₂ E₁' a b E₂' E₃' κ
-  soundκ (flattenʳ-cons₂ᵖ E₁' a b E₂' E₃' E₄') κ = sound-flattenʳ-cons₂ E₁' a b E₂' E₃' E₄' κ
+  soundκ (genᵖ G) κ = G .Generator.leaf κ
 
   -- Closed form at κ = []: mirror norm₀'s definition at interval i.
   sound : (P : PExp E₁ E₂)
@@ -903,6 +958,11 @@ module Reflection where
   open import 1Lab.Reflection.Solver using (solver-failed)
   open import 1Lab.Reflection.Subst using (subst-tm ; singletonS)
 
+  -- The named generators are DEFINITIONS (genᵖ of a record literal), so
+  -- their quoted spines are def-headed and carry NbE's module parameters.
+  -- One synonym serves both emission and matching.
+  pattern genT n args = def n (unknown h∷ unknown v∷ args)
+
   private
     -- Smart ⊕: hoist cons-atoms out of the left component, so that the two
     -- spellings (x ∷ xs) ++ ys and x ∷ (xs ++ ys) of the same list quote to
@@ -971,25 +1031,25 @@ module Reflection where
     lhsE (con (quote NbE.assocᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) e₃
     lhsE (con (quote NbE.idrᵖ) (e v∷ [])) = mk-⊕ e (con (quote NbE.εᵉ) [])
-    lhsE (con (quote NbE.flattenˡᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.flattenˡᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ (mk-⊕ e₂ e₃)) e₄
-    lhsE (con (quote NbE.flattenʳᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.flattenʳᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
-    lhsE (con (quote NbE.flattenᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+    lhsE (genT (quote NbE.flattenᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
-    lhsE (con (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
-    lhsE (con (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ e₄)
-    lhsE (con (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₃) e₄
-    lhsE (con (quote NbE.assoc-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ [])) =
+    lhsE (genT (quote NbE.assoc-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ e₂ v∷ []) v∷ []))) e₃
-    lhsE (con (quote NbE.flattenʳ-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.flattenʳ-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ mk-⊕ e₂ (mk-⊕ e₃ e₄) v∷ []) v∷ []))
-    lhsE (con (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+    lhsE (genT (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₃ e₄)
-    lhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+    lhsE (genT (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
     lhsE _ = unknown
     rhsE (def (quote NbE.idᵉ) (_ h∷ _ v∷ e v∷ [])) = e
@@ -1003,25 +1063,25 @@ module Reflection where
     rhsE (con (quote NbE.assocᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₂ e₃)
     rhsE (con (quote NbE.idrᵖ) (e v∷ [])) = e
-    rhsE (con (quote NbE.flattenˡᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.flattenˡᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₂ (mk-⊕ e₃ e₄))
-    rhsE (con (quote NbE.flattenʳᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.flattenʳᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ e₄)
-    rhsE (con (quote NbE.flattenᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+    rhsE (genT (quote NbE.flattenᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₂) (mk-⊕ e₃ (mk-⊕ e₄ e₅))
-    rhsE (con (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.buryᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ (mk-⊕ e₂ e₃)) e₄
-    rhsE (con (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.pivotᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ e₃) e₄)
-    rhsE (con (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.flattenˡ-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ e₃ e₄)
-    rhsE (con (quote NbE.assoc-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ [])) =
+    rhsE (genT (quote NbE.assoc-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ [])) =
       mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ mk-⊕ e₂ e₃ v∷ []) v∷ []))
-    rhsE (con (quote NbE.flattenʳ-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.flattenʳ-cons₂ᵖ) (e₁ v∷ a v∷ b v∷ e₂ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ (con (quote NbE._∷ᵉ_) (a v∷ con (quote NbE._∷ᵉ_) (b v∷ e₂ v∷ []) v∷ []))) (mk-⊕ e₃ e₄)
-    rhsE (con (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
+    rhsE (genT (quote NbE.bury-nilᵖ) (e₁ v∷ e₃ v∷ e₄ v∷ [])) =
       mk-⊕ (mk-⊕ e₁ e₃) e₄
-    rhsE (con (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
+    rhsE (genT (quote NbE.buryᵐᵖ) (e₁ v∷ e₂ v∷ e₃ v∷ e₄ v∷ e₅ v∷ [])) =
       mk-⊕ e₁ (mk-⊕ (mk-⊕ e₂ (mk-⊕ e₃ e₄)) e₅)
     rhsE _ = unknown
   -- build-path tm ⇒ (code, loop-collapse proof for the code's residue).
@@ -1051,7 +1111,7 @@ module Reflection where
     , “refl” )
   ... | just (a , ys¹) with un-cons ys¹
   ...   | just (b , ys²) = pure
-    ( con (quote NbE.assoc-cons₂ᵖ)
+    ( genT (quote NbE.assoc-cons₂ᵖ)
         (build-lexp xs v∷ a v∷ b v∷ build-lexp ys² v∷ build-lexp zs v∷ [])
     , “refl” )
   ...   | nothing = pure
@@ -1061,11 +1121,11 @@ module Reflection where
   build-path (def (quote ++-idr) (_ h∷ _ h∷ xs v∷ [])) =
     pure (con (quote NbE.idrᵖ) (build-lexp xs v∷ []) , “refl”)
   build-path (def (quote NbE.flattenˡ) (_ h∷ _ v∷ t₁ v∷ con (quote List.[]) _ v∷ t₃ v∷ t₄ v∷ [])) =
-    pure ( con (quote NbE.flattenˡ-nilᵖ)
+    pure ( genT (quote NbE.flattenˡ-nilᵖ)
              (build-lexp t₁ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote NbE.flattenˡ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
-    pure ( con (quote NbE.flattenˡᵖ)
+    pure ( genT (quote NbE.flattenˡᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote NbE.flattenʳ) (_ h∷ _ v∷ con (quote List.[]) _ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
@@ -1075,39 +1135,39 @@ module Reflection where
          , “refl” )
   build-path (def (quote NbE.flattenʳ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) with un-cons t₂
   ... | nothing = pure
-    ( con (quote NbE.flattenʳᵖ)
+    ( genT (quote NbE.flattenʳᵖ)
         (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
     , “refl” )
   ... | just (a , t₂¹) with un-cons t₂¹
   ...   | just (b , t₂²) = pure
-    ( con (quote NbE.flattenʳ-cons₂ᵖ)
+    ( genT (quote NbE.flattenʳ-cons₂ᵖ)
         (build-lexp t₁ v∷ a v∷ b v∷ build-lexp t₂² v∷ build-lexp t₃ v∷
          build-lexp t₄ v∷ [])
     , “refl” )
   ...   | nothing = pure
-    ( con (quote NbE.flattenʳᵖ)
+    ( genT (quote NbE.flattenʳᵖ)
         (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
     , “refl” )
   build-path (def (quote NbE.flattenᵐ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ t₅ v∷ [])) =
-    pure ( con (quote NbE.flattenᵐᵖ)
+    pure ( genT (quote NbE.flattenᵐᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷
               build-lexp t₅ v∷ [])
          , “refl” )
   build-path (def (quote NbE.bury) (_ h∷ _ v∷ t₁ v∷ con (quote List.[]) _ v∷ t₃ v∷ t₄ v∷ [])) =
-    pure ( con (quote NbE.bury-nilᵖ)
+    pure ( genT (quote NbE.bury-nilᵖ)
              (build-lexp t₁ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote NbE.bury) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
-    pure ( con (quote NbE.buryᵖ)
+    pure ( genT (quote NbE.buryᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote NbE.buryᵐ) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ t₅ v∷ [])) =
-    pure ( con (quote NbE.buryᵐᵖ)
+    pure ( genT (quote NbE.buryᵐᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷
               build-lexp t₅ v∷ [])
          , “refl” )
   build-path (def (quote NbE.pivot) (_ h∷ _ v∷ t₁ v∷ t₂ v∷ t₃ v∷ t₄ v∷ [])) =
-    pure ( con (quote NbE.pivotᵖ)
+    pure ( genT (quote NbE.pivotᵖ)
              (build-lexp t₁ v∷ build-lexp t₂ v∷ build-lexp t₃ v∷ build-lexp t₄ v∷ [])
          , “refl” )
   build-path (def (quote ap) (_ h∷ _ h∷ _ h∷ _ h∷ f v∷ _ h∷ _ h∷ p v∷ [])) =
