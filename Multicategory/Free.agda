@@ -388,8 +388,8 @@ module Syntax {o h} (G : Multigraph o h) where
   idₘ = inc var
 
   -- Where the rest of the development lives (all formalised):
-  --  1. sub respects _≈_ in both arguments — Free/CongruenceLeft,
-  --     Free/CongruenceRight (β/η cases: Free/RedexStability) — so sub
+  --  1. sub respects _≈_ in both arguments — Free/Congruence (a shared
+  --     two-sided handler layer; β/η cases: Free/RedexStability) — so sub
   --     descends to _∘ₘ_ via Quot-op₂.
   --  2. The Premulticategory laws for sub — Free/Identity, Free/Assoc,
   --     Free/Interchange — assembled into FMonCat G : Premulticategory in
