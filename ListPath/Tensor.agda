@@ -111,7 +111,7 @@ module Tensor {o h} {C : Precategory o h} (M : Monoidal-category C) where
     -- The motivating example: expose a marked slot.
     _ : (ys₁ : List Ob) (y : Ob) (ys₂ : List Ob)
       → ⊗-context (ys₁ ++ y ∷ ys₂) ≅ (⊗-context ys₁ ⊗ (y ⊗ ⊗-context ys₂))
-    _ = λ ys₁ y ys₂ → iso-of (● ⊛ (◆ ⊛ ●)) (ys₁ , y , ys₂ , lift tt)
+    _ = λ ys₁ y ys₂ → iso-of (● ⊛ (◆ ⊛ ●)) (ys₁ , y , ys₂ , _)
 
     -- Binary and ternary splits.
     _ : (Γ Δ : List Ob) → ⊗-context (Γ ++ Δ) ≅ (⊗-context Γ ⊗ ⊗-context Δ)
@@ -128,3 +128,79 @@ module Tensor {o h} {C : Precategory o h} (M : Monoidal-category C) where
       ≅ (⊗-context xs₁ ⊗ (x₁ ⊗ (⊗-context xs₂ ⊗ (x₂ ⊗ ⊗-context xs₃))))
     _ = λ xs₁ x₁ xs₂ x₂ xs₃ →
       iso-of (● ⊛ (◆ ⊛ (● ⊛ (◆ ⊛ ●)))) (xs₁ , x₁ , xs₂ , x₂ , xs₃ , lift tt)
+
+  -- ------------------------------------------------------------------------
+  -- The goal-directed interface: `tensor!` reads the ⊗-side of the goal,
+  -- reconstructs the shape (⊗-context ↦ ●, plain object ↦ ◆, ⊗ ↦ ⊛) and
+  -- the environment, and applies iso-of.  Unifying the result against the
+  -- goal checks the context side, so no separate soundness step is needed.
+  -- ------------------------------------------------------------------------
+
+  module Reflect where
+    open import 1Lab.Reflection
+    open import 1Lab.Reflection.Subst using (apply-tm*)
+
+    last-vis : List (Arg Term) → Maybe Term
+    last-vis = go nothing where
+      go : Maybe Term → List (Arg Term) → Maybe Term
+      go acc []                                = acc
+      go acc (arg (arginfo visible _) t ∷ as)  = go (just t) as
+      go acc (_ ∷ as)                          = go acc as
+
+    last-vis₂ : List (Arg Term) → Maybe (Term × Term)
+    last-vis₂ as = go nothing (reverse as) where
+      go : Maybe Term → List (Arg Term) → Maybe (Term × Term)
+      go acc []                               = nothing
+      go acc (arg (arginfo visible _) t ∷ as) with acc
+      ... | nothing = go (just t) as
+      ... | just u  = just (t , u)
+      go acc (_ ∷ as)                         = go acc as
+
+    _,ᵗ_ : Term → Term → Term
+    x ,ᵗ ρ = con (quote _,_) (x v∷ ρ v∷ [])
+
+    -- Parse a tensor expression into (shape, environment-with-hole).
+    -- (TERMINATING: the subterms come through last-vis₂, which the checker
+    -- cannot compare structurally.)
+    {-# TERMINATING #-}
+    parse : Term → TC (Term × (Term → Term))
+    parse (def (quote _⊗_) as) with last-vis₂ as
+    ... | just (a , b) = do
+          (S₁ , κ₁) ← parse a
+          (S₂ , κ₂) ← parse b
+          pure (con (quote _⊛_) (S₁ v∷ S₂ v∷ []) , λ t → κ₁ (κ₂ t))
+    ... | nothing = typeError (strErr "tensor!: malformed ⊗" ∷ [])
+    parse (def (quote ⊗-context) as) with last-vis as
+    ... | just Γ  = pure (con (quote ●) [] , (Γ ,ᵗ_))
+    ... | nothing = typeError (strErr "tensor!: malformed ⊗-context" ∷ [])
+    parse x = pure (con (quote ◆) [] , (x ,ᵗ_))
+
+    macro
+      tensor! : Term → TC ⊤
+      tensor! goal = do
+        ty ← wait-for-type =<< infer-type goal
+        def _ as ← pure ty
+          where t → typeError (strErr "tensor!: goal is not an isomorphism\n  " ∷ termErr t ∷ [])
+        just rhs ← pure (last-vis as)
+          where _ → typeError (strErr "tensor!: goal is not an isomorphism" ∷ [])
+        (S , κ) ← parse rhs
+        `iso ← quoteTC iso-of
+        unify goal (apply-tm* `iso (argN S ∷ argN (κ unknown) ∷ []))
+
+  open Reflect using (tensor!) public
+
+  private
+    -- The macro interface: no arguments at all.
+    _ : (ys₁ : List Ob) (y : Ob) (ys₂ : List Ob)
+      → ⊗-context (ys₁ ++ y ∷ ys₂) ≅ (⊗-context ys₁ ⊗ (y ⊗ ⊗-context ys₂))
+    _ = λ ys₁ y ys₂ → tensor!
+
+    _ : (Γ Δ Ξ : List Ob)
+      → ⊗-context (Γ ++ Δ ++ Ξ)
+      ≅ (⊗-context Γ ⊗ (⊗-context Δ ⊗ ⊗-context Ξ))
+    _ = λ Γ Δ Ξ → tensor!
+
+    _ : (xs₁ : List Ob) (x₁ : Ob) (xs₂ : List Ob) (x₂ : Ob) (xs₃ : List Ob)
+      → ⊗-context (xs₁ ++ x₁ ∷ xs₂ ++ x₂ ∷ xs₃)
+      ≅ (⊗-context xs₁ ⊗ (x₁ ⊗ (⊗-context xs₂ ⊗ (x₂ ⊗ ⊗-context xs₃))))
+    _ = λ xs₁ x₁ xs₂ x₂ xs₃ → tensor!
