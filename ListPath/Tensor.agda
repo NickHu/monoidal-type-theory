@@ -147,33 +147,53 @@ module Tensor {o h} {C : Precategory o h} (M : Monoidal-category C) where
       go acc (arg (arginfo visible _) t ∷ as)  = go (just t) as
       go acc (_ ∷ as)                          = go acc as
 
-    last-vis₂ : List (Arg Term) → Maybe (Term × Term)
-    last-vis₂ as = go nothing (reverse as) where
-      go : Maybe Term → List (Arg Term) → Maybe (Term × Term)
-      go acc []                               = nothing
-      go acc (arg (arginfo visible _) t ∷ as) with acc
-      ... | nothing = go (just t) as
-      ... | just u  = just (t , u)
-      go acc (_ ∷ as)                         = go acc as
-
     _,ᵗ_ : Term → Term → Term
     x ,ᵗ ρ = con (quote _,_) (x v∷ ρ v∷ [])
 
+    name-eq : Name → Name → Bool
+    name-eq n m = Dec-rec (λ _ → true) (λ _ → false) (n ≡? m)
+
     -- Parse a tensor expression into (shape, environment-with-hole).
-    -- (TERMINATING: the subterms come through last-vis₂, which the checker
-    -- cannot compare structurally.)
+    --
+    -- Scope caveat: every `open Monoidal-category M` / `open Tensor M` site
+    -- mints its own definitionally-equal COPIES of _⊗_ and ⊗-context, so
+    -- syntactic name-matching against this module's names fails at client
+    -- sites.  ⊗ is matched UP TO CONVERSION (speculative unification with
+    -- ?a ⊗ ?b — the metas land in rigid pair positions, so this solves);
+    -- ⊗-context cannot be matched that way (unifying under a defined
+    -- function blocks), but whnf unfolds any copy back to the ORIGINAL
+    -- definition, whose name we can match.  (TERMINATING: the recursion
+    -- goes through solved metas.)
     {-# TERMINATING #-}
     parse : Term → TC (Term × (Term → Term))
-    parse (def (quote _⊗_) as) with last-vis₂ as
-    ... | just (a , b) = do
+    parse-atom : Term → Term → TC (Term × (Term → Term))
+
+    parse t = do
+      `Ob ← quoteTC Ob
+      `f ← quoteTC (λ (x y : Ob) → x ⊗ y)
+      -- Metas are created INSIDE the speculation, so a failed attempt
+      -- rolls them back rather than leaving them unsolved.
+      r ← (noConstraints (do
+              a ← new-meta `Ob
+              b ← new-meta `Ob
+              unify t (apply-tm* `f (argN a ∷ argN b ∷ []))
+              a' ← reduce a
+              b' ← reduce b
+              pure (just (a' , b'))))
+            <|> pure nothing
+      case r of λ where
+        (just (a , b)) → do
           (S₁ , κ₁) ← parse a
           (S₂ , κ₂) ← parse b
-          pure (con (quote _⊛_) (S₁ v∷ S₂ v∷ []) , λ t → κ₁ (κ₂ t))
-    ... | nothing = typeError (strErr "tensor!: malformed ⊗" ∷ [])
-    parse (def (quote ⊗-context) as) with last-vis as
-    ... | just Γ  = pure (con (quote ●) [] , (Γ ,ᵗ_))
-    ... | nothing = typeError (strErr "tensor!: malformed ⊗-context" ∷ [])
-    parse x = pure (con (quote ◆) [] , (x ,ᵗ_))
+          pure (con (quote _⊛_) (S₁ v∷ S₂ v∷ []) , λ u → κ₁ (κ₂ u))
+        nothing → do
+          t' ← reduce t
+          parse-atom t t'
+
+    parse-atom t (def n as) with name-eq n (quote ⊗-context) | last-vis as
+    ... | true  | just Γ = pure (con (quote ●) [] , (Γ ,ᵗ_))
+    ... | _     | _      = pure (con (quote ◆) [] , (t ,ᵗ_))
+    parse-atom t _ = pure (con (quote ◆) [] , (t ,ᵗ_))
 
     macro
       tensor! : Term → TC ⊤
