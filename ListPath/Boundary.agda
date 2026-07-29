@@ -60,44 +60,46 @@ frontier ●       = lst ∷ []
 frontier ◆       = el ∷ []
 frontier (s ⊛ t) = frontier s ++ frontier t
 
+-- Shape utilities, shared with companion generators (ListPath.Tensor's
+-- declare-chain mirrors declare-boundary's stage recursion).
+kind-eq : Kind → Kind → Bool
+kind-eq lst lst = true
+kind-eq el  el  = true
+kind-eq _   _   = false
+
+kinds-eq : List Kind → List Kind → Bool
+kinds-eq []       []       = true
+kinds-eq (k ∷ ks) (l ∷ ls) = if kind-eq k l then kinds-eq ks ls else false
+kinds-eq _        _        = false
+
+sh-eq : Sh → Sh → Bool
+sh-eq ●         ●         = true
+sh-eq ◆         ◆         = true
+sh-eq (s ⊛ t)   (s' ⊛ t') = if sh-eq s s' then sh-eq t t' else false
+sh-eq _         _         = false
+
+head-kind : Sh → Kind
+head-kind ●       = lst
+head-kind ◆       = el
+head-kind (s ⊛ _) = head-kind s
+
+-- Remove the leftmost leaf.  The interpretation of the result is
+-- DEFINITIONALLY the interpretation of the original at [] (for ●: the
+-- head [] computes through every ++ on the left spine) resp. under the
+-- peeled head (for ◆).
+drop₁ : Sh → Maybe Sh
+drop₁ ●       = nothing
+drop₁ ◆       = nothing
+drop₁ (s ⊛ t) with drop₁ s
+... | just s' = just (s' ⊛ t)
+... | nothing = just t
+
+drop! : Sh → TC Sh
+drop! s with drop₁ s
+... | just s' = pure s'
+... | nothing = typeError (strErr "shape generator: internal drop of a leaf" ∷ [])
+
 private
-  kind-eq : Kind → Kind → Bool
-  kind-eq lst lst = true
-  kind-eq el  el  = true
-  kind-eq _   _   = false
-
-  kinds-eq : List Kind → List Kind → Bool
-  kinds-eq []       []       = true
-  kinds-eq (k ∷ ks) (l ∷ ls) = if kind-eq k l then kinds-eq ks ls else false
-  kinds-eq _        _        = false
-
-  sh-eq : Sh → Sh → Bool
-  sh-eq ●         ●         = true
-  sh-eq ◆         ◆         = true
-  sh-eq (s ⊛ t)   (s' ⊛ t') = if sh-eq s s' then sh-eq t t' else false
-  sh-eq _         _         = false
-
-  head-kind : Sh → Kind
-  head-kind ●       = lst
-  head-kind ◆       = el
-  head-kind (s ⊛ _) = head-kind s
-
-  -- Remove the leftmost leaf.  The interpretation of the result is
-  -- DEFINITIONALLY the interpretation of the original at [] (for ●: the
-  -- head [] computes through every ++ on the left spine) resp. under the
-  -- peeled head (for ◆).
-  drop₁ : Sh → Maybe Sh
-  drop₁ ●       = nothing
-  drop₁ ◆       = nothing
-  drop₁ (s ⊛ t) with drop₁ s
-  ... | just s' = just (s' ⊛ t)
-  ... | nothing = just t
-
-  drop! : Sh → TC Sh
-  drop! s with drop₁ s
-  ... | just s' = pure s'
-  ... | nothing = typeError (strErr "declare-boundary: internal drop of a leaf" ∷ [])
-
   -- ------------------------------------------------------------------------
   -- Term builders.
   -- ------------------------------------------------------------------------
